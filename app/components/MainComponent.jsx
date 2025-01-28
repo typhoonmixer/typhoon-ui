@@ -23,6 +23,9 @@ import {
   useSendTransaction
 } from "@starknet-react/core";
 
+import dotenv from 'dotenv'
+dotenv.config()
+
 const MainComponent = () => {
   const { sendAsync, data, status, isSuccess } = useSendTransaction({ calls: [] });
   const { address, account } = useAccount();
@@ -36,7 +39,7 @@ const MainComponent = () => {
   const [rewardMode, setRewardMode] = useState(true)
 
 
-  const typhoonAddress = "0x2d3db422ca384702726a961e43e6506ec709e6f7b21c1e96655800fe7c2aaee"
+  const typhoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
 
   const tokenToAddress = {
     "STRK": "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
