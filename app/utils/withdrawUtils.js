@@ -47,7 +47,7 @@ export async function generateProofCalldata(note, recipient) {
     let parsedVK = parseGroth16VerifyingKeyFromObject(vk)
     const groth16Calldata = garaga.getGroth16CallData(parsedProof, parsedVK, garaga.CurveId.BN254);
     // The first element of the calldata is "length" and is not compatible with Cairo 1.0, so it is removed
-    groth16Calldata.shift()
+    groth16Calldata[0] = note.pool
 
     return groth16Calldata
 }

@@ -643,8 +643,7 @@ const MainComponent = () => {
         contractAddress: typhoonAddress,
         entrypoint: 'withdraw',
         calldata: CallData.compile({
-          full_proof_with_hints_list: cairo.tuple(callData),
-          pool: '0x' + proofString.pool,
+          full_proof_with_hints_list: cairo.tuple(callData)
         }),
       }, {version:2});
       await account.waitForTransaction(multiCall.transaction_hash);
