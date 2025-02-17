@@ -6,6 +6,7 @@ import Hasher from './mimc5.js';
 import { commitmentAndNullifierHash } from './depositUtils.js';
 import vk from './verification_key.json' assert { type: "json" }
 import { parseGroth16ProofFromObject, parseGroth16VerifyingKeyFromObject } from './parsingUtils';
+import ethers from "ethers";
 
 import * as snarkjs from "snarkjs";
 
@@ -15,30 +16,124 @@ const typhoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
 
 const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
 
-export async function generateProofCalldata(note, recipient) {
+export async function generateProofCalldata(notes, recipient, amountOut, changeNullifier, changeSecret) {
     await garaga.init();
     const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
+    // sort in ascending order
+    notes.sort((a, b) => Number(a.blockHeight) - Number(b.blockHeight))
+    // roots: Vec<BigUint>, // is sorted from the oldest to the newest root
+    // nullifierHashs: Vec<BigUint>,
+    // days: Vec<u128>,
+    // recipient: String,
+    // relayer: String,
+    // relayerFee: BigUint,
+    // nullifiers: Vec<BigUint>,
+    // secrets: Vec<BigUint>,
+    // pathElements: Vec<Vec<BigUint>>,
+    // pathIndices: Vec<Vec<u8>>,
+    // changeLeaf: BigUint,
+    // changeSecret: BigUint,
+    // changeNullifier: BigUint,
+    // balances: Vec<BigUint>,
+    // change: BigUint,
+    // amountOut: BigUint,
+    // previousBlockHash: BigUint,        // from oldest root
+    // nextTreeRootsHashs: Vec<BigUint>,  // the next blocks starting from the oldest root
+    // blocksIndex: Vec<usize>,           // the heights of the block of each root
+    // blockRootTrees: Vec<Vec<BigUint>>, // should have only 100 roots for each block
+    // finalBlockHash: BigUint,
 
-    let receipt = await provider.waitForTransaction(note.txHash)
-    let depositEvent = typhoon.parseEvents(receipt)[0]["typhoon::Typhoon::Typhon::Deposit"]
+    const types = ["string[]", "string[]", "string[]", "string", "string", "string", "string[]", "string[]", "string[][]", "string[][]", "string", "string", "string", "string[]", "string", "string", "string", "string[]", "string[]", "string[][]", "string"]
 
-    let [commitment, nullifierHash] = await commitmentAndNullifierHash(note.secret, note.nullifier)
+    let roots = []
+    let nullifierHashs = []
+    let days = []
+    let nullifiers = []
+    let secrets = []
+    let pathElements = [[]]
+    let pathIndices = [[]]
+    let changeLeaf = ""
+    let balances = []
+    let change = ""
+    let previousBlockHash = ""
+    let nextTreeBlockRoots = []
+    let currentBlockRootTrees = [[]]
+    let finalBlockHash = ""
 
-    let index = depositEvent.commitments.indexOf(commitment)
+    let totalBalance = BigInt(0);
 
-    let result = getRootPairingsDirections(depositEvent.insertedIndexs[index], commitment, note.day, depositEvent.subtreeHelper[index])
+    const { abi: poolAbi } = await provider.getClassAt(notes[i].pool);
+    const pool = new Contract(poolAbi, notes[i].pool, provider);
+
+    for (var i = 0; i < notes.length; i++) {
+
+        let receipt = await provider.waitForTransaction(notes[i].txHash)
+        let depositEvent = typhoon.parseEvents(receipt)[0]["typhoon::Typhoon::Typhoon::Deposit"]
+
+        let [commitment, nullifierHash] = await commitmentAndNullifierHash(notes[i].secret, notes[i].nullifier)
+
+        let result = getRootPairingsDirections(depositEvent.insertedIndexs, commitment, notes[i].day, depositEvent.subtreeHelper)
+        roots.push(result.r.toString())
+        nullifierHashs.push(nullifierHash.toString())
+        days.push(notes[i].day)
+        nullifiers.push(notes[i].nullifier)
+        secrets.push(notes[i].secret)
+        pathElements.push(result.p.map((e) => {
+            return e.toString()
+        }))
+        pathIndices.push(result.d.map((e) => {
+            return e.toString()
+        }))
+        balances.push(notes[i].balance)
+        let curBlockRef = await pool.getBlock(notes[i].blockHeight)[3]
+        let broots = await pool.rootsFromRef(curBlockRef)
+        currentBlockRootTrees.push(broots)
+        totalBalance += BigInt(notes[i].balance)
+    }
+
+    let prevBlock = await pool.getBlock(notes[0].blockHeight - 1)[0]
+    previousBlockHash = prevBlock
+
+    let curBlockHeight = await pool.blockchainHeight()
+    let nextBlocks = await pool.getBlocksInRange(notes[0].blockHeight + 1, curBlockHeight)
+    for(var i = 0; i< Number(curBlockHeight) - Number(notes[0].blockHeight);i++){
+        nextTreeBlockRoots.push(nextBlocks[i][2])
+    }
+
+    finalBlockHash = await pool.getBlock(curBlockHeight)[0]
+
+    change = totalBalance - BigInt(amountOut)
+    let [changeCommitment, _] = await commitmentAndNullifierHash(changeSecret, changeNullifier)
+    let hasher = new Hasher()
+    changeLeaf = hasher.MiMC5Sponge([changeCommitment.toString(), change], '0')
+
 
     let proofInput = {
-        "root": result.r,
-        "nullifierHash": nullifierHash,
-        "day": BigInt(note.day),
+        "root": roots,
+        "nullifierHash": nullifierHashs,
+        "day": days,
         "recipient": BigInt(recipient),
-        "relayer": BigInt(0), 
+        "relayer": BigInt(0),
         "relayerFee": BigInt(0),
-        "secret": BigInt(note.secret),
-        "nullifier": BigInt(note.nullifier),
-        "pathElements": result.p,
-        "pathIndices": result.d
+        "secret": secrets,
+        "nullifier": nullifiers,
+        "pathElements": pathElements,
+        "pathIndices": pathIndices,
+        "changeLeaf": changeLeaf,
+        "changeSecret": changeSecret,
+        "changeNullifier": changeNullifier,
+        "balances": balances,
+        "change": change,
+        "amountOut": amountOut,
+        "previousBlockHash": previousBlockHash,
+        "nextTreeBlockRoots": nextTreeBlockRoots,
+        "currentBlockRootTrees": currentBlockRootTrees,
+        "finalBlockHash1": finalBlockHash1,
+        "finalBlockHash2": finalBlockHash2,
+        "finalBlockHash3": finalBlockHash3,
+        "finalBlockHash4": finalBlockHash4,
+        "finalBlockHash5": finalBlockHash5,
+        "randomSecurityNextTreeBlocks": randomSecurityNextTreeBlocks
     }
     const { proof, publicSignals } = await snarkjs.groth16.fullProve(proofInput, "withdraw.wasm", "withdraw_0001.zkey");
 
@@ -46,11 +141,14 @@ export async function generateProofCalldata(note, recipient) {
 
     let parsedVK = parseGroth16VerifyingKeyFromObject(vk)
     const groth16Calldata = garaga.getGroth16CallData(parsedProof, parsedVK, garaga.CurveId.BN254);
+
     // The first element of the calldata is "length" and is not compatible with Cairo 1.0, so it is removed
     groth16Calldata[0] = note.pool
 
     return groth16Calldata
 }
+
+
 
 function getRootPairingsDirections(rootIndex, commitment, day, subtreeHelper) {
     let hasher = new Hasher()

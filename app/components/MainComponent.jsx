@@ -29,12 +29,14 @@ dotenv.config()
 const MainComponent = () => {
   const { sendAsync, data, status, isSuccess } = useSendTransaction({ calls: [] });
   const { address, account } = useAccount();
-  account
-
+  
+  
 
   const [srcToken, setSrcToken] = useState(STRK)
   const [loading, setLoading] = useState(false)
   const [loadingText, setLoadingText] = useState('')
+
+  
 
   const [rewardMode, setRewardMode] = useState(true)
 
@@ -48,11 +50,13 @@ const MainComponent = () => {
   }
 
   const [noteValue, setNoteValue] = useState("")
+  const [amountOut, setAmountOut] = useState("")
   const [receiverValue, setReceiverValue] = useState("")
 
   const [telegramValue, setTelegramValue] = useState("")
 
   const noteValueRef = useRef()
+  const amountOutValueRef = useRef()
   const receiverValueRef = useRef(null)
 
   const telegramInputRef = useRef()
@@ -86,13 +90,14 @@ const MainComponent = () => {
     value: receiverValue
   }
 
-  const [receiverObj, setReceiverObj] = useState(rObj)
-  const [noteObj, setNoteObj] = useState(nObj)
 
   const [noteComp, setNoteComp] = useState()
   const [receiverComp, setReceiverComp] = useState()
 
   const [denomination, setDenomination] = useState(one)
+
+  const {poolTvl, setPoolTvl} = useState(0);
+  const {balance, setBalance} = useState(0);
 
 
 
@@ -142,56 +147,24 @@ const MainComponent = () => {
 
   const [content, setContent] = useState(depositContent)
 
+
   useEffect(() => {
-    async function getDeposits() {
-      let denominations = poolsToNumber()
+    async function getPoolTvl() {
       const { abi: typhoonAbi } = await account.getClassAt(typhoonAddress);
 
       const typhoon = new Contract(typhoonAbi, typhoonAddress, account);
       typhoon.connect(account)
-      let total = 0
-      for (let i = 0; i < denominations.length; i++) {
-        let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denominationsList[i]))
-        let poolAddr = '0x' + pool.toString(16)
-        const { abi: poolAbi } = await account.getClassAt(poolAddr)
-        const poolC = new Contract(poolAbi, poolAddr, account);
-        let day = await poolC.currentDay()
-        let deposits = await poolC.liquidityProviders(day)
-        total = total + Number(deposits)
-      }
-      setOverallDeposits(total)
-    }
-    if (account) {
-      getDeposits()
-    }
-    if (!loading) {
-      if (btnText == DEPOSIT) {
-        setContent(depositContent)
-      } else if (btnText == WITHDRAW) {
-        setContent(withdrawContent)
-      } else if (btnText == TELEGRAM_TRANSFER) {
-        setContent(telegramContent)
-      }
-    }
-  }, [overallDeposits, srcToken, account])
-
-
-  useEffect(() => {
-    async function getDeposits() {
-      const { abi: typhoonAbi } = await account.getClassAt(typhoonAddress);
-
-      const typhoon = new Contract(typhoonAbi, typhoonAddress, account);
-      typhoon.connect(account)
-      let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denomination))
+      let pool = await typhoon.getPool(tokenToAddress[srcToken])
       let poolAddr = '0x' + pool.toString(16)
       const { abi: poolAbi } = await account.getClassAt(poolAddr)
       const poolC = new Contract(poolAbi, poolAddr, account);
       let day = await poolC.currentDay()
       let deposits = await poolC.liquidityProviders(day)
-      setTodayDeposits(deposits)
+      let poolTVL = await poolC.poolTVL();
+      setPoolTvl(poolTVL)
     }
     if (account) {
-      getDeposits()
+      getPoolTvl()
     }
     if (!loading) {
       if (btnText == DEPOSIT) {
@@ -203,7 +176,7 @@ const MainComponent = () => {
       }
     }
 
-  }, [todayDeposits, denomination, srcToken, account])
+  }, [poolTvl, srcToken, account])
 
   useEffect(() => {
     setDepositTypes(getFilteredItems(selectedDepositType))
@@ -269,6 +242,10 @@ const MainComponent = () => {
   useEffect(() => {
     setContent(withdrawContent)
   }, [noteValue]);
+
+  useEffect(() => {
+    setContent(withdrawContent)
+  }, [amountOut]);
 
   useEffect(() => {
     setContent(withdrawContent)
@@ -356,7 +333,7 @@ const MainComponent = () => {
       <div>
         <div className='flex items-center justify-between py-4 px-1'>
           <p>Withdraw</p>
-
+          <p>{`Balance: ${balance} ${srcToken}`}</p>
         </div>
 
         Note
@@ -378,6 +355,25 @@ const MainComponent = () => {
 
           </div>
         </div>
+        Withdraw Amount
+        <div className='relative bg-[#212429] p-4 py-6 rounded-xl mb-5 border-[2px] border-transparent hover:border-zinc-600'>
+          <div className='flex items-center rounded-xl'>
+            <input
+              ref={amountOutValueRef}
+              className={getInputClassname()}
+              type={"number"}
+              value={amountOut}
+              placeholder={"Amount"}
+              disabled={false}
+              onChange={e => {
+                setAmountOut(e.target.value)
+              }
+              }
+            />
+
+          </div>
+        </div>
+        
         Receiver
         <div className='bg-[#212429] p-4 py-6 rounded-xl mb-2 mt-2 border-[2px] border-transparent hover:border-zinc-600'>
           <div className='flex items-center rounded-xl'>
@@ -411,14 +407,17 @@ const MainComponent = () => {
       <div>
         <div className='flex items-center justify-between py-4 px-1'>
           Deposit
-          {depositTypeSelector()}
         </div>
 
         <div className='relative bg-[#212429] p-4 py-6 rounded-xl mb-5 border-[2px] border-transparent hover:border-zinc-600'>
-          {selectedDepositType === "Defined denominations" ? comp : specificAmountField()}
+          {specificAmountField()}
         </div>
         <div className='bg-[#212429] p-4 py-6 rounded-xl mt-5 border-[2px] border-transparent hover:border-zinc-600'>
-          {selectedDepositType === "Specific Amount" ? "Overall today deposits" : "today deposits for pool"}: {selectedDepositType === "Specific Amount" ? overallDeposits : todayDeposits}
+          Pool TVL:
+          {" "+0}
+          {/* {" "+poolTvl} */}
+          {" "+srcToken}
+           
         </div>
 
         <FormGroup className='mb-5'>
@@ -654,6 +653,7 @@ const MainComponent = () => {
     await new Promise(r => setTimeout(r, 3000));
     setNoteValue("")
     setReceiverValue("")
+    setAmountOut("")
     setLoading(false)
   }
 
