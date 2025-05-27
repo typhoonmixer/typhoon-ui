@@ -1,7 +1,7 @@
 
 import * as garaga from 'garaga';
 
-import { RpcProvider, Contract } from 'starknet';
+import { RpcProvider, Contract, constants } from 'starknet';
 import Hasher from './mimc5.js';
 import { commitmentAndNullifierHash } from './depositUtils.js';
 import vk from './verification_key.json' assert { type: "json" }
@@ -9,7 +9,7 @@ import { parseGroth16ProofFromObject, parseGroth16VerifyingKeyFromObject } from 
 
 import * as snarkjs from "snarkjs";
 
-const provider = new RpcProvider({ nodeUrl: 'https://free-rpc.nethermind.io/sepolia-juno/v0_7' });
+const provider = new RpcProvider({ nodeUrl: constants.NetworkName.SN_SEPOLIA });
 
 const typhoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
 
