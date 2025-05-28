@@ -6,6 +6,7 @@ import {
   braavos,
   infuraProvider,
   lavaProvider,
+  blastProvider,
   nethermindProvider,
   reddioProvider,
   StarknetConfig,
@@ -15,6 +16,7 @@ import {
 import { ArgentMobileConnector } from "starknetkit/argentMobile";
 import { WebWalletConnector } from "starknetkit/webwallet";
 import dotenv from 'dotenv'
+import { RpcProvider} from 'starknet';
 dotenv.config()
 
 
@@ -43,6 +45,9 @@ export function StarknetProvider({ children }) {
     provider = lavaProvider({ apiKey });
   } else if (nodeProvider == "nethermind") {
     provider = nethermindProvider({ apiKey });
+  }
+  else if (nodeProvider == "blast") {
+    provider = blastProvider({ apiKey });
   } else {
     provider = reddioProvider({ apiKey });
   }

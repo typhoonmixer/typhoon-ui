@@ -9,7 +9,7 @@ import { parseGroth16ProofFromObject, parseGroth16VerifyingKeyFromObject } from 
 
 import * as snarkjs from "snarkjs";
 
-const provider = new RpcProvider({ nodeUrl: constants.NetworkName.SN_SEPOLIA });
+const provider = new RpcProvider({ nodeUrl: 'https://starknet-sepolia.public.blastapi.io/rpc/v0_7' });
 
 const typhoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
 
