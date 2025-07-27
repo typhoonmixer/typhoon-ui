@@ -1,10 +1,15 @@
 "use client"
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, use } from 'react'
+import Popup from 'reactjs-popup';
+import { Wallet, Signature, verifyMessage, recoverAddress } from 'ethers';
+
+import { encrypt } from '@metamask/eth-sig-util';
+import { bufferToHex } from 'ethereumjs-util';
 
 import FormGroup from '@mui/material/FormGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
-
+import { createHash, sign } from 'crypto';
 import { RpcProvider, Contract, WalletAccount, CallData, cairo, RPC } from 'starknet';
 
 import WithdrawField from './WithdrawField'
@@ -17,20 +22,37 @@ import { CoinSelector, DenominationSelector } from './Selector';
 import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button } from '@nextui-org/react'
 import { allowancePerPool, commitmentAndNullifierHash, generateSecretAndNullifier, getFullDenomination, poolsToNumber } from '../utils/depositUtils';
 import { JSONInputStringToList, generateProofCalldata } from '../utils/withdrawUtils';
+import NoteList from './NoteList';
+import typhoonAbi from '../utils/typhoon_abi.json' assert { type: "json" }
+import ecies from 'ecies-geth';
 
 import {
   useAccount,
+  useContract,
   useSendTransaction
 } from "@starknet-react/core";
+
+
 
 import dotenv from 'dotenv'
 dotenv.config()
 
+const provider = new RpcProvider({ nodeUrl: 'https://starknet-sepolia.public.blastapi.io/rpc/v0_8' });
+const typhoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
+const noteAccountContract = process.env.NEXT_PUBLIC_NOTE_ACCOUNT_ADDR
+const maxUint256 = (1n << 256n) - 1n;
+const maxUint512 = (1n << 512n) - 1n;
+
 const MainComponent = () => {
   const { sendAsync, data, status, isSuccess } = useSendTransaction({ calls: [] });
   const { address, account } = useAccount();
-  account
 
+
+  let d = [{
+    "id": "0",
+    "denomination": 1000,
+    "coin": "STRK"
+  }]
 
   const [srcToken, setSrcToken] = useState(STRK)
   const [loading, setLoading] = useState(false)
@@ -39,7 +61,7 @@ const MainComponent = () => {
   const [rewardMode, setRewardMode] = useState(true)
 
 
-  const typhoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
+
 
   const tokenToAddress = {
     "STRK": "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
@@ -72,6 +94,10 @@ const MainComponent = () => {
 
   const [selectedNavItem, setSelectedNavItem] = useState(DEPOSIT)
 
+  const [noteAcc, setNoteAcc] = useState("");
+  const [proofElement, setProofElement] = useState([])
+  const [downloaded, setDownloaded] = useState(false)
+
   const nObj = {
     setValue: setNoteValue,
     holder: "note",
@@ -94,7 +120,7 @@ const MainComponent = () => {
 
   const [denomination, setDenomination] = useState(one)
 
-
+  const [openDepositOp, setOpenDepositOp] = useState(false)
 
   const [specificValue, setSpecificValue] = useState()
 
@@ -142,19 +168,33 @@ const MainComponent = () => {
 
   const [content, setContent] = useState(depositContent)
 
+
+  let noteAccount = ""
+  useEffect(() => {
+    const noteAccount = localStorage.getItem("noteAcc") != null ? localStorage.getItem("noteAcc") : "";
+    if (noteAccount != "") {
+      setNoteAcc(noteAccount)
+    }
+
+  }, [noteAccount])
+
+  // useEffect(() => {
+  //   console.log("proofElement", proofElement)
+  //   setProofElement(proofElement)
+  // }, [proofElement])
+
   useEffect(() => {
     async function getDeposits() {
       let denominations = poolsToNumber()
-      const { abi: typhoonAbi } = await account.getClassAt(typhoonAddress);
+      const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
 
-      const typhoon = new Contract(typhoonAbi, typhoonAddress, account);
-      typhoon.connect(account)
+      const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
       let total = 0
       for (let i = 0; i < denominations.length; i++) {
         let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denominationsList[i]))
         let poolAddr = '0x' + pool.toString(16)
-        const { abi: poolAbi } = await account.getClassAt(poolAddr)
-        const poolC = new Contract(poolAbi, poolAddr, account);
+        const { abi: poolAbi } = await provider.getClassAt(poolAddr)
+        const poolC = new Contract(poolAbi, poolAddr, provider);
         let day = await poolC.currentDay()
         let deposits = await poolC.liquidityProviders(day)
         total = total + Number(deposits)
@@ -178,14 +218,13 @@ const MainComponent = () => {
 
   useEffect(() => {
     async function getDeposits() {
-      const { abi: typhoonAbi } = await account.getClassAt(typhoonAddress);
+      const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
 
-      const typhoon = new Contract(typhoonAbi, typhoonAddress, account);
-      typhoon.connect(account)
+      const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
       let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denomination))
       let poolAddr = '0x' + pool.toString(16)
-      const { abi: poolAbi } = await account.getClassAt(poolAddr)
-      const poolC = new Contract(poolAbi, poolAddr, account);
+      const { abi: poolAbi } = await provider.getClassAt(poolAddr)
+      const poolC = new Contract(poolAbi, poolAddr, provider);
       let day = await poolC.currentDay()
       let deposits = await poolC.liquidityProviders(day)
       setTodayDeposits(deposits)
@@ -279,75 +318,79 @@ const MainComponent = () => {
 
 
   return (
-    <div className='bg-zinc-900 w5-[35%] p-4 px-6 rounded-xl'>
-      <div className='bg-zinc-900 h-fit flex items-center justify-around rounded-full mx-6'>
-        <p
-          className={getNavIconClassName(DEPOSIT)}
-          onClick={() => {
-            setSelectedNavItem(DEPOSIT)
-            if (!loading) {
-              setContent(depositContent)
-            }
-            if (address) {
-              setBtnText(DEPOSIT)
-            } else {
-              setBtnText(CONNECT_WALLET)
-            }
-          }}
-        >
-          {DEPOSIT}
-        </p>
-        <p
-          className={getNavIconClassName(WITHDRAW)}
-          onClick={() => {
-            setSelectedNavItem(WITHDRAW)
-            if (!loading) {
-              setContent(withdrawContent)
-            }
-            if (address) {
-              setBtnText(WITHDRAW)
-            } else {
-              setBtnText(CONNECT_WALLET)
-            }
-          }}
-        >
-          {WITHDRAW}
-        </p>
-        <p
-          className={getNavIconClassName(TELEGRAM)}
-          onClick={() => {
-            setSelectedNavItem(TELEGRAM)
-            if (!loading) {
-              setContent(telegramContent)
-            }
-            setBtnText(TELEGRAM_TRANSFER)
-          }}
-        >
-          {TELEGRAM}
-        </p>
+    <div className='flex'>
+      <div className='bg-zinc-900 w5-[35%] p-4 px-6 rounded-xl' >
+        <div className='bg-zinc-900 h-fit flex items-center justify-around rounded-full mx-6'>
+          <p
+            className={getNavIconClassName(DEPOSIT)}
+            onClick={() => {
+              setSelectedNavItem(DEPOSIT)
+              if (!loading) {
+                setContent(depositContent)
+              }
+              if (address) {
+                setBtnText(DEPOSIT)
+              } else {
+                setBtnText(CONNECT_WALLET)
+              }
+            }}
+          >
+            {DEPOSIT}
+          </p>
+          <p
+            className={getNavIconClassName(WITHDRAW)}
+            onClick={() => {
+              setSelectedNavItem(WITHDRAW)
+              if (!loading) {
+                setContent(withdrawContent)
+              }
+              if (address) {
+                setBtnText(WITHDRAW)
+              } else {
+                setBtnText(CONNECT_WALLET)
+              }
+            }}
+          >
+            {WITHDRAW}
+          </p>
+          <p
+            className={getNavIconClassName(TELEGRAM)}
+            onClick={() => {
+              setSelectedNavItem(TELEGRAM)
+              if (!loading) {
+                setContent(telegramContent)
+              }
+              setBtnText(TELEGRAM_TRANSFER)
+            }}
+          >
+            {TELEGRAM}
+          </p>
 
+        </div>
+        {content}
+        {openDepositOp ? depositOptionPopup() : <button
+          className={getBtnClassName()}
+          disabled={loading}
+          onClick={async () => {
+            if (btnText === DEPOSIT) {
+              if (selectedDepositType === "Defined denominations") {
+
+                await handleDeposit()
+              } else {
+                await handleSpecificAmountDeposit()
+              }
+            }
+            else if (btnText === WITHDRAW) await handleWithdraw()
+          }}
+        >
+          {btnText}
+        </button>}
+
+
+
+        <Toaster />
       </div>
-      {content}
-      <button
-        className={getBtnClassName()}
-        disabled={loading}
-        onClick={async () => {
-          if (btnText === DEPOSIT) {
-            if (selectedDepositType === "Defined denominations") {
-              await handleDeposit()
-            } else {
-              await handleSpecificAmountDeposit()
-            }
-          }
-          else if (btnText === WITHDRAW) await handleWithdraw()
-        }}
-      >
-        {btnText}
-      </button>
-
-
-
-      <Toaster />
+      {account != undefined ? <NoteList /> : <div></div>}
     </div>
   )
 
@@ -486,11 +529,13 @@ const MainComponent = () => {
   }
 
   async function handleDeposit() {
+
     setLoading(true)
     setLoadingText("Initiating deposit...")
-    const { abi: typhoonAbi } = await account.getClassAt(typhoonAddress);
 
-    const typhoon = new Contract(typhoonAbi, typhoonAddress, account);
+    const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
+
+    const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
 
     let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denomination))
     let poolAddr = '0x' + pool.toString(16)
@@ -513,43 +558,45 @@ const MainComponent = () => {
         contractAddress: typhoonAddress,
         entrypoint: 'deposit',
         calldata: CallData.compile({
-          _commitment: [cairo.uint256(cn[0])],
-          _pool: cairo.tuple([poolAddr]),
+          _commitment: cairo.uint256(cn[0]),
+          _pool: poolAddr,
           _reward: rewardMode
         }),
       },
-    ], {version:2});
+    ], { version: 2 });
 
     await account.waitForTransaction(multiCall.transaction_hash);
 
-    const { abi: poolAbi } = await account.getClassAt(poolAddr)
-    const poolC = new Contract(poolAbi, poolAddr, account);
+    const { abi: poolAbi } = await provider.getClassAt(poolAddr)
+    const poolC = new Contract(poolAbi, poolAddr, provider);
 
     let day = await poolC.currentDay()
+    
 
-    let proofElements = JSON.stringify({
-      "secret": secret,
-      "nullifier": nullifier,
-      "txHash": multiCall.transaction_hash.toString(),
-      "pool": poolAddr,
-      "day": rewardMode ? day.toString() : '1'
-    })
-    console.log("creating file")
-    createAndDownloadFile(proofElements)
+    await setProofElement(["0x" + secret, "0x" + nullifier, multiCall.transaction_hash.toString(), poolAddr, rewardMode ? "0x" + day.toString() : '0x1'])
+
+
     setLoadingText("Deposit Completed!")
+    if (noteAcc == "") {
+      setOpenDepositOp(true)
+    } else {
+      setLoadingText("Saving in Note Account!")
+      await saveInNoteAccount(["0x" + secret, "0x" + nullifier, multiCall.transaction_hash.toString(), poolAddr, rewardMode ? "0x" + day.toString() : '0x1'])
+    }
+
     await new Promise(r => setTimeout(r, 2000));
     setLoading(false)
   }
 
   async function handleSpecificAmountDeposit() {
     setLoading(true)
-    const { abi: typhoonAbi } = await account.getClassAt(typhoonAddress);
-    const typhoon = new Contract(typhoonAbi, typhoonAddress, account);
-    typhoon.connect(account)
+    const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
+    const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
 
-    const { abi: tokenAbi } = await account.getClassAt(tokenToAddress[srcToken])
-    const token = new Contract(tokenAbi, tokenToAddress[srcToken], account);
-    token.connect(account)
+
+    const { abi: tokenAbi } = await provider.getClassAt(tokenToAddress[srcToken])
+    const token = new Contract(tokenAbi, tokenToAddress[srcToken], provider);
+
 
     let proofsElements = []
 
@@ -597,12 +644,12 @@ const MainComponent = () => {
       }),
     })
     setLoadingText("Depositing...")
-    const multiCall = await account.execute(approvalsAndDeposit, {version:2});
+    const multiCall = await account.execute(approvalsAndDeposit, { version: 2 });
 
     await account.waitForTransaction(multiCall.transaction_hash);
 
-    const { abi: poolAbi } = await account.getClassAt(pools[0])
-    const poolC = new Contract(poolAbi, pools[0], account);
+    const { abi: poolAbi } = await provider.getClassAt(pools[0])
+    const poolC = new Contract(poolAbi, pools[0], provider);
 
     let day = await poolC.currentDay()
 
@@ -627,6 +674,7 @@ const MainComponent = () => {
 
 
   async function handleWithdraw() {
+    let callData = await generateProofCalldata("", receiverValue)
     setLoading(true)
     setLoadingText("Initiating Withdraw...")
     await new Promise(r => setTimeout(r, 1000));
@@ -645,7 +693,7 @@ const MainComponent = () => {
         calldata: CallData.compile({
           full_proof_with_hints_list: cairo.tuple(callData)
         }),
-      }, {version:2});
+      }, { version: 2 });
       await account.waitForTransaction(multiCall.transaction_hash);
     }
 
@@ -657,6 +705,218 @@ const MainComponent = () => {
     setLoading(false)
   }
 
+  function depositOptionPopup() {
+    return (
+      <div>
+        <Popup open={openDepositOp} onClose={() => {
+
+          if (!downloaded) {
+            let proofElements = JSON.stringify({
+              "secret": proofElement[0],
+              "nullifier": proofElement[1],
+              "txHash": proofElement[2],
+              "pool": proofElement[3],
+              "day": proofElement[4]
+            })
+            createAndDownloadFile(proofElements)
+          }
+          setDownloaded(true)
+          setOpenDepositOp(false)
+        }} modal nested contentStyle={{ width: '500px', height: '200px', borderRadius: '20px' }}>
+          <div>
+            <div className="lg:border-outline-grey ml-5 basis-5/6 lg:col-span-2 lg:border-r-[1px] lg:border-solid lg:py-4 lg:pl-8">
+              <h2 className="my-4 text-center text-[1.125em] font-bold text-black lg:text-start">
+                Issue note options
+              </h2>
+            </div>
+            <div className="flex">
+              <button style={{ backgroundColor: 'blue', color: 'white', marginLeft: '10px' }}
+                aria-haspopup="dialog"
+                onClick={() => {
+                  let proofElements = JSON.stringify({
+                    "secret": proofElement[0],
+                    "nullifier": proofElement[1],
+                    "txHash": proofElement[2],
+                    "pool": proofElement[3],
+                    "day": proofElement[4]
+                  })
+                  createAndDownloadFile(proofElements)
+                  setDownloaded(true)
+                  setOpenDepositOp(false)
+                }}
+                className="rounded-[12px] bg-button-primary bg-blue px-4 py-3 text-background-primary-light transition-all duration-300 hover:rounded-[30px] md:py-4"
+              >
+                Download Note
+              </button>
+
+              <Popup trigger={<button style={{ backgroundColor: 'blue', color: 'white', marginRight: '10px' }} className={className}> Connect/Create Note Account</button>} modal contentStyle={{ borderRadius: '10px' }}>
+                <div>
+                  <div className="lg:border-outline-grey ml-5 basis-5/6 lg:col-span-2 lg:border-r-[1px] lg:border-solid lg:py-4 lg:pl-8">
+                    <h2 className="my-4 text-center text-[1.125em] font-bold text-black lg:text-start">
+                      Connect a Note Account
+                    </h2>
+                  </div>
+                  <div className="flex">
+                    <div className="relative bg-[#212429] p-12 py-6 rounded-xl mb-5 ml-5 border-transparent hover:border-zinc-600">
+                      <div className="flex items-center rounded-xl">
+                        <input
+                          className={getInputClassname()}
+                          type={"text"}
+                          value={noteValue}
+                          placeholder={"type or paste your private key here..."}
+                          disabled={false}
+                          onChange={(e) => {
+                            setNoteValue(e.target.value);
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <button style={{ backgroundColor: 'blue', color: 'white', marginLeft: '10px' }}
+                      aria-haspopup="dialog"
+                      onClick={async () => {
+                        connectNoteAccount(noteAcc)
+                        await saveInNoteAccount(proofElement)
+                        setDownloaded(true)
+                        setOpenDepositOp(false)
+                      }
+                      }
+                      className="rounded-[12px]  ml-10 bg-button-primary bg-blue px-4 py-3 text-background-primary-light transition-all duration-300 hover:rounded-[30px] md:py-4"
+                    >
+                      Connect
+                    </button>
+                  </div>
+                  <div className="items-center lg:border-outline-grey ml-5 basis-5/6 lg:col-span-2 lg:border-r-[1px] lg:border-solid lg:py-4 lg:pl-8">
+                    <h2 className="my-4 text-center text-[1.125em] font-bold text-black lg:text-start">
+                      Or
+                    </h2>
+                  </div>
+                  <button style={{ backgroundColor: 'blue', color: 'white', marginLeft: '20px' }}
+                    aria-haspopup="dialog"
+                    onClick={async () => {
+                      createNoteAccount()
+                      await saveInNoteAccount(proofElement)
+                      setDownloaded(true)
+                      setOpenDepositOp(false)
+                    }}
+                    className="items-center rounded-[12px] ml-10 bg-button-primary bg-blue px-6 py-3 text-background-primary-light transition-all duration-300 hover:rounded-[30px] md:py-4"
+                  >
+                    Create Note Account
+                  </button>
+                  <div className="col-span-8 flex flex-col gap-2">
+
+                    <p className="text-black">
+                      Once you click on "Create Note Account", a new private key will be generated and will be downloaded to your computer in ".txt" format. Please keep it safe, as it is the only way to access your Note Account.
+                    </p>
+                  </div>
+                </div>
+              </Popup>
+            </div>
+
+          </div>
+        </Popup>
+      </div>
+    )
+  }
+
+  function connectNoteAccount(noteAccount) {
+    localStorage.setItem("noteAcc", noteAccount)
+    // save note in contract
+  }
+
+  function createNoteAccount() {
+    const acc = Wallet.createRandom();
+    const privKey = acc.privateKey.slice(2) // remove 0x prefix
+    localStorage.setItem("noteAcc", privKey);
+    let na = JSON.stringify({
+      "privkey": privKey,
+    })
+    createAndDownloadFile(na)
+    // save note in contract
+  }
+
+  async function saveInNoteAccount(pe) {
+    let acc = new Wallet("0x" + noteAcc);
+    
+    const publicKeyBuffer = Buffer.from(acc.signingKey.publicKey.slice(2), 'hex');
+    let compressedData = []
+    console.log("tx hash save ",pe)
+    for (let i = 0; i < pe.length; i++) {
+      let data = pe[i].slice(2) // remove 0x prefix
+      if(data.length % 2 != 0){
+        data = "150dd"+data
+      }
+      let encrypted = bufferToHex(await ecies.encrypt(publicKeyBuffer, Buffer.from(data, "hex")))
+      let en = BigInt(encrypted, 16)
+      let times = en / (maxUint512 * maxUint512)
+      
+      let remainder = en % (maxUint512 * maxUint512)
+      let timesR = remainder / (maxUint512*maxUint256)
+      let timesRemainderR = (remainder % (maxUint512*maxUint256)) / maxUint512
+      let remainderRemainderR = ((remainder % (maxUint512*maxUint256)) % maxUint512) / maxUint256
+      let remainderRemainderR2 = ((remainder % (maxUint512*maxUint256)) % maxUint512) % maxUint256
+      let recover = (maxUint512 * maxUint512)* times + (timesR * (maxUint512*maxUint256)) + (timesRemainderR*maxUint512) + (remainderRemainderR*maxUint256) + remainderRemainderR2
+      // console.log(times > maxUint256)
+      // console.log(timesR > maxUint256)
+      // console.log(timesRemainderR > maxUint256)
+      // console.log(remainderRemainderR > maxUint256)
+      // console.log(remainderRemainderR2 > maxUint256)
+      // console.log("encrypted", encrypted)
+      // // console.log("0x0" + recover.toString(16))
+      // console.log("0x0" + recover.toString(16) == encrypted)
+      compressedData.push(times.toString())
+      compressedData.push(timesR.toString())
+      compressedData.push(timesRemainderR.toString())
+      compressedData.push(remainderRemainderR.toString())
+      compressedData.push(remainderRemainderR2.toString())
+      const privateKeyBuffer = Buffer.from(noteAcc, 'hex');
+      const decrypted = bufferToHex(await ecies.decrypt(privateKeyBuffer, Buffer.from("0" + recover.toString(16), 'hex')));
+      // console.log("proof element ", pe[i], " decrypted: ", decrypted.slice(2).includes("150dd")? "0x"+decrypted.slice(7): decrypted)
+    }
+
+    let msg = bufferToHex(await ecies.encrypt(publicKeyBuffer, Buffer.from(compressedData.join(''))))
+    let msg_hash_str = createHash('sha256').update(msg).digest('hex')
+
+    // let signature = await acc.signMessage(BigInt("0x"+msg_hash_str).toString())
+    let signature =  acc.signingKey.sign("0x"+msg_hash_str)
+    
+    // let sig = Signature.from(signature);
+    // console.log(verifyMessage(BigInt("0x"+msg_hash_str).toString(), sig) == acc.address)
+    try {
+      
+      // console.log("maxUint256", maxUint256)
+      // console.log("address", acc.address)
+      // console.log("compressedData", compressedData)
+      // console.log("msg_hash_str", msg_hash_str)
+      // console.log("r", sig.r)
+      // console.log("s", sig.s)
+      // console.log("v", sig.v)
+      // fn addNote(ref self: TContractState, pubKey: EthAddress, encryptedNote: Span<u256>, msg_hash: u256, r: u256, s: u256, v: u32);
+      const multiCall = await account.execute({
+        contractAddress: noteAccountContract,
+        entrypoint: 'addNote',
+        calldata: CallData.compile({
+          pubKey: acc.address,
+          encryptedNote: cairo.tuple([cairo.uint256(compressedData[0]), cairo.uint256(compressedData[1]), cairo.uint256(compressedData[2]), cairo.uint256(compressedData[3]), cairo.uint256(compressedData[4]), cairo.uint256(compressedData[5]), cairo.uint256(compressedData[6]), cairo.uint256(compressedData[7]), cairo.uint256(compressedData[8]), cairo.uint256(compressedData[9]), cairo.uint256(compressedData[10]), cairo.uint256(compressedData[11]), cairo.uint256(compressedData[12]), cairo.uint256(compressedData[13]), cairo.uint256(compressedData[14]), cairo.uint256(compressedData[15]), cairo.uint256(compressedData[16]), cairo.uint256(compressedData[17]), cairo.uint256(compressedData[18]), cairo.uint256(compressedData[19]), cairo.uint256(compressedData[20]), cairo.uint256(compressedData[21]), cairo.uint256(compressedData[22]), cairo.uint256(compressedData[23]), cairo.uint256(compressedData[24])]),
+          msgHash: cairo.uint256(BigInt("0x"+msg_hash_str).toString()),
+          r: cairo.uint256(BigInt(signature.r).toString()),
+          s: cairo.uint256(BigInt(signature.s).toString()),
+          v: signature.v
+        }),
+      }, { version: 2 });
+      await account.waitForTransaction(multiCall.transaction_hash);
+    } catch (error) {
+      let proofElements = JSON.stringify({
+        "secret": proofElement[0],
+        "nullifier": proofElement[1],
+        "txHash": proofElement[2],
+        "pool": proofElement[3],
+        "day": proofElement[4]
+      })
+      createAndDownloadFile(proofElements)
+    }
+
+  }
 
   function specificAmountField() {
     return (

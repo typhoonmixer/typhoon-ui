@@ -203,7 +203,7 @@ const ConnectButton = ({
   return (
     <>
       <button
-        style={{ backgroundColor: "blue", color: "white" }}
+        style={{ backgroundColor: "blue", color: "white", marginLeft: "10px" }}
         aria-haspopup="dialog"
         onClick={() => togglePopover({ targetId: "connect-modal" })}
         className={className}

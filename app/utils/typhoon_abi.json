@@ -1,0 +1,277 @@
+[
+    {
+        "type": "impl",
+        "name": "Typhoon",
+        "interface_name": "typhoon::interfaces::ITyphoon::ITyphoon"
+    },
+    {
+        "type": "struct",
+        "name": "core::integer::u256",
+        "members": [
+            {
+                "name": "low",
+                "type": "core::integer::u128"
+            },
+            {
+                "name": "high",
+                "type": "core::integer::u128"
+            }
+        ]
+    },
+    {
+        "type": "enum",
+        "name": "core::bool",
+        "variants": [
+            {
+                "name": "False",
+                "type": "()"
+            },
+            {
+                "name": "True",
+                "type": "()"
+            }
+        ]
+    },
+    {
+        "type": "struct",
+        "name": "core::array::Span::<core::felt252>",
+        "members": [
+            {
+                "name": "snapshot",
+                "type": "@core::array::Array::<core::felt252>"
+            }
+        ]
+    },
+    {
+        "type": "interface",
+        "name": "typhoon::interfaces::ITyphoon::ITyphoon",
+        "items": [
+            {
+                "type": "function",
+                "name": "deposit",
+                "inputs": [
+                    {
+                        "name": "_commitment",
+                        "type": "core::integer::u256"
+                    },
+                    {
+                        "name": "_pool",
+                        "type": "core::starknet::contract_address::ContractAddress"
+                    },
+                    {
+                        "name": "_reward",
+                        "type": "core::bool"
+                    }
+                ],
+                "outputs": [],
+                "state_mutability": "external"
+            },
+            {
+                "type": "function",
+                "name": "withdraw",
+                "inputs": [
+                    {
+                        "name": "full_proof_with_hints",
+                        "type": "core::array::Span::<core::felt252>"
+                    },
+                    {
+                        "name": "pool",
+                        "type": "core::starknet::contract_address::ContractAddress"
+                    }
+                ],
+                "outputs": [],
+                "state_mutability": "external"
+            },
+            {
+                "type": "function",
+                "name": "getPool",
+                "inputs": [
+                    {
+                        "name": "_token",
+                        "type": "core::starknet::contract_address::ContractAddress"
+                    },
+                    {
+                        "name": "_denomination",
+                        "type": "core::integer::u256"
+                    }
+                ],
+                "outputs": [
+                    {
+                        "type": "core::starknet::contract_address::ContractAddress"
+                    }
+                ],
+                "state_mutability": "view"
+            },
+            {
+                "type": "function",
+                "name": "addPool",
+                "inputs": [
+                    {
+                        "name": "_token",
+                        "type": "core::starknet::contract_address::ContractAddress"
+                    },
+                    {
+                        "name": "_denomination",
+                        "type": "core::integer::u256"
+                    },
+                    {
+                        "name": "_day",
+                        "type": "core::integer::u256"
+                    },
+                    {
+                        "name": "_fee",
+                        "type": "core::integer::u256"
+                    }
+                ],
+                "outputs": [],
+                "state_mutability": "external"
+            },
+            {
+                "type": "function",
+                "name": "verifier",
+                "inputs": [],
+                "outputs": [
+                    {
+                        "type": "core::starknet::contract_address::ContractAddress"
+                    }
+                ],
+                "state_mutability": "view"
+            },
+            {
+                "type": "function",
+                "name": "hasher",
+                "inputs": [],
+                "outputs": [
+                    {
+                        "type": "core::starknet::contract_address::ContractAddress"
+                    }
+                ],
+                "state_mutability": "view"
+            },
+            {
+                "type": "function",
+                "name": "setPoolFee",
+                "inputs": [
+                    {
+                        "name": "_pool",
+                        "type": "core::starknet::contract_address::ContractAddress"
+                    },
+                    {
+                        "name": "_fee",
+                        "type": "core::integer::u256"
+                    }
+                ],
+                "outputs": [],
+                "state_mutability": "external"
+            },
+            {
+                "type": "function",
+                "name": "withdrawPoolProfit",
+                "inputs": [
+                    {
+                        "name": "_pool",
+                        "type": "core::starknet::contract_address::ContractAddress"
+                    },
+                    {
+                        "name": "_recipient",
+                        "type": "core::starknet::contract_address::ContractAddress"
+                    },
+                    {
+                        "name": "_amount",
+                        "type": "core::integer::u256"
+                    }
+                ],
+                "outputs": [],
+                "state_mutability": "external"
+            }
+        ]
+    },
+    {
+        "type": "constructor",
+        "name": "constructor",
+        "inputs": [
+            {
+                "name": "owner",
+                "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+                "name": "_hasher",
+                "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+                "name": "_verifier",
+                "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+                "name": "_poolClassHash",
+                "type": "core::felt252"
+            }
+        ]
+    },
+    {
+        "type": "event",
+        "name": "typhoon::Typhoon::Typhoon::Deposit",
+        "kind": "struct",
+        "members": [
+            {
+                "name": "commitments",
+                "type": "core::integer::u256",
+                "kind": "key"
+            },
+            {
+                "name": "roots",
+                "type": "core::array::Array::<(core::integer::u256, core::integer::u256, core::integer::u256)>",
+                "kind": "data"
+            },
+            {
+                "name": "d",
+                "type": "core::array::Array::<core::integer::u256>",
+                "kind": "data"
+            },
+            {
+                "name": "count",
+                "type": "core::integer::u256",
+                "kind": "data"
+            },
+            {
+                "name": "timestamps",
+                "type": "core::integer::u256",
+                "kind": "data"
+            }
+        ]
+    },
+    {
+        "type": "event",
+        "name": "typhoon::Typhoon::Typhoon::Withdraw",
+        "kind": "struct",
+        "members": [
+            {
+                "name": "recipient",
+                "type": "core::starknet::contract_address::ContractAddress",
+                "kind": "key"
+            },
+            {
+                "name": "nullifierHash",
+                "type": "core::integer::u256",
+                "kind": "data"
+            }
+        ]
+    },
+    {
+        "type": "event",
+        "name": "typhoon::Typhoon::Typhoon::Event",
+        "kind": "enum",
+        "variants": [
+            {
+                "name": "Deposit",
+                "type": "typhoon::Typhoon::Typhoon::Deposit",
+                "kind": "nested"
+            },
+            {
+                "name": "Withdraw",
+                "type": "typhoon::Typhoon::Typhoon::Withdraw",
+                "kind": "nested"
+            }
+        ]
+    }
+]

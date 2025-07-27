@@ -1,7 +1,7 @@
 
 import * as garaga from 'garaga';
 
-import { RpcProvider, Contract, constants } from 'starknet';
+import { RpcProvider, Contract, constants, types } from 'starknet-v7';
 import Hasher from './mimc5.js';
 import { commitmentAndNullifierHash } from './depositUtils.js';
 import vk from './verification_key.json' assert { type: "json" }
@@ -9,36 +9,43 @@ import { parseGroth16ProofFromObject, parseGroth16VerifyingKeyFromObject } from 
 
 import * as snarkjs from "snarkjs";
 
-const provider = new RpcProvider({ nodeUrl: 'https://starknet-sepolia.public.blastapi.io/rpc/v0_7' });
 
+const infuraKey = process.env.NEXT_PUBLIC_API_KEY
+
+const provider = new RpcProvider({ nodeUrl: "https://starknet-sepolia.public.blastapi.io/rpc/v0_8" });
 const typhoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
+
 
 const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
 
 export async function generateProofCalldata(note, recipient) {
     await garaga.init();
+    
     const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
 
     let receipt = await provider.waitForTransaction(note.txHash)
-    let depositEvent = typhoon.parseEvents(receipt)[0]["typhoon::Typhoon::Typhon::Deposit"]
 
+    let depositEvent = typhoon.parseEvents(receipt)[0]["typhoon::Typhoon::Typhoon::Deposit"]
+
+    let [dd, h] = getDD(depositEvent.d)
+    let tower = getTower(depositEvent.roots)
     let [commitment, nullifierHash] = await commitmentAndNullifierHash(note.secret, note.nullifier)
 
-    let index = depositEvent.commitments.indexOf(commitment)
-
-    let result = getRootPairingsDirections(depositEvent.insertedIndexs[index], commitment, note.day, depositEvent.subtreeHelper[index])
 
     let proofInput = {
-        "root": result.r,
         "nullifierHash": nullifierHash,
-        "day": BigInt(note.day),
+        "day": BigInt(1),
         "recipient": BigInt(recipient),
-        "relayer": BigInt(0), 
+        "relayer": BigInt(0),
         "relayerFee": BigInt(0),
         "secret": BigInt(note.secret),
         "nullifier": BigInt(note.nullifier),
-        "pathElements": result.p,
-        "pathIndices": result.d
+        "count": BigInt(depositEvent.count),
+        "dd": dd,
+        "D": depositEvent.d.map(x => BigInt(x)),
+        "rootLv": h,
+        "RL": tower[h],
+        "C": tower
     }
     const { proof, publicSignals } = await snarkjs.groth16.fullProve(proofInput, "withdraw.wasm", "withdraw_0001.zkey");
 
@@ -46,9 +53,59 @@ export async function generateProofCalldata(note, recipient) {
 
     let parsedVK = parseGroth16VerifyingKeyFromObject(vk)
     const groth16Calldata = garaga.getGroth16CallData(parsedProof, parsedVK, garaga.CurveId.BN254);
+
+
     // The first element of the calldata is "length" and is not compatible with Cairo 1.0, so it is removed
     groth16Calldata[0] = note.pool
 
+    return groth16Calldata
+}
+
+export async function generateProofCalldata2(secret, nullifier, txHash, pool, recipient) {
+    await garaga.init();
+    const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
+
+    let receipt = await provider.waitForTransaction(txHash)
+
+    let depositEvent = typhoon.parseEvents(receipt)[0]["typhoon::Typhoon::Typhoon::Deposit"]
+    console.log("depositEvent ", depositEvent)
+    let [dd, h] = getDD(depositEvent.d)
+    let fullTower = getFullTower(depositEvent.tower)
+    let [commitment, nullifierHash] = await commitmentAndNullifierHash(secret, nullifier)
+
+
+    let proofInput = {
+        "nullifierHash": nullifierHash,
+        "day": BigInt(1),
+        "recipient": BigInt(recipient),
+        "relayer": BigInt(0),
+        "relayerFee": BigInt(0),
+        "secret": BigInt(secret),
+        "nullifier": BigInt(nullifier),
+        "count": BigInt(depositEvent.count),
+        "dd": dd,
+        "D": depositEvent.d.map(x => BigInt(x)),
+        "rootLv": h,
+        "RL": depositEvent.tower[h],
+        "C": fullTower
+    }
+    const { proof, publicSignals } = await snarkjs.groth16.fullProve(proofInput, "withdraw.wasm", "withdraw_0001.zkey");
+
+    let parsedProof = parseGroth16ProofFromObject(proof, publicSignals.map(x => BigInt(x)))
+    
+    let parsedVK = parseGroth16VerifyingKeyFromObject(vk)
+    const groth16Calldata = garaga.getGroth16CallData(parsedProof, parsedVK, garaga.CurveId.BN254);
+    // const groth16Calldata2 = garaga.get_groth16_calldata(parsedProof, parsedVK, garaga.CurveId.BN254);
+    // console.log(JSON.stringify(groth16Calldata.map(x => x.toString()))==JSON.stringify(groth16Calldata2.map(x => x.toString())))
+    // console.log(groth16Calldata.length)
+    // const { abi: verifierAbi } = await provider.getClassAt("0x67f33ef382388195add5e65f8f7055899e624f4191253c65adec04866b67c80");
+    // const verifierContract = new Contract(verifierAbi, "0x67f33ef382388195add5e65f8f7055899e624f4191253c65adec04866b67c80", provider);
+    // groth16Calldata2.shift()
+    // const pubin = await verifierContract.verify_groth16_proof_bn254(groth16Calldata2);
+    // console.log("pub inputs ", pubin)
+    // The first element of the calldata is "length" and is not compatible with Cairo 1.0, so it is removed
+    groth16Calldata.shift()
+    
     return groth16Calldata
 }
 
@@ -100,6 +157,68 @@ export function JSONInputStringToList(input) {
 
     }
     return inputList.filter(i => i !== "}")
+}
+
+function getFullTower(tower) {
+    let fullTower = Array(126).fill().map(() => Array(4).fill(BigInt(0)));
+
+    for (let i = 0; i < tower.length; i++) {
+        fullTower[i] = [tower[i][0], tower[i][1], tower[i][2], tower[i][3]];
+    }
+
+    return fullTower
+}
+
+function getDD(d) {
+    let h = getHeight(d);
+    let D = rotateLeft(reverseArray(d), 127 - h)
+    console.log("D ", rotateLeft(reverseArray(D), 127 - h))
+    let dd = hashListH2(d, h)
+    return [dd, h];
+}
+
+// assert(hashListH2(rotate_left(reverse(D), 127 - h), 127, h) == dd, "D[] must match dd");
+
+function hashListH2(input, len) {
+    let hasher = new Hasher()
+    let h = BigInt(input[0]);
+    for (let i = 1; i < len; i++) {
+        h = hasher.MiMC5Sponge([h.toString(), input[i].toString()], '0');
+    }
+    return h;
+}
+
+function getHeight(d) {
+    let h = 0;
+    for (let i = 0; i < d; i++) {
+        if (d[i] == 0) {
+            break;
+        }
+        h += 1;
+    }
+    return h;
+}
+
+function rotateLeft(inputArray, n) {
+    const N = inputArray.length;
+    const rotated = new Array(N);
+
+    for (let i = 0; i < N; i++) {
+        rotated[i] = inputArray[(i + n) % N];
+    }
+
+    return rotated;
+}
+
+function reverseArray(inputArray) {
+    const N = inputArray.length;
+    const outputArray = new Array(N);
+
+    for (let i = 0; i < N; i++) {
+        outputArray[i] = inputArray[N - i - 1];
+    }
+
+    return outputArray;
 }
 
 function zeros(i) {
