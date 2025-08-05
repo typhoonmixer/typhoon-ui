@@ -56,7 +56,7 @@ function CopyButton({
       }}
       className={className}
     >
-      <span>{buttonText}</span>
+      <span style={{color:"black"}}>{buttonText}</span>
       <span aria-hidden className={iconClassName}>
         {isCopied ? <Check /> : <Copy />}
       </span>

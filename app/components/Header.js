@@ -8,9 +8,11 @@ import { Wallet, Signature } from 'ethers';
 
 import toast, { Toaster } from 'react-hot-toast'
 import NoteAccountButton from './lib/NoteAccount';
+import CopyButton from "../utils/CopyButton";
 
 import Popup from 'reactjs-popup';
 import 'reactjs-popup/dist/index.css';
+import { Button } from 'react-bootstrap';
 
 const providerUrl = 'https://free-rpc.nethermind.io/sepolia-juno/v0_7';
 
@@ -24,12 +26,17 @@ const Header = () => {
   const [noteAccountExists, setNoteAccountExists] = useState(false);
 
   useEffect(() => {
-    const noteAcc = localStorage.getItem("noteAcc");
-    if (noteAcc) {
-      setNoteValue(noteAcc);
-      setNoteAccountExists(true);
+    let naux = localStorage.getItem("noteAcc")
+    if ((noteAccountExists || naux != "") && (localStorage.getItem("noteAcc") != "undefined" && localStorage.getItem("noteAcc") != "null")) {
+      setNoteValue(localStorage.getItem("noteAcc"));
+      if(!noteAccountExists){
+        setNoteAccountExists(true)
+      }
+    } else {
+      setNoteValue("");
+      setNoteAccountExists(false)
     }
-  }, [localStorage.getItem("noteAcc")])
+  }, [localStorage.getItem("noteAcc"), noteAccountExists])
 
   let className = "rounded-[12px] bg-button-primary bg-blue px-6 py-3 text-background-primary-light transition-all duration-300 hover:rounded-[30px] md:py-4"
 
@@ -60,7 +67,28 @@ const Header = () => {
           Get Faucets
         </button> */}
         {/* <NoteAccountButton style={{marginRight: '10px'}}></NoteAccountButton> */}
-        {noteAccountExists? noteAccountText() :<Popup trigger={<button style={{ backgroundColor: 'blue', color: 'white', marginRight: '10px' }} className={className}> Note Account</button>} modal contentStyle={{ borderRadius: '10px' }}>
+        {noteAccountExists == true ? <Popup display="anchored" trigger={<Button style={{ backgroundColor: 'blue', color: 'white', marginRight: '10px' }} className={className}>{noteAccountText()}</Button>} contentStyle={{ width: '400px', height: '150px', borderRadius: '20px' }}>
+          <div>
+            <CopyButton style={{color:"black"}}
+              copyText={noteAccAddr()}
+              buttonText={
+                `Note Account: ${noteAccAddr()}`
+              }
+              className="flex items-center gap-2 text-sm text-yellow-primary"
+              iconClassName="rounded-full bg-[--link-card] p-1 text-yellow-primary dark:bg-black"
+            />
+            Note Account: 
+            <button style={{ border: '2px solid black', color: "black" }}
+              onClick={(e) => {
+                localStorage.setItem("noteAcc", null)
+                setNoteAccountExists(false)
+              }}
+              className="w-full rounded-[12px] border-[2px] border-solid border-[--borders] bg-[--modal-disconnect-bg] p-3 text-red-secondary md:p-4"
+            >
+              Disconnect
+            </button>
+          </div>
+        </Popup> : <Popup trigger={<button style={{ backgroundColor: 'blue', color: 'white', marginRight: '10px' }} className={className}> Note Account</button>} modal contentStyle={{ borderRadius: '10px' }}>
           <div>
             <div className="lg:border-outline-grey ml-5 basis-5/6 lg:col-span-2 lg:border-r-[1px] lg:border-solid lg:py-4 lg:pl-8">
               <h2 className="my-4 text-center text-[1.125em] font-bold text-black lg:text-start">
@@ -126,6 +154,7 @@ const Header = () => {
 
   function connectNoteAccount(noteAccount) {
     localStorage.setItem("noteAcc", noteAccount)
+    setNoteValue(noteAccount);
     setNoteAccountExists(true);
   }
 
@@ -138,8 +167,14 @@ const Header = () => {
       </div>
     )
   }
-  
-  
+
+  function noteAccAddr() {
+    const acc = new Wallet(noteValue)
+    const address = acc.address;
+    return address
+  }
+
+
   function createNoteAccount() {
     const acc = Wallet.createRandom();
     const privKey = acc.privateKey.slice(2) // remove 0x prefix

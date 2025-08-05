@@ -1,9 +1,10 @@
 import React from 'react'
-import {CoinSelector, DenominationSelector} from './Selector'
+import { CoinSelector, DenominationSelector } from './Selector'
 
 const DepositField = React.forwardRef(({ obj }, ref) => {
-  const {denomination, defaultValue, setToken, setDenomination, disabled } = obj
+  const { denomination, defaultValue, setToken, setDenomination, disabled, token } = obj
 
+  console.log("default token: ", token)
   return (
     <div className='flex items-center' >
       Token:
@@ -19,6 +20,7 @@ const DepositField = React.forwardRef(({ obj }, ref) => {
         id={"denomination"}
         setToken={setDenomination}
         defaultValue={denomination}
+        token={defaultValue}
       />
     </div>
   )

@@ -88,17 +88,18 @@ export function poolsToNumber() {
 }
 
 export function getFullDenomination(denomination) {
-    if(denomination == one){
-        return BigInt(`${one.split('.')[1] + '0'.repeat(16)}`)
-    } else if (denomination == two){
-        return BigInt(`${two.split('.')[1] + '0'.repeat(17)}`) 
-    } else if (denomination == three) {
-        return BigInt(`${three + '0'.repeat(18)}`)
-    } else if(denomination == four){
-        return BigInt(`${four + '0'.repeat(18)}`);
-    } else if (denomination == five){
-        return BigInt(`${five + '0'.repeat(18)}`)
+    if(denomination.includes('.')){
+        let sDenomination = denomination.split('.')
+        let pos = 0
+        console.log("sDenomination: ", sDenomination)
+        for(let char of sDenomination[1]){
+            if(char == '1'){
+                break
+            }
+            pos += 1
+        }
+        return '1' + '0'.repeat(18 - (pos+1))
     } else {
-        return 0
+        return denomination + '0'.repeat(18)
     }
 }

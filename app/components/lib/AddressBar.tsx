@@ -72,7 +72,7 @@ const UserModal = () => {
           </div>
 
           <div>
-            <button
+            <button 
               onClick={(e) => {
                 const popover = document.getElementById("user-popover");
                 // @ts-ignore

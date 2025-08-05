@@ -12,7 +12,7 @@ import {
 } from "@starknet-react/core";
 import ecies from 'ecies-geth';
 
-const provider = new RpcProvider({ nodeUrl: 'https://starknet-sepolia.public.blastapi.io/rpc/v0_8' });
+const provider = new RpcProvider({ nodeUrl: 'https://starknet-mainnet.public.blastapi.io/rpc/v0_8' });
 const maxUint256 = (1n << 256n) - 1n;
 const maxUint512 = (1n << 512n) - 1n;
 const typhoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
@@ -42,7 +42,7 @@ function NoteList() {
                 const { abi: noteAccountAbi } = await provider.getClassAt(noteAccountContract);
                 const ncContract = new Contract(noteAccountAbi, noteAccountContract, provider);
                 let compressedNotesData = await ncContract.getNotes(acc.address);
-
+                
                 let decryptedNotesAux = []
                 for (let i = 0; i < compressedNotesData.length; i++) {
                     let dnaux = []
@@ -68,7 +68,7 @@ function NoteList() {
                 let notesDenominationsAux = []
                 for (let i = 0; i < decryptedNotes.length; i++) {
                     const poolAddress = decryptedNotes[i].pool;
-                    
+
                     let denomination = await getPoolDenomination(poolAddress);
                     let tokenAddr = await getPoolToken(poolAddress);
                     let cid = await provider.getChainId();
@@ -81,7 +81,7 @@ function NoteList() {
                 setNotesDenominations(notesDenominationsAux);
                 setEncryptedNotes(compressedNotesData);
             } catch (error) {
-                if (noteAccount == undefined) {
+                if (noteAccount == null) {
                     console.log("No note account found, please create or connect to one first.");
                 } else {
                     console.error("Error fetching notes:", error);
@@ -90,9 +90,14 @@ function NoteList() {
 
         }
         noteAccount = localStorage.getItem('noteAcc');
-        fetchNotes();
+
+        if (noteAccount != null && noteAccount != "undefined" && noteAccount != "null") {
+            fetchNotes();
+        }
+
     }, [noteAccount, encryptedNotes])
     // fn getNotes(self: @ContractState, pubKey: EthAddress) -> Array<(u256, u256, u256, u256, u256, u256, u256)>
+
 
 
 
@@ -107,9 +112,9 @@ function NoteList() {
     async function withdrawNote(noteId) {
         setWithdrawing(true);
         let acc = new Wallet("0x" + noteAccount);
-        
         let callData = await generateProofCalldata2(decryptedNotes[noteId].secret.slice(2), decryptedNotes[noteId].nullifier.slice(2), decryptedNotes[noteId].txHash, decryptedNotes[noteId].pool, receiver);
-        
+        // createAndDownloadFile(JSON.stringify(callData.map((x) => x.toString())))
+        // console.log("pool ",decryptedNotes[noteId].pool)
         const publicKeyBuffer = Buffer.from(acc.signingKey.publicKey.slice(2), 'hex');
         let encryptedNotesAux = encryptedNotes;
         encryptedNotesAux.splice(noteId, 1)
@@ -120,26 +125,31 @@ function NoteList() {
         for (let i = 0; i < encryptedNotesAux.length; i++) {
             encriptedNotesData.push(cairo.tuple([cairo.uint256(encryptedNotesAux[i][0]), cairo.uint256(encryptedNotesAux[i][1]), cairo.uint256(encryptedNotesAux[i][2]), cairo.uint256(encryptedNotesAux[i][3]), cairo.uint256(encryptedNotesAux[i][4]), cairo.uint256(encryptedNotesAux[i][5]), cairo.uint256(encryptedNotesAux[i][6]), cairo.uint256(encryptedNotesAux[i][7]), cairo.uint256(encryptedNotesAux[i][8]), cairo.uint256(encryptedNotesAux[i][9]), cairo.uint256(encryptedNotesAux[i][10]), cairo.uint256(encryptedNotesAux[i][11]), cairo.uint256(encryptedNotesAux[i][12]), cairo.uint256(encryptedNotesAux[i][13]), cairo.uint256(encryptedNotesAux[i][14]), cairo.uint256(encryptedNotesAux[i][15]), cairo.uint256(encryptedNotesAux[i][16]), cairo.uint256(encryptedNotesAux[i][17]), cairo.uint256(encryptedNotesAux[i][18]), cairo.uint256(encryptedNotesAux[i][19]), cairo.uint256(encryptedNotesAux[i][20]), cairo.uint256(encryptedNotesAux[i][21]), cairo.uint256(encryptedNotesAux[i][22]), cairo.uint256(encryptedNotesAux[i][23]), cairo.uint256(encryptedNotesAux[i][24])]))
         }
-        const multiCall = await account.execute([{
-            contractAddress: typhoonAddress,
-            entrypoint: 'withdraw',
-            calldata: CallData.compile({
-                full_proof_with_hints_list: cairo.tuple(callData),
-                pool: decryptedNotes[noteId].pool
-            }),
-        },
-        {
-            contractAddress: noteAccountContract,
-            entrypoint: 'updateNotes',
-            calldata: CallData.compile({
-                pubKey: acc.address,
-                msgHash: cairo.uint256(BigInt("0x" + msg_hash_str).toString()),
-                r: cairo.uint256(BigInt(signature.r).toString()),
-                s: cairo.uint256(BigInt(signature.s).toString()),
-                v: signature.v,
-                newNotes: cairo.tuple(encriptedNotesData)
-            }),
-        }], { version: 2 });
+        const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
+        const typhoonContract = new Contract(typhoonAbi, typhoonAddress, account);
+
+        const call = typhoonContract.populate('withdraw', { full_proof_with_hints: callData });
+
+        // c.shift()
+        // const res = await typhoon.withdraw(call.calldata);
+        const multiCall = await account.execute([
+            {
+                contractAddress: typhoonAddress,
+                entrypoint: 'withdraw',
+                calldata: call.calldata,
+            },
+            {
+                contractAddress: noteAccountContract,
+                entrypoint: 'updateNotes',
+                calldata: CallData.compile({
+                    pubKey: acc.address,
+                    msgHash: cairo.uint256(BigInt("0x" + msg_hash_str).toString()),
+                    r: cairo.uint256(BigInt(signature.r).toString()),
+                    s: cairo.uint256(BigInt(signature.s).toString()),
+                    v: signature.v,
+                    noteIndex: cairo.uint256(noteId)
+                }),
+            }], { version: 2 });
         // fn updateNotes(ref self: ContractState,pubKey: EthAddress, msg_hash: u256, r: u256, s: u256, v: u32  ,newNotes: Span<Span<u256>>)
         await account.waitForTransaction(multiCall.transaction_hash);
         setWithdrawing(false);
@@ -233,7 +243,23 @@ async function getPoolToken(poolAddress) {
     return tokenAddr;
 }
 
+function createAndDownloadFile(content) {
+    const fileContent = content;
+    const blob = new Blob([fileContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
 
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'calldata.json';
+
+    document.body.appendChild(link);
+
+    link.click();
+
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+}
 
 
 

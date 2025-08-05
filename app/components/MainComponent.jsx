@@ -16,9 +16,9 @@ import WithdrawField from './WithdrawField'
 import toast, { Toaster } from 'react-hot-toast'
 import { DEFAULT_VALUE, ETH, STRK } from '../utils/SupportedCoins'
 import DepositField from './DepositField'
-import { denominationsList, one } from '../utils/SupportedDenominations'
+import { denominationsList, one, tokenList } from '../utils/SupportedDenominations'
 
-import { CoinSelector, DenominationSelector } from './Selector';
+// import { CoinSelector, DenominationSelector } from './Selector';
 import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button } from '@nextui-org/react'
 import { allowancePerPool, commitmentAndNullifierHash, generateSecretAndNullifier, getFullDenomination, poolsToNumber } from '../utils/depositUtils';
 import { JSONInputStringToList, generateProofCalldata } from '../utils/withdrawUtils';
@@ -37,7 +37,7 @@ import {
 import dotenv from 'dotenv'
 dotenv.config()
 
-const provider = new RpcProvider({ nodeUrl: 'https://starknet-sepolia.public.blastapi.io/rpc/v0_8' });
+const provider = new RpcProvider({ nodeUrl: 'https://starknet-mainnet.public.blastapi.io/rpc/v0_8' });
 const typhoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
 const noteAccountContract = process.env.NEXT_PUBLIC_NOTE_ACCOUNT_ADDR
 const maxUint256 = (1n << 256n) - 1n;
@@ -118,7 +118,7 @@ const MainComponent = () => {
   const [noteComp, setNoteComp] = useState()
   const [receiverComp, setReceiverComp] = useState()
 
-  const [denomination, setDenomination] = useState(one)
+  const [denomination, setDenomination] = useState(denominationsList[tokenToAddress["STRK"]][0])
 
   const [openDepositOp, setOpenDepositOp] = useState(false)
 
@@ -137,12 +137,36 @@ const MainComponent = () => {
 
   const [overallDeposits, setOverallDeposits] = useState(0);
 
+  function getDepositFilteredItems(ignoreValue, menu) {
+    return menu.filter(item => item['key'] !== ignoreValue)
+  }
+
+  const dmenu = [
+    { key: denominationsList[tokenList["STRK"]][0], name: denominationsList[tokenList["STRK"]][0] },
+    { key: denominationsList[tokenList["STRK"]][1], name: denominationsList[tokenList["STRK"]][1] },
+    { key: denominationsList[tokenList["STRK"]][2], name: denominationsList[tokenList["STRK"]][2] },
+    { key: denominationsList[tokenList["STRK"]][3], name: denominationsList[tokenList["STRK"]][3] },
+  ]
+
+  const [dselectedItem, setDSelectedItem] = useState(denominationsList[tokenList["STRK"]][0])
+  const [dmenuItems, setDMenuItems] = useState(getDepositFilteredItems(denominationsList[tokenList["STRK"]][0], dmenu))
+  const [dignoreValue, setDIgnoreValue] = useState(denominationsList[tokenList["STRK"]][0])
+
+  const cmenu = [
+    { key: ETH, name: ETH },
+    { key: STRK, name: STRK },
+  ]
+  const [cselectedItem, setCSelectedItem] = useState("STRK")
+  const [cignoreValue, setCIgnoreValue] = useState("STRK")
+  const [cmenuItems, setCMenuItems] = useState(getDepositFilteredItems("STRK", cmenu))
+
   let depositObj = {
     denomination: denomination,
     defaultValue: STRK,
     setToken: setSrcToken,
     setDenomination: setDenomination,
-    disabled: false
+    disabled: false,
+    token: tokenToAddress["STRK"]
   }
 
   const [comp, setComp] = useState(<DepositField obj={depositObj} ref={depositRef} />)
@@ -164,9 +188,29 @@ const MainComponent = () => {
   const [compT, setCompT] = useState(<DepositField obj={telegramObj} ref={depositRef} />)
 
 
+  // const [depositInputs, setDepositInputs] = useState(<div className='flex items-center' >
+  //   Token:
+  //   <CoinSelector
+  //     id={"coin"}
+  //     setToken={setSrcToken}
+  //     defaultValue={srcToken}
+  //     disabled={false}
+  //   />
+  //   Denomination:
+  //   <DenominationSelector
+  //     disabled={false}
+  //     id={"denomination"}
+  //     setToken={setDenomination}
+  //     defaultValue={denominationsList[tokenList[srcToken]][0]}
+  //     token={tokenList[srcToken]}
+  //   />
+  // </div>);
+
   const [btnText, setBtnText] = useState(CONNECT_WALLET)
 
   const [content, setContent] = useState(depositContent)
+
+  localStorage.setItem("curToken", "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d");
 
 
   let noteAccount = ""
@@ -190,8 +234,8 @@ const MainComponent = () => {
 
       const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
       let total = 0
-      for (let i = 0; i < denominations.length; i++) {
-        let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denominationsList[i]))
+      for (let i = 0; i < denominationsList[tokenToAddress[srcToken]].length; i++) {
+        let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denominationsList[tokenToAddress[srcToken]][i]))
         let poolAddr = '0x' + pool.toString(16)
         const { abi: poolAbi } = await provider.getClassAt(poolAddr)
         const poolC = new Contract(poolAbi, poolAddr, provider);
@@ -242,7 +286,22 @@ const MainComponent = () => {
       }
     }
 
+
   }, [todayDeposits, denomination, srcToken, account])
+
+  // useEffect(() => {
+  //   console.log("srcToken: ", srcToken)
+  //   let depositObj = {
+  //     denomination: denomination,
+  //     defaultValue: srcToken,
+  //     setToken: setSrcToken,
+  //     setDenomination: setDenomination,
+  //     disabled: false,
+  //     token: tokenToAddress[srcToken]
+  //   }
+
+  //   setComp(<DepositField obj={depositObj} ref={depositRef} />)
+  // }, [srcToken])
 
   useEffect(() => {
     setDepositTypes(getFilteredItems(selectedDepositType))
@@ -252,6 +311,60 @@ const MainComponent = () => {
   useEffect(() => {
     setContent(depositContent)
   }, [depositTypes])
+
+  
+
+  useEffect(() => {
+    const menu = [
+      { key: denominationsList[tokenList[srcToken]][0], name: denominationsList[tokenList[srcToken]][0] },
+      { key: denominationsList[tokenList[srcToken]][1], name: denominationsList[tokenList[srcToken]][1] },
+      { key: denominationsList[tokenList[srcToken]][2], name: denominationsList[tokenList[srcToken]][2] },
+      { key: denominationsList[tokenList[srcToken]][3], name: denominationsList[tokenList[srcToken]][3] },
+    ]
+    let newItems = getDepositFilteredItems(dignoreValue, menu)
+    setDMenuItems([...newItems])
+  }, [dignoreValue])
+
+  useEffect(() => {
+    setDIgnoreValue(dselectedItem)
+  }, [dselectedItem])
+
+  useEffect(() => {
+    const menu = [
+      { key: ETH, name: ETH },
+      { key: STRK, name: STRK },
+    ]
+    let newItems = getDepositFilteredItems(cignoreValue, menu)
+    setCMenuItems([...newItems])
+  }, [cignoreValue])
+
+  useEffect(() => {
+    setCIgnoreValue(cselectedItem)
+    // setDSelectedItem(denominationsList[tokenList[cselectedItem]][0])
+  }, [cselectedItem])
+
+
+
+
+  // useEffect(() => {
+  //   setDepositInputs(<div className='flex items-center' >
+  //     Token:
+  //     <CoinSelector
+  //       id={"coin"}
+  //       setToken={setSrcToken}
+  //       defaultValue={srcToken}
+  //       disabled={false}
+  //     />
+  //     Denomination:
+  //     <DenominationSelector
+  //       disabled={false}
+  //       id={"denomination"}
+  //       setToken={setDenomination}
+  //       defaultValue={denominationsList[tokenList[srcToken]][0]}
+  //       token={tokenList[srcToken]}
+  //     />
+  //   </div>)
+  // }, [srcToken, denomination])
 
 
   useEffect(() => {
@@ -454,20 +567,26 @@ const MainComponent = () => {
       <div>
         <div className='flex items-center justify-between py-4 px-1'>
           Deposit
-          {depositTypeSelector()}
+          {/* {depositTypeSelector()} */}
         </div>
 
         <div className='relative bg-[#212429] p-4 py-6 rounded-xl mb-5 border-[2px] border-transparent hover:border-zinc-600'>
-          {selectedDepositType === "Defined denominations" ? comp : specificAmountField()}
+          {selectedDepositType === "Defined denominations" ? <div className='flex items-center' >
+            Token:
+            {CoinSelector("coin", false)}
+            Denomination:
+            {DenominationSelector("denomination", false)}
+
+          </div> : specificAmountField()}
         </div>
         <div className='bg-[#212429] p-4 py-6 rounded-xl mt-5 border-[2px] border-transparent hover:border-zinc-600'>
           {selectedDepositType === "Specific Amount" ? "Overall today deposits" : "today deposits for pool"}: {selectedDepositType === "Specific Amount" ? overallDeposits : todayDeposits}
         </div>
 
         <FormGroup className='mb-5'>
-          <FormControlLabel onChange={(_, checked) => {
+          <FormControlLabel disableTypography={{ color: 'white' }} disabled={true} onChange={(_, checked) => {
             setRewardMode(checked)
-          }} control={<Switch defaultChecked />} label="Reward mode" />
+          }} control={<Switch defaultChecked={false} />} label="Reward mode" />
         </FormGroup>
       </div>
     )
@@ -531,7 +650,7 @@ const MainComponent = () => {
   async function handleDeposit() {
 
     setLoading(true)
-    setLoadingText("Initiating deposit...")
+    setLoadingText("Initiating deposit...(Do not close neither reload the screen.)")
 
     const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
 
@@ -540,7 +659,7 @@ const MainComponent = () => {
     let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denomination))
     let poolAddr = '0x' + pool.toString(16)
 
-    setLoadingText("Depositing...")
+    setLoadingText("Depositing...(Do not close neither reload the screen.)")
     const [secret, nullifier] = generateSecretAndNullifier()
     const cn = await commitmentAndNullifierHash(secret, nullifier)
     const multiCall = await account.execute([
@@ -571,16 +690,16 @@ const MainComponent = () => {
     const poolC = new Contract(poolAbi, poolAddr, provider);
 
     let day = await poolC.currentDay()
-    
+
 
     await setProofElement(["0x" + secret, "0x" + nullifier, multiCall.transaction_hash.toString(), poolAddr, rewardMode ? "0x" + day.toString() : '0x1'])
 
 
-    setLoadingText("Deposit Completed!")
+    setLoadingText("Deposit Completed! (Do not close neither reload the screen.)")
     if (noteAcc == "") {
       setOpenDepositOp(true)
     } else {
-      setLoadingText("Saving in Note Account!")
+      setLoadingText("Saving in Note Account!(Do not close neither reload the screen.)")
       await saveInNoteAccount(["0x" + secret, "0x" + nullifier, multiCall.transaction_hash.toString(), poolAddr, rewardMode ? "0x" + day.toString() : '0x1'])
     }
 
@@ -687,12 +806,13 @@ const MainComponent = () => {
       let proofString = JSON.parse(proofsStringList[i])
       let callData = await generateProofCalldata(proofString, receiverValue)
       setLoadingText(`Withdrawing (${i + 1}/${proofsStringList.length})... (This can take a few seconds)`)
+      const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
+      const typhoonContract = new Contract(typhoonAbi, typhoonAddress, account);
+      const call = typhoonContract.populate('withdraw', { full_proof_with_hints: callData });
       const multiCall = await account.execute({
         contractAddress: typhoonAddress,
         entrypoint: 'withdraw',
-        calldata: CallData.compile({
-          full_proof_with_hints_list: cairo.tuple(callData)
-        }),
+        calldata: call.calldata,
       }, { version: 2 });
       await account.waitForTransaction(multiCall.transaction_hash);
     }
@@ -837,25 +957,25 @@ const MainComponent = () => {
 
   async function saveInNoteAccount(pe) {
     let acc = new Wallet("0x" + noteAcc);
-    
+
     const publicKeyBuffer = Buffer.from(acc.signingKey.publicKey.slice(2), 'hex');
     let compressedData = []
-    console.log("tx hash save ",pe)
+    console.log("tx hash save ", pe)
     for (let i = 0; i < pe.length; i++) {
       let data = pe[i].slice(2) // remove 0x prefix
-      if(data.length % 2 != 0){
-        data = "150dd"+data
+      if (data.length % 2 != 0) {
+        data = "150dd" + data
       }
       let encrypted = bufferToHex(await ecies.encrypt(publicKeyBuffer, Buffer.from(data, "hex")))
       let en = BigInt(encrypted, 16)
       let times = en / (maxUint512 * maxUint512)
-      
+
       let remainder = en % (maxUint512 * maxUint512)
-      let timesR = remainder / (maxUint512*maxUint256)
-      let timesRemainderR = (remainder % (maxUint512*maxUint256)) / maxUint512
-      let remainderRemainderR = ((remainder % (maxUint512*maxUint256)) % maxUint512) / maxUint256
-      let remainderRemainderR2 = ((remainder % (maxUint512*maxUint256)) % maxUint512) % maxUint256
-      let recover = (maxUint512 * maxUint512)* times + (timesR * (maxUint512*maxUint256)) + (timesRemainderR*maxUint512) + (remainderRemainderR*maxUint256) + remainderRemainderR2
+      let timesR = remainder / (maxUint512 * maxUint256)
+      let timesRemainderR = (remainder % (maxUint512 * maxUint256)) / maxUint512
+      let remainderRemainderR = ((remainder % (maxUint512 * maxUint256)) % maxUint512) / maxUint256
+      let remainderRemainderR2 = ((remainder % (maxUint512 * maxUint256)) % maxUint512) % maxUint256
+      let recover = (maxUint512 * maxUint512) * times + (timesR * (maxUint512 * maxUint256)) + (timesRemainderR * maxUint512) + (remainderRemainderR * maxUint256) + remainderRemainderR2
       // console.log(times > maxUint256)
       // console.log(timesR > maxUint256)
       // console.log(timesRemainderR > maxUint256)
@@ -878,12 +998,12 @@ const MainComponent = () => {
     let msg_hash_str = createHash('sha256').update(msg).digest('hex')
 
     // let signature = await acc.signMessage(BigInt("0x"+msg_hash_str).toString())
-    let signature =  acc.signingKey.sign("0x"+msg_hash_str)
-    
+    let signature = acc.signingKey.sign("0x" + msg_hash_str)
+
     // let sig = Signature.from(signature);
     // console.log(verifyMessage(BigInt("0x"+msg_hash_str).toString(), sig) == acc.address)
     try {
-      
+
       // console.log("maxUint256", maxUint256)
       // console.log("address", acc.address)
       // console.log("compressedData", compressedData)
@@ -898,7 +1018,7 @@ const MainComponent = () => {
         calldata: CallData.compile({
           pubKey: acc.address,
           encryptedNote: cairo.tuple([cairo.uint256(compressedData[0]), cairo.uint256(compressedData[1]), cairo.uint256(compressedData[2]), cairo.uint256(compressedData[3]), cairo.uint256(compressedData[4]), cairo.uint256(compressedData[5]), cairo.uint256(compressedData[6]), cairo.uint256(compressedData[7]), cairo.uint256(compressedData[8]), cairo.uint256(compressedData[9]), cairo.uint256(compressedData[10]), cairo.uint256(compressedData[11]), cairo.uint256(compressedData[12]), cairo.uint256(compressedData[13]), cairo.uint256(compressedData[14]), cairo.uint256(compressedData[15]), cairo.uint256(compressedData[16]), cairo.uint256(compressedData[17]), cairo.uint256(compressedData[18]), cairo.uint256(compressedData[19]), cairo.uint256(compressedData[20]), cairo.uint256(compressedData[21]), cairo.uint256(compressedData[22]), cairo.uint256(compressedData[23]), cairo.uint256(compressedData[24])]),
-          msgHash: cairo.uint256(BigInt("0x"+msg_hash_str).toString()),
+          msgHash: cairo.uint256(BigInt("0x" + msg_hash_str).toString()),
           r: cairo.uint256(BigInt(signature.r).toString()),
           s: cairo.uint256(BigInt(signature.s).toString()),
           v: signature.v
@@ -918,29 +1038,29 @@ const MainComponent = () => {
 
   }
 
-  function specificAmountField() {
-    return (
-      <div className='flex items-center rounded-xl'>
-        <input
-          ref={specificRef}
-          className={getInputClassname()}
-          type={'number'}
-          value={specificValue}
-          placeholder={'0.0'}
-          onChange={e => {
-            setSpecificValue(e.target.value)
-          }}
-        />
+  // function specificAmountField() {
+  //   return (
+  //     <div className='flex items-center rounded-xl'>
+  //       <input
+  //         ref={specificRef}
+  //         className={getInputClassname()}
+  //         type={'number'}
+  //         value={specificValue}
+  //         placeholder={'0.0'}
+  //         onChange={e => {
+  //           setSpecificValue(e.target.value)
+  //         }}
+  //       />
 
-        <CoinSelector
-          disabled={false}
-          id={"coin"}
-          setToken={setSrcToken}
-          defaultValue={STRK}
-        />
-      </div>
-    )
-  }
+  //       <CoinSelector
+  //         disabled={false}
+  //         id={"coin"}
+  //         setToken={setSrcToken}
+  //         defaultValue={STRK}
+  //       />
+  //     </div>
+  //   )
+  // }
 
   function depositTypeSelector() {
     return (
@@ -1001,6 +1121,83 @@ const MainComponent = () => {
       ' w-full outline-none h-8 px-2 appearance-none text-3xl bg-transparent'
     return className
   }
+
+  function DenominationSelector(id, disabled) {
+    return (
+      <Dropdown disableAnimation={disabled} className='bg-black rounded-xl'>
+        <DropdownTrigger>
+          <Button disabled={disabled} variant="bordered" className='bg-black rounded-xl ml-2'>{dselectedItem}</Button>
+        </DropdownTrigger>
+        <DropdownMenu className='bg-black rounded-xl' key={cmenuItems.map(i => i.key).join('-')} aria-label="Static Actions" items={dmenuItems} onAction={key => {
+          const menu = [
+            { key: denominationsList[tokenList[srcToken]][0], name: denominationsList[tokenList[srcToken]][0] },
+            { key: denominationsList[tokenList[srcToken]][1], name: denominationsList[tokenList[srcToken]][1] },
+            { key: denominationsList[tokenList[srcToken]][2], name: denominationsList[tokenList[srcToken]][2] },
+            { key: denominationsList[tokenList[srcToken]][3], name: denominationsList[tokenList[srcToken]][3] },
+          ]
+          let newItems = getDepositFilteredItems(key, menu)
+          setDMenuItems([...newItems])
+          setDSelectedItem(key)
+          setDenomination(key)
+        }}>
+          {item => (
+            <DropdownItem
+              aria-label={id}
+              key={item.key}
+              color={item.key === 'delete' ? 'error' : 'default'}
+            >
+              {item.name}
+            </DropdownItem>
+          )}
+        </DropdownMenu>
+      </Dropdown>
+    )
+  }
+
+  function CoinSelector(id, disabled) {
+    
+
+    return (
+      <Dropdown disableAnimation={disabled} className='bg-black rounded-xl mr-2'>
+        <DropdownTrigger>
+          <Button disabled={disabled} variant="bordered" className='bg-black rounded-xl ml-2 mr-7'>{cselectedItem}</Button>
+        </DropdownTrigger>
+        <DropdownMenu className='bg-black rounded-xl' key={cmenuItems.map(i => i.key).join('-')} aria-label="Static Actions" items={cmenuItems} onAction={key => {
+          const menu = [
+            { key: ETH, name: ETH },
+            { key: STRK, name: STRK },
+          ]
+          let newItems = getDepositFilteredItems(key, menu)
+          setCMenuItems([...newItems])
+          setCSelectedItem(key)
+          setSrcToken(key)
+          const dmenu = [
+            { key: denominationsList[tokenList[key]][0], name: denominationsList[tokenList[key]][0] },
+            { key: denominationsList[tokenList[key]][1], name: denominationsList[tokenList[key]][1] },
+            { key: denominationsList[tokenList[key]][2], name: denominationsList[tokenList[key]][2] },
+            { key: denominationsList[tokenList[key]][3], name: denominationsList[tokenList[key]][3] },
+          ]
+          let newdItems = getDepositFilteredItems(denominationsList[tokenList[key]][0], dmenu)
+          setDMenuItems([...newdItems])
+          setDSelectedItem(denominationsList[tokenList[key]][0])
+          setDenomination(denominationsList[tokenList[key]][0])
+        }}>
+          {item => (
+            <DropdownItem
+              aria-label={id}
+              key={item.key}
+              color={item.key === 'delete' ? 'error' : 'default'}
+            >
+              {item.name}
+            </DropdownItem>
+          )}
+        </DropdownMenu>
+      </Dropdown>
+    )
+  }
+
 }
+
+
 
 export default MainComponent

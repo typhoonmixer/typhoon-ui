@@ -1,7 +1,7 @@
 
 import * as garaga from 'garaga';
 
-import { RpcProvider, Contract, constants, types } from 'starknet-v7';
+import { RpcProvider, Contract, constants, types, hash, events, CallData, num } from 'starknet-v7';
 import Hasher from './mimc5.js';
 import { commitmentAndNullifierHash } from './depositUtils.js';
 import vk from './verification_key.json' assert { type: "json" }
@@ -11,8 +11,9 @@ import * as snarkjs from "snarkjs";
 
 
 const infuraKey = process.env.NEXT_PUBLIC_API_KEY
+const genBlockNumber = process.env.NEXT_PUBLIC_GEN_BLOCK_NUMBER
 
-const provider = new RpcProvider({ nodeUrl: "https://starknet-sepolia.public.blastapi.io/rpc/v0_8" });
+const provider = new RpcProvider({ nodeUrl: "https://starknet-mainnet.public.blastapi.io/rpc/v0_8" });
 const typhoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
 
 
@@ -20,15 +21,23 @@ const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
 
 export async function generateProofCalldata(note, recipient) {
     await garaga.init();
-    
+
     const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
 
     let receipt = await provider.waitForTransaction(note.txHash)
 
     let depositEvent = typhoon.parseEvents(receipt)[0]["typhoon::Typhoon::Typhoon::Deposit"]
 
-    let [dd, h] = getDD(depositEvent.d)
-    let tower = getTower(depositEvent.roots)
+    const lastBlock = await provider.getBlock('latest');
+    const keyFilter = [[num.toHex(hash.starknetKeccak('Add'))]];
+    let parsedAddEvents = await getAddEvents(Number(receipt.block_number), lastBlock.block_number, note.pool, keyFilter)
+
+    let [C, RL, currentLevel, count] = await getCandRl(depositEvent.leafs, parsedAddEvents, note.pool, Number(receipt.block_number))
+    let filteredleafs = depositEvent.leafs.filter(val => val != 0n)
+    let D = getD(parsedAddEvents, depositEvent.d, filteredleafs[filteredleafs.length - 1])
+    
+
+    let dd = getDD(D, currentLevel)
     let [commitment, nullifierHash] = await commitmentAndNullifierHash(note.secret, note.nullifier)
 
 
@@ -40,12 +49,12 @@ export async function generateProofCalldata(note, recipient) {
         "relayerFee": BigInt(0),
         "secret": BigInt(note.secret),
         "nullifier": BigInt(note.nullifier),
-        "count": BigInt(depositEvent.count),
+        "count": count,
         "dd": dd,
-        "D": depositEvent.d.map(x => BigInt(x)),
-        "rootLv": h,
-        "RL": tower[h],
-        "C": tower
+        "D": D,
+        "rootLv": currentLevel,
+        "RL": RL,
+        "C": C
     }
     const { proof, publicSignals } = await snarkjs.groth16.fullProve(proofInput, "withdraw.wasm", "withdraw_0001.zkey");
 
@@ -53,7 +62,6 @@ export async function generateProofCalldata(note, recipient) {
 
     let parsedVK = parseGroth16VerifyingKeyFromObject(vk)
     const groth16Calldata = garaga.getGroth16CallData(parsedProof, parsedVK, garaga.CurveId.BN254);
-
 
     // The first element of the calldata is "length" and is not compatible with Cairo 1.0, so it is removed
     groth16Calldata[0] = note.pool
@@ -68,11 +76,18 @@ export async function generateProofCalldata2(secret, nullifier, txHash, pool, re
     let receipt = await provider.waitForTransaction(txHash)
 
     let depositEvent = typhoon.parseEvents(receipt)[0]["typhoon::Typhoon::Typhoon::Deposit"]
-    console.log("depositEvent ", depositEvent)
-    let [dd, h] = getDD(depositEvent.d)
-    let fullTower = getFullTower(depositEvent.tower)
-    let [commitment, nullifierHash] = await commitmentAndNullifierHash(secret, nullifier)
+    
+    const lastBlock = await provider.getBlock('latest');
+    const keyFilter = [[num.toHex(hash.starknetKeccak('Add'))]];
+    let parsedAddEvents = await getAddEvents(Number(receipt.block_number), lastBlock.block_number, pool, keyFilter)
+    
+    let [C, RL, currentLevel, count] = await getCandRl(depositEvent.leafs, parsedAddEvents, pool, Number(receipt.block_number))
+    let filteredleafs = depositEvent.leafs.filter(val => val != 0n)
+    let D = getD(parsedAddEvents, depositEvent.d, filteredleafs[filteredleafs.length - 1])
+    
 
+    let dd = getDD(D, currentLevel)
+    let [commitment, nullifierHash] = await commitmentAndNullifierHash(secret, nullifier)
 
     let proofInput = {
         "nullifierHash": nullifierHash,
@@ -82,17 +97,17 @@ export async function generateProofCalldata2(secret, nullifier, txHash, pool, re
         "relayerFee": BigInt(0),
         "secret": BigInt(secret),
         "nullifier": BigInt(nullifier),
-        "count": BigInt(depositEvent.count),
+        "count": count + 1n,
         "dd": dd,
-        "D": depositEvent.d.map(x => BigInt(x)),
-        "rootLv": h,
-        "RL": depositEvent.tower[h],
-        "C": fullTower
+        "D": D,
+        "rootLv": currentLevel,
+        "RL": RL,
+        "C": C
     }
     const { proof, publicSignals } = await snarkjs.groth16.fullProve(proofInput, "withdraw.wasm", "withdraw_0001.zkey");
 
     let parsedProof = parseGroth16ProofFromObject(proof, publicSignals.map(x => BigInt(x)))
-    
+
     let parsedVK = parseGroth16VerifyingKeyFromObject(vk)
     const groth16Calldata = garaga.getGroth16CallData(parsedProof, parsedVK, garaga.CurveId.BN254);
     // const groth16Calldata2 = garaga.get_groth16_calldata(parsedProof, parsedVK, garaga.CurveId.BN254);
@@ -104,46 +119,163 @@ export async function generateProofCalldata2(secret, nullifier, txHash, pool, re
     // const pubin = await verifierContract.verify_groth16_proof_bn254(groth16Calldata2);
     // console.log("pub inputs ", pubin)
     // The first element of the calldata is "length" and is not compatible with Cairo 1.0, so it is removed
-    groth16Calldata.shift()
-    
+    groth16Calldata[0] = pool
+
     return groth16Calldata
 }
 
-function getRootPairingsDirections(rootIndex, commitment, day, subtreeHelper) {
-    let hasher = new Hasher()
-    let currentLevelHash = hasher.MiMC5Sponge([commitment.toString(), day], '0')
-    let currentIndex = Number(rootIndex)
-    let hashPairings = []
-    let hashDirections = []
-    let left = BigInt('0')
-    let right = BigInt('0')
-    let levels = 10
-    let sthi = 0
-
-    for (let i = 0; i < levels; i++) {
-        if (currentIndex % 2 == 0) {
-            left = currentLevelHash
-            right = zeros(i)
-            hashPairings.push(zeros(i))
-            hashDirections.push(0)
-        } else {
-            left = subtreeHelper[sthi]
-            right = currentLevelHash
-            hashPairings.push(BigInt(subtreeHelper[sthi]))
-            hashDirections.push(1)
-            sthi += 1
-        }
-        currentLevelHash = hasher.MiMC5Sponge([left.toString(), right.toString()], '0')
-        currentIndex = Math.trunc(currentIndex / 2)
+// if lvFullIndex % 4 is higher than 0 this function is called
+async function fetchLevel(block_number, level, lvFullIndex, pool) {
+    console.log("fetch block number ", block_number)
+    const keyFilter = [[num.toHex(hash.starknetKeccak('Add'))]];
+    // 1309463 is the block where typhoon got deployed
+    let events = await getAddEvents(1671756, block_number, pool, keyFilter)
+    console.log("events list ", events)
+    let filteredEvents = events.filter(val => val.level == level)
+    console.log("filtered events ", filteredEvents)
+    let levelArr = []
+    let ll = lvFullIndex % 4n
+    for (let i = 0; i < Number(ll.toString()); i++) {
+        levelArr[i] = filteredEvents[(filteredEvents.length - 1) - i].value
     }
-
-    return {
-        r: currentLevelHash,
-        p: hashPairings,
-        d: hashDirections
-    }
-
+    return levelArr
 }
+
+async function getAddEvents(from_block_number, to_block_number, pool, filter) {
+    const lastBlock = await provider.getBlock('latest');
+    const keyFilter = [[num.toHex(hash.starknetKeccak('Add'))]];
+    let allEvents = []
+    let continuationToken = '0';
+    while (continuationToken != undefined) {
+        const eventsList = await provider.getEvents({
+            address: pool,
+            from_block: { block_number: from_block_number },
+            to_block: { block_number: to_block_number },
+            keys: filter,
+            chunk_size: 1000,
+            continuation_token: continuationToken === '0' ? undefined : continuationToken,
+        });
+        continuationToken = eventsList.continuation_token;
+        allEvents = allEvents.concat(eventsList.events)
+    }
+
+    const { abi: poolAbi } = await provider.getClassAt(pool);
+    const abiEvents = events.getAbiEvents(poolAbi);
+    const abiStructs = CallData.getAbiStruct(poolAbi);
+    const abiEnums = CallData.getAbiEnum(poolAbi);
+    const parsed = events.parseEvents(allEvents, abiEvents, abiStructs, abiEnums);
+
+    return parsed.map((e) => e["typhoon::Pool::Pool::Add"])
+}
+
+function getD(addEvents, baseD, leaf) {
+    let D = Array(127).fill(0n)
+    let bd = baseD.filter(val => val != 0n)
+    let startIndex = 0;
+    for (let i = 0; i < addEvents.length; i++) {
+        if (addEvents[i].value == leaf) {
+            startIndex = i
+            break
+        }
+    }
+
+    for (let i = 0; i < bd.length; i++) {
+        D[i] = bd[i]
+    }
+
+    if (addEvents[startIndex + 1] == undefined) {
+        return D
+    }
+
+    for (let i = startIndex + 1; i < addEvents.length; i++) {
+        let ll = addEvents[i].lvFullIndex % 4n
+        D[addEvents[i].level] = ll == 0n ? addEvents[i].value : hashListH2([D[addEvents[i].level], addEvents[i].value], 2)
+    }
+    return D
+}
+
+async function getCandRl(leafs, addEvents, pool, block_number) {
+
+    let C = [];
+    let RL = []
+    let leafLevel = []
+    let count = 0n
+
+    leafLevel = leafs.filter(val => val != 0n)
+
+    let currentLevel = 0n
+    let currentLL = leafLevel.length
+
+
+    RL = [...leafs]
+    C.push([leafs[0], leafs[1], leafs[2], leafs[3]])
+    for (let i = 0; i < 125; i++) {
+        C.push(Array(4).fill(0n))
+    }
+
+    console.log("RL before loop ", RL)
+    console.log("C 0 before ", C)
+
+    let leafIndex = 0
+    for (let i = 0; i < addEvents.length; i++) {
+        if (addEvents[i].value == leafs[currentLL - 1]) {
+            leafIndex = i
+            count = addEvents[i].lvFullIndex
+            break
+        }
+    }
+
+    for (let i = leafIndex + 1; i < addEvents.length; i++) {
+        if (addEvents[i].level == 0n) {
+            count = addEvents[i].lvFullIndex
+        }
+        if (C[currentLevel][3] != 0n) {
+            currentLevel += 1n;
+        } 
+        if (addEvents[i].level == currentLevel) {
+            let ll = addEvents[i].lvFullIndex % 4n
+            
+            if (ll == 0n) {
+                C[currentLevel][0] = addEvents[i].value
+                RL = C[currentLevel]
+            } else if (ll != 0n && C[currentLevel][ll - 1n] != 0n) {
+                C[currentLevel][ll] = addEvents[i].value
+                RL = C[currentLevel]
+            } else {
+                let previousRoots = await fetchLevel(block_number, addEvents[i].level, addEvents[i].lvFullIndex, pool)
+                if (!previousRoots.includes(addEvents[i].value)) {
+                    previousRoots[ll] = addEvents[i].value
+                }
+
+                RL = [0n, 0n, 0n, 0n]
+                for (let j = 0; j < previousRoots.length; j++) {
+                    RL[j] = previousRoots[j]
+                }
+                C[currentLevel][0] = addEvents[i].value
+            }
+        }
+
+    }
+
+    // for (let i = leafIndex + 1; i < addEvents.length; i++) {
+
+    //     if (currentLL == 4) {
+    //         currentLevel += 1
+    //         currentLL = 0
+    //     }
+    //     if (Number(addEvents[i].level.toString()) == currentLevel) {
+    //         if (currentLevel == 0) {
+    //             count = addEvents[i].lvFullIndex
+    //         }
+    //         C[currentLevel][currentLL] = addEvents[i].value
+    //         currentLL += 1
+    //     }
+    // }
+
+    return [C, RL, currentLevel, count]
+}
+
+
 
 export function JSONInputStringToList(input) {
     let inputList = input.split('}')
@@ -169,12 +301,11 @@ function getFullTower(tower) {
     return fullTower
 }
 
-function getDD(d) {
-    let h = getHeight(d);
-    let D = rotateLeft(reverseArray(d), 127 - h)
-    console.log("D ", rotateLeft(reverseArray(D), 127 - h))
-    let dd = hashListH2(d, h)
-    return [dd, h];
+function getDD(d, h) {
+    let D = d.filter(val => val != 0n)
+    D = D.reverse()
+    let dd = hashListH2(D, D.length)
+    return dd;
 }
 
 // assert(hashListH2(rotate_left(reverse(D), 127 - h), 127, h) == dd, "D[] must match dd");
@@ -190,13 +321,13 @@ function hashListH2(input, len) {
 
 function getHeight(d) {
     let h = 0;
-    for (let i = 0; i < d; i++) {
+    for (let i = 0; i < d.length; i++) {
         if (d[i] == 0) {
             break;
         }
         h += 1;
     }
-    return h;
+    return h - 1;
 }
 
 function rotateLeft(inputArray, n) {
