@@ -26,9 +26,12 @@ const Header = () => {
   const [noteAccountExists, setNoteAccountExists] = useState(false);
 
   useEffect(() => {
-    let naux = localStorage.getItem("noteAcc")
-    if ((noteAccountExists || naux != "") && (localStorage.getItem("noteAcc") != "undefined" && localStorage.getItem("noteAcc") != "null")) {
-      setNoteValue(localStorage.getItem("noteAcc"));
+    let naux = "";
+    if (typeof window !== "undefined") {
+      naux = localStorage.getItem("noteAcc");
+    }
+    if ((noteAccountExists || naux != "") && (naux != "undefined" && naux != "null")) {
+      setNoteValue(naux);
       if(!noteAccountExists){
         setNoteAccountExists(true)
       }
@@ -36,7 +39,7 @@ const Header = () => {
       setNoteValue("");
       setNoteAccountExists(false)
     }
-  }, [localStorage.getItem("noteAcc"), noteAccountExists])
+  }, [noteValue, noteAccountExists])
 
   let className = "rounded-[12px] bg-button-primary bg-blue px-6 py-3 text-background-primary-light transition-all duration-300 hover:rounded-[30px] md:py-4"
 
@@ -80,7 +83,10 @@ const Header = () => {
             Note Account: 
             <button style={{ border: '2px solid black', color: "black" }}
               onClick={(e) => {
-                localStorage.setItem("noteAcc", null)
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem("noteAcc", null)
+                }
+                
                 setNoteAccountExists(false)
               }}
               className="w-full rounded-[12px] border-[2px] border-solid border-[--borders] bg-[--modal-disconnect-bg] p-3 text-red-secondary md:p-4"
@@ -153,7 +159,10 @@ const Header = () => {
   )
 
   function connectNoteAccount(noteAccount) {
-    localStorage.setItem("noteAcc", noteAccount)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("noteAcc", noteAccount)
+    }
+    
     setNoteValue(noteAccount);
     setNoteAccountExists(true);
   }
@@ -178,7 +187,9 @@ const Header = () => {
   function createNoteAccount() {
     const acc = Wallet.createRandom();
     const privKey = acc.privateKey.slice(2) // remove 0x prefix
-    localStorage.setItem("noteAcc", privKey);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("noteAcc", privKey)
+    }
     let na = JSON.stringify({
       "privkey": privKey,
     })

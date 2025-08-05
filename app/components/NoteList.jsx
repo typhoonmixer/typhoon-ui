@@ -28,7 +28,10 @@ function NoteList() {
     const [receiver, setReceiver] = useState("");
     const [withdrawing, setWithdrawing] = useState(false);
     const [finished, setFinished] = useState(false);
-    let noteAccount = localStorage.getItem('noteAcc');
+    let noteAccount = null
+    // if (typeof window !== "undefined") {
+    //     noteAccount = localStorage.getItem('noteAcc');
+    // }
     const [loadingText, setLoadingText] = useState('')
 
     const [encryptedNotes, setEncryptedNotes] = useState([]);
@@ -42,7 +45,7 @@ function NoteList() {
                 const { abi: noteAccountAbi } = await provider.getClassAt(noteAccountContract);
                 const ncContract = new Contract(noteAccountAbi, noteAccountContract, provider);
                 let compressedNotesData = await ncContract.getNotes(acc.address);
-                
+
                 let decryptedNotesAux = []
                 for (let i = 0; i < compressedNotesData.length; i++) {
                     let dnaux = []
@@ -89,7 +92,9 @@ function NoteList() {
             }
 
         }
-        noteAccount = localStorage.getItem('noteAcc');
+        if (typeof window !== "undefined") {
+            noteAccount = localStorage.getItem('noteAcc');
+        }
 
         if (noteAccount != null && noteAccount != "undefined" && noteAccount != "null") {
             fetchNotes();

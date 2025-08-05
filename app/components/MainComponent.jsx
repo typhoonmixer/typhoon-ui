@@ -210,12 +210,19 @@ const MainComponent = () => {
 
   const [content, setContent] = useState(depositContent)
 
-  localStorage.setItem("curToken", "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d");
+  
 
 
   let noteAccount = ""
   useEffect(() => {
-    const noteAccount = localStorage.getItem("noteAcc") != null ? localStorage.getItem("noteAcc") : "";
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("curToken", "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d");
+    }
+    const noteAccount = "";
+    if (typeof window !== "undefined") {
+      noteAccount = localStorage.getItem("noteAcc") != null ? localStorage.getItem("noteAcc") : "";
+    }
+
     if (noteAccount != "") {
       setNoteAcc(noteAccount)
     }
@@ -940,14 +947,18 @@ const MainComponent = () => {
   }
 
   function connectNoteAccount(noteAccount) {
-    localStorage.setItem("noteAcc", noteAccount)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("noteAcc", noteAccount)
+    }
     // save note in contract
   }
 
   function createNoteAccount() {
     const acc = Wallet.createRandom();
     const privKey = acc.privateKey.slice(2) // remove 0x prefix
-    localStorage.setItem("noteAcc", privKey);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("noteAcc", privKey)
+    }
     let na = JSON.stringify({
       "privkey": privKey,
     })
