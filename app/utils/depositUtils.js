@@ -91,7 +91,6 @@ export function getFullDenomination(denomination) {
     if(denomination.includes('.')){
         let sDenomination = denomination.split('.')
         let pos = 0
-        console.log("sDenomination: ", sDenomination)
         for(let char of sDenomination[1]){
             if(char == '1'){
                 break
