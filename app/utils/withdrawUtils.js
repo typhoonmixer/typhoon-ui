@@ -126,13 +126,13 @@ export async function generateProofCalldata2(secret, nullifier, txHash, pool, re
 
 // if lvFullIndex % 4 is higher than 0 this function is called
 async function fetchLevel(block_number, level, lvFullIndex, pool) {
-    console.log("fetch block number ", block_number)
+    
     const keyFilter = [[num.toHex(hash.starknetKeccak('Add'))]];
     // 1309463 is the block where typhoon got deployed
     let events = await getAddEvents(1671756, block_number, pool, keyFilter)
-    console.log("events list ", events)
+    
     let filteredEvents = events.filter(val => val.level == level)
-    console.log("filtered events ", filteredEvents)
+    
     let levelArr = []
     let ll = lvFullIndex % 4n
     for (let i = 0; i < Number(ll.toString()); i++) {
@@ -213,8 +213,7 @@ async function getCandRl(leafs, addEvents, pool, block_number) {
         C.push(Array(4).fill(0n))
     }
 
-    console.log("RL before loop ", RL)
-    console.log("C 0 before ", C)
+    
 
     let leafIndex = 0
     for (let i = 0; i < addEvents.length; i++) {
