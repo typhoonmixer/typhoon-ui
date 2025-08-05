@@ -29,9 +29,9 @@ function NoteList() {
     const [withdrawing, setWithdrawing] = useState(false);
     const [finished, setFinished] = useState(false);
     let noteAccount = null
-    // if (typeof window !== "undefined") {
-    //     noteAccount = localStorage.getItem('noteAcc');
-    // }
+    if (typeof window !== "undefined") {
+        noteAccount = localStorage.getItem('noteAcc');
+    }
     const [loadingText, setLoadingText] = useState('')
 
     const [encryptedNotes, setEncryptedNotes] = useState([]);
