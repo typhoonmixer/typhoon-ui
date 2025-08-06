@@ -95,8 +95,10 @@ function NoteList() {
         if (typeof window !== "undefined") {
             noteAccount = localStorage.getItem('noteAcc');
         }
-
+        console.log("note account before ", noteAccount)
         if (noteAccount != null && noteAccount != "undefined" && noteAccount != "null") {
+            console.log("inside fetch notes ", noteAccount)
+            
             fetchNotes();
         }
 
