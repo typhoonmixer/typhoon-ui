@@ -30,7 +30,7 @@ const Header = () => {
     if (typeof window !== "undefined") {
       naux = localStorage.getItem("noteAcc");
     }
-    if ((noteAccountExists || naux != "") && (naux != "undefined" && naux != "null")) {
+    if ((noteAccountExists || naux != "") && (naux != "undefined" && naux != "null") && naux != null) {
       setNoteValue(naux);
       if(!noteAccountExists){
         setNoteAccountExists(true)
