@@ -168,8 +168,6 @@ const Header = () => {
   }
 
   function noteAccountText() {
-    console.log("noteAccountText ", noteValue)
-    console.log(typeof noteValue)
     const acc = new Wallet(noteValue)
     const address = acc.address;
     return (
@@ -180,7 +178,6 @@ const Header = () => {
   }
 
   function noteAccAddr() {
-    console.log("noteAccAddr ", noteValue)
     const acc = new Wallet(noteValue)
     const address = acc.address;
     return address
