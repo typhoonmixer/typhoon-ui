@@ -473,7 +473,7 @@ const MainComponent = () => {
           >
             {WITHDRAW}
           </p>
-          <p
+{/*           <p
             className={getNavIconClassName(TELEGRAM)}
             onClick={() => {
               setSelectedNavItem(TELEGRAM)
@@ -484,7 +484,7 @@ const MainComponent = () => {
             }}
           >
             {TELEGRAM}
-          </p>
+          </p> */}
 
         </div>
         {content}
