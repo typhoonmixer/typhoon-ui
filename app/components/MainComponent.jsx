@@ -503,8 +503,8 @@ const MainComponent = () => {
             else if (btnText === WITHDRAW) await handleWithdraw()
           }} */}
         >
-          {btnText}
-        </button>}
+{/*           {btnText} */}
+{/*         </button>} */}
 
 
 
