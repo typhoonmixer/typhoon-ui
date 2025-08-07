@@ -685,7 +685,7 @@ const MainComponent = () => {
 
 
     setLoadingText("Deposit Completed! (Do not close neither reload the screen.)")
-    if (noteAcc == "") {
+    if (noteAcc == "" || noteAcc == null || noteAcc == undefined || noteAcc == "null" || noteAcc == "undefined") {
       setOpenDepositOp(true)
     } else {
       setLoadingText("Saving in Note Account!(Do not close neither reload the screen.)")
