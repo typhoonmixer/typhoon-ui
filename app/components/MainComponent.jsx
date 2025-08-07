@@ -488,7 +488,7 @@ const MainComponent = () => {
 
         </div>
         {content}
-        {openDepositOp ? depositOptionPopup() : <button
+{/*         {openDepositOp ? depositOptionPopup() : <button
           className={getBtnClassName()}
           disabled={loading}
           onClick={async () => {
@@ -501,7 +501,7 @@ const MainComponent = () => {
               }
             }
             else if (btnText === WITHDRAW) await handleWithdraw()
-          }}
+          }} */}
         >
           {btnText}
         </button>}
