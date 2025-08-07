@@ -782,7 +782,6 @@ const MainComponent = () => {
 
 
   async function handleWithdraw() {
-    let callData = await generateProofCalldata("", receiverValue)
     setLoading(true)
     setLoadingText("Initiating Withdraw...")
     await new Promise(r => setTimeout(r, 1000));
