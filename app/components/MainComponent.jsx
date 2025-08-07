@@ -858,7 +858,7 @@ const MainComponent = () => {
                 Download Note
               </button>
 
-              <Popup trigger={<button style={{ backgroundColor: 'blue', color: 'white', marginRight: '10px' }} className={className}> Connect/Create Note Account</button>} modal contentStyle={{ borderRadius: '10px' }}>
+              <Popup trigger={<button style={{ backgroundColor: 'blue', color: 'white', marginRight: '5px', marginLeft: "10px" }} className={"rounded-[12px] bg-button-primary bg-blue px-4 py-3 text-background-primary-light transition-all duration-300 hover:rounded-[30px] md:py-4"}> Connect/Create Note Account</button>} modal contentStyle={{ borderRadius: '10px' }}>
                 <div>
                   <div className="lg:border-outline-grey ml-5 basis-5/6 lg:col-span-2 lg:border-r-[1px] lg:border-solid lg:py-4 lg:pl-8">
                     <h2 className="my-4 text-center text-[1.125em] font-bold text-black lg:text-start">
