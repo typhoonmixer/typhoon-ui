@@ -210,7 +210,17 @@ const MainComponent = () => {
 
   const [content, setContent] = useState(depositContent)
 
-  
+
+  const [accountExists, setAccountExists] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (localStorage.getItem("noteAcc") != "null" && localStorage.getItem("noteAcc") != "undefined" && localStorage.getItem("noteAcc") != "" && localStorage.getItem("noteAcc") != null && localStorage.getItem("noteAcc") != undefined) {
+        setNoteAcc(localStorage.getItem("noteAcc"))
+        setAccountExists(true)
+      }
+    }
+  })
 
 
   let noteAccount = ""
@@ -220,14 +230,16 @@ const MainComponent = () => {
     }
     let noteAccount = "";
     if (typeof window !== "undefined") {
-      noteAccount = localStorage.getItem("noteAcc") != null ? localStorage.getItem("noteAcc") : "";
+      if (localStorage.getItem("noteAcc") != "null" && localStorage.getItem("noteAcc") != "undefined" && localStorage.getItem("noteAcc") != "" && localStorage.getItem("noteAcc") != null && localStorage.getItem("noteAcc") != undefined) {
+        setNoteAcc(localStorage.getItem("noteAcc"))
+      }
     }
 
-    if (noteAccount != "") {
-      setNoteAcc(noteAccount)
-    }
+    // if (noteAccount != "") {
+    //   setNoteAcc(noteAccount)
+    // }
 
-  }, [noteAccount])
+  }, [accountExists])
 
   // useEffect(() => {
   //   console.log("proofElement", proofElement)
@@ -319,7 +331,7 @@ const MainComponent = () => {
     setContent(depositContent)
   }, [depositTypes])
 
-  
+
 
   useEffect(() => {
     const menu = [
@@ -473,7 +485,7 @@ const MainComponent = () => {
           >
             {WITHDRAW}
           </p>
-{/*           <p
+          {/* <p
             className={getNavIconClassName(TELEGRAM)}
             onClick={() => {
               setSelectedNavItem(TELEGRAM)
@@ -488,6 +500,24 @@ const MainComponent = () => {
 
         </div>
         {content}
+        {openDepositOp ? depositOptionPopup() : <button
+          className={getBtnClassName()}
+          disabled={loading}
+          onClick={async () => {
+            if (btnText === DEPOSIT) {
+              if (selectedDepositType === "Defined denominations") {
+
+                await handleDeposit()
+              } else {
+                await handleSpecificAmountDeposit()
+              }
+            }
+            else if (btnText === WITHDRAW) await handleWithdraw()
+          }}
+        >
+          {btnText}
+        </button>}
+
 
 
         <Toaster />
@@ -618,14 +648,14 @@ const MainComponent = () => {
     )
   }
 
-  function createAndDownloadFile(content) {
+  function createAndDownloadFile(content, name = "note.txt") {
     const fileContent = content;
     const blob = new Blob([fileContent], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
 
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'note.txt';
+    link.download = name;
 
     document.body.appendChild(link);
 
@@ -685,6 +715,7 @@ const MainComponent = () => {
 
 
     setLoadingText("Deposit Completed! (Do not close neither reload the screen.)")
+    console.log("noteAcc", noteAcc)
     if (noteAcc == "" || noteAcc == null || noteAcc == undefined || noteAcc == "null" || noteAcc == "undefined") {
       setOpenDepositOp(true)
     } else {
@@ -782,6 +813,8 @@ const MainComponent = () => {
 
 
   async function handleWithdraw() {
+
+    // let callData = await generateProofCalldata("", receiverValue)
     setLoading(true)
     setLoadingText("Initiating Withdraw...")
     await new Promise(r => setTimeout(r, 1000));
@@ -883,8 +916,8 @@ const MainComponent = () => {
                     <button style={{ backgroundColor: 'blue', color: 'white', marginLeft: '10px' }}
                       aria-haspopup="dialog"
                       onClick={async () => {
-                        connectNoteAccount(noteAcc)
-                        await saveInNoteAccount(proofElement)
+                        connectNoteAccount(noteValue)
+                        await saveInNoteAccount(proofElement, noteValue)
                         setDownloaded(true)
                         setOpenDepositOp(false)
                       }
@@ -902,8 +935,8 @@ const MainComponent = () => {
                   <button style={{ backgroundColor: 'blue', color: 'white', marginLeft: '20px' }}
                     aria-haspopup="dialog"
                     onClick={async () => {
-                      createNoteAccount()
-                      await saveInNoteAccount(proofElement)
+                      let acc = createNoteAccount()
+                      await saveInNoteAccount(proofElement, acc)
                       setDownloaded(true)
                       setOpenDepositOp(false)
                     }}
@@ -931,6 +964,8 @@ const MainComponent = () => {
     if (typeof window !== 'undefined') {
       localStorage.setItem("noteAcc", noteAccount)
     }
+    setNoteAcc(noteAccount)
+    setAccountExists(true)
     // save note in contract
   }
 
@@ -940,15 +975,20 @@ const MainComponent = () => {
     if (typeof window !== 'undefined') {
       localStorage.setItem("noteAcc", privKey)
     }
+    console.log("localStorage noteAcc", localStorage.getItem("noteAcc"))
     let na = JSON.stringify({
       "privkey": privKey,
     })
-    createAndDownloadFile(na)
+    createAndDownloadFile(na, "priv-key.txt")
+    setAccountExists(true)
+    setNoteAcc(privKey)
     // save note in contract
+    return privKey
   }
 
-  async function saveInNoteAccount(pe) {
-    let acc = new Wallet("0x" + noteAcc);
+  async function saveInNoteAccount(pe, acckey) {
+    console.log("noteAcc", noteAcc)
+    let acc = new Wallet("0x" + acckey);
 
     const publicKeyBuffer = Buffer.from(acc.signingKey.publicKey.slice(2), 'hex');
     let compressedData = []
@@ -981,8 +1021,8 @@ const MainComponent = () => {
       compressedData.push(timesRemainderR.toString())
       compressedData.push(remainderRemainderR.toString())
       compressedData.push(remainderRemainderR2.toString())
-      const privateKeyBuffer = Buffer.from(noteAcc, 'hex');
-      const decrypted = bufferToHex(await ecies.decrypt(privateKeyBuffer, Buffer.from("0" + recover.toString(16), 'hex')));
+      // const privateKeyBuffer = Buffer.from(noteAcc, 'hex');
+      // const decrypted = bufferToHex(await ecies.decrypt(privateKeyBuffer, Buffer.from("0" + recover.toString(16), 'hex')));
       // console.log("proof element ", pe[i], " decrypted: ", decrypted.slice(2).includes("150dd")? "0x"+decrypted.slice(7): decrypted)
     }
 
@@ -1147,7 +1187,7 @@ const MainComponent = () => {
   }
 
   function CoinSelector(id, disabled) {
-    
+
 
     return (
       <Dropdown disableAnimation={disabled} className='bg-black rounded-xl mr-2'>
