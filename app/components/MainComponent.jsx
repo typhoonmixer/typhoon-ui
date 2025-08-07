@@ -717,7 +717,14 @@ const MainComponent = () => {
     setLoadingText("Deposit Completed! (Do not close neither reload the screen.)")
     console.log("noteAcc", noteAcc)
     if (noteAcc == "" || noteAcc == null || noteAcc == undefined || noteAcc == "null" || noteAcc == "undefined") {
-      setOpenDepositOp(true)
+      let proofElements = JSON.stringify({
+        "secret": "0x" + secret,
+        "nullifier": "0x" + nullifier,
+        "txHash": multiCall.transaction_hash.toString(),
+        "pool": poolAddr,
+        "day": rewardMode ? "0x" + day.toString() : '0x1'
+      })
+      createAndDownloadFile(proofElements)
     } else {
       setLoadingText("Saving in Note Account!(Do not close neither reload the screen.)")
       await saveInNoteAccount(["0x" + secret, "0x" + nullifier, multiCall.transaction_hash.toString(), poolAddr, rewardMode ? "0x" + day.toString() : '0x1'])
