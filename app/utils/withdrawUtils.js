@@ -38,7 +38,7 @@ export async function generateProofCalldata(note, recipient) {
     
 
     let dd = getDD(D, currentLevel)
-    let [commitment, nullifierHash] = await commitmentAndNullifierHash(note.secret, note.nullifier)
+    let [commitment, nullifierHash] = await commitmentAndNullifierHash(note.secret.slice(2), note.nullifier.slice(2))
 
 
     let proofInput = {
@@ -47,9 +47,9 @@ export async function generateProofCalldata(note, recipient) {
         "recipient": BigInt(recipient),
         "relayer": BigInt(0),
         "relayerFee": BigInt(0),
-        "secret": BigInt(note.secret),
-        "nullifier": BigInt(note.nullifier),
-        "count": count,
+        "secret": BigInt(note.secret.slice(2)),
+        "nullifier": BigInt(note.nullifier.slice(2)),
+        "count": count + 1n,
         "dd": dd,
         "D": D,
         "rootLv": currentLevel,
