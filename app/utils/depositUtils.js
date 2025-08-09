@@ -130,7 +130,7 @@ export function poolsToNumber() {
     return pools
 }
 
-export function getFullDenomination(denomination) {
+export function getFullDenomination(denomination, decimals) {
     if(denomination.includes('.')){
         let sDenomination = denomination.split('.')
         let pos = 0
@@ -140,8 +140,8 @@ export function getFullDenomination(denomination) {
             }
             pos += 1
         }
-        return '1' + '0'.repeat(18 - (pos+1))
+        return '1' + '0'.repeat(decimals - (pos+1))
     } else {
-        return denomination + '0'.repeat(18)
+        return denomination + '0'.repeat(decimals)
     }
 }
