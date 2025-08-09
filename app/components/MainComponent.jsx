@@ -346,6 +346,7 @@ const MainComponent = () => {
 
   useEffect(() => {
     setDIgnoreValue(dselectedItem)
+    setContent(depositContent())
   }, [dselectedItem])
 
   useEffect(() => {
@@ -359,6 +360,7 @@ const MainComponent = () => {
 
   useEffect(() => {
     setCIgnoreValue(cselectedItem)
+    setContent(depositContent())
     // setDSelectedItem(denominationsList[tokenList[cselectedItem]][0])
   }, [cselectedItem])
 
@@ -1209,6 +1211,7 @@ const MainComponent = () => {
           let newItems = getDepositFilteredItems(key, menu)
           setCMenuItems([...newItems])
           setCSelectedItem(key)
+          console.log("token ", key)
           setSrcToken(key)
           const dmenu = [
             { key: denominationsList[tokenList[key]][0], name: denominationsList[tokenList[key]][0] },
