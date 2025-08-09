@@ -628,7 +628,7 @@ const MainComponent = () => {
           </div> : specificAmountField()}
         </div>
         <div className='bg-[#212429] p-4 py-6 rounded-xl mt-5 border-[2px] border-transparent hover:border-zinc-600'>
-         {`Number of equal doposits: ${poolCount}`}
+         {`Number of equal deposits: ${poolCount}`}
         </div>
 
         <FormGroup className='mb-5'>
