@@ -120,6 +120,23 @@ const MainComponent = () => {
 
   const [denomination, setDenomination] = useState(denominationsList[tokenToAddress["STRK"]][0])
 
+  const [allPoolDeposits, setAllPoolDeposits] = useState([])
+
+  useEffect(() => {
+    async function getAllPoolDeposits() {
+      const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
+
+      const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
+      let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denomination))
+      let poolAddr = '0x' + pool.toString(16)
+      console.log("fetched poolAddr", poolAddr)
+      let fetchedDeposits = await fetchDeposits(poolAddr)
+      console.log("fetchedDeposits", fetchedDeposits)
+      setAllPoolDeposits(fetchedDeposits)
+    }
+    getAllPoolDeposits()
+  },[srcToken, denomination])
+
   const [openDepositOp, setOpenDepositOp] = useState(false)
 
   const [specificValue, setSpecificValue] = useState()
@@ -599,7 +616,7 @@ const MainComponent = () => {
           </div> : specificAmountField()}
         </div>
         <div className='bg-[#212429] p-4 py-6 rounded-xl mt-5 border-[2px] border-transparent hover:border-zinc-600'>
-          {selectedDepositType === "Specific Amount" ? "Overall today deposits" : "today deposits for pool"}: {selectedDepositType === "Specific Amount" ? overallDeposits : todayDeposits}
+         {`Number of Equal deposits: ${allPoolDeposits.length}`}
         </div>
 
         <FormGroup className='mb-5'>
