@@ -13,7 +13,7 @@ export async function fetchDeposits(pool) {
     // 1309463 is the block where typhoon got deployed
     let events = await getDepositEvents(1671756, lastBlock.block_number, keyFilter)
     
-    let filteredEvents = events.filter(val => val.pool == pool)
+    let filteredEvents = events.filter(val => '0x'+val.pool.toString(16) == pool)
     
     // let levelArr = []
     // let ll = lvFullIndex % 4n
