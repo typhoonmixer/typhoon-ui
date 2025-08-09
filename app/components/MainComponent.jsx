@@ -22,6 +22,7 @@ import { denominationsList, one, tokenList } from '../utils/SupportedDenominatio
 import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button } from '@nextui-org/react'
 import { allowancePerPool, commitmentAndNullifierHash, generateSecretAndNullifier, getFullDenomination, poolsToNumber } from '../utils/depositUtils';
 import { JSONInputStringToList, generateProofCalldata } from '../utils/withdrawUtils';
+import {fetchDeposits} from '../utils/depositUtils';
 import NoteList from './NoteList';
 import typhoonAbi from '../utils/typhoon_abi.json' assert { type: "json" }
 import ecies from 'ecies-geth';
