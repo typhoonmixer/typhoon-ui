@@ -123,20 +123,20 @@ const MainComponent = () => {
 
   const [allPoolDeposits, setAllPoolDeposits] = useState([])
 
-  useEffect(() => {
-    async function getAllPoolDeposits() {
-      const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
+  // useEffect(() => {
+  //   async function getAllPoolDeposits() {
+  //     const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
 
-      const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
-      let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denomination))
-      let poolAddr = '0x' + pool.toString(16)
-      console.log("fetched poolAddr", poolAddr)
-      let fetchedDeposits = await fetchDeposits(poolAddr)
-      console.log("fetchedDeposits", fetchedDeposits)
-      setAllPoolDeposits(fetchedDeposits)
-    }
-    getAllPoolDeposits()
-  },[srcToken, denomination])
+  //     const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
+  //     let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denomination))
+  //     let poolAddr = '0x' + pool.toString(16)
+  //     console.log("fetched poolAddr", poolAddr)
+  //     let fetchedDeposits = await fetchDeposits(poolAddr)
+  //     console.log("fetchedDeposits", fetchedDeposits)
+  //     setAllPoolDeposits(fetchedDeposits)
+  //   }
+  //   getAllPoolDeposits()
+  // },[srcToken, denomination])
 
   const [openDepositOp, setOpenDepositOp] = useState(false)
 
