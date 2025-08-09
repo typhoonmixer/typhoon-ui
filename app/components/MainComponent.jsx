@@ -155,6 +155,9 @@ const MainComponent = () => {
   const cmenu = [
     { key: ETH, name: ETH },
     { key: STRK, name: STRK },
+    { key: 'USDC', name: 'USDC' },
+    { key: 'UNO', name: 'UNO' },
+    { key: 'WBTC', name: 'WBTC' },
   ]
   const [cselectedItem, setCSelectedItem] = useState("STRK")
   const [cignoreValue, setCIgnoreValue] = useState("STRK")
@@ -355,6 +358,9 @@ const MainComponent = () => {
     const menu = [
       { key: ETH, name: ETH },
       { key: STRK, name: STRK },
+      { key: 'USDC', name: 'USDC' },
+      { key: 'UNO', name: 'UNO' },
+      { key: 'WBTC', name: 'WBTC' },
     ]
     let newItems = getDepositFilteredItems(cignoreValue, menu)
     setCMenuItems([...newItems])
@@ -1226,6 +1232,9 @@ const MainComponent = () => {
           const menu = [
             { key: ETH, name: ETH },
             { key: STRK, name: STRK },
+            { key: 'USDC', name: 'USDC' },
+            { key: 'UNO', name: 'UNO' },
+            { key: 'WBTC', name: 'WBTC' },
           ]
           let newItems = getDepositFilteredItems(key, menu)
           setCMenuItems([...newItems])
