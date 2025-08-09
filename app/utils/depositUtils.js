@@ -2,8 +2,51 @@ import { one, two, three, four, five } from "./SupportedDenominations";
 import { ethers } from 'ethers'
 import $u from './$u.js';
 const wc = require("./witness_calculator.js");
+import { RpcProvider, Contract, constants, types, hash, events, CallData, num } from 'starknet-v7';
+const typhoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
+const provider = new RpcProvider({ nodeUrl: "https://starknet-mainnet.public.blastapi.io/rpc/v0_8" });
 
 
+export async function fetchDeposits(pool) {
+    const lastBlock = await provider.getBlock('latest');
+    const keyFilter = [[num.toHex(hash.starknetKeccak('Deposit'))]];
+    // 1309463 is the block where typhoon got deployed
+    let events = await getDepositEvents(1671756, lastBlock.block_number, keyFilter)
+    
+    let filteredEvents = events.filter(val => val.pool == pool)
+    
+    // let levelArr = []
+    // let ll = lvFullIndex % 4n
+    // for (let i = 0; i < Number(ll.toString()); i++) {
+    //     levelArr[i] = filteredEvents[(filteredEvents.length - 1) - i].value
+    // }
+    return filteredEvents
+}
+
+async function getDepositEvents(from_block_number, to_block_number, filter) { 
+    let allEvents = []
+    let continuationToken = '0';
+    while (continuationToken != undefined) {
+        const eventsList = await provider.getEvents({
+            address: typhoonAddress,
+            from_block: { block_number: from_block_number },
+            to_block: { block_number: to_block_number },
+            keys: filter,
+            chunk_size: 1000,
+            continuation_token: continuationToken === '0' ? undefined : continuationToken,
+        });
+        continuationToken = eventsList.continuation_token;
+        allEvents = allEvents.concat(eventsList.events)
+    }
+
+    const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
+    const abiEvents = events.getAbiEvents(typhoonAbi);
+    const abiStructs = CallData.getAbiStruct(typhoonAbi);
+    const abiEnums = CallData.getAbiEnum(typhoonAbi);
+    const parsed = events.parseEvents(allEvents, abiEvents, abiStructs, abiEnums);
+
+    return parsed.map((e) => e["typhoon::Typhoon::Typhoon::Deposit"])
+}
 
 export function generateSecretAndNullifier() {
     const secret = uint8ArrayTo256BitBigInt(ethers.randomBytes(32)).toString();
