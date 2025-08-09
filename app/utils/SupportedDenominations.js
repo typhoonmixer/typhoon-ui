@@ -22,3 +22,11 @@ export const tokenList = {
      "UNO": "0x0719b5092403233201aa822ce928bd4b551d0cdb071a724edd7dc5e5f57b7f34",
      "WBTC": "0x03fe2b97c1fd336e750087d68b9b867997fd64a2661ff3ca5a7c771641e8e7ac"
 }
+
+export const tokenDecimals = {
+     "STRK": 18,
+     "ETH": 18,
+     "USDC": 6,
+     "UNO": 18,
+     "WBTC": 8
+}
