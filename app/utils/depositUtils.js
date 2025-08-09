@@ -14,7 +14,7 @@ export async function fetchDeposits(pool) {
     let events = await getDepositEvents(1671756, lastBlock.block_number, keyFilter)
     
     let filteredEvents = events.filter(val => '0x'+val.pool.toString(16) == pool)
-    
+    console.log("filtered events ", filteredEvents)
     // let levelArr = []
     // let ll = lvFullIndex % 4n
     // for (let i = 0; i < Number(ll.toString()); i++) {
