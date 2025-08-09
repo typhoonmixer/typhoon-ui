@@ -22,7 +22,6 @@ import { denominationsList, one, tokenList } from '../utils/SupportedDenominatio
 import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button } from '@nextui-org/react'
 import { allowancePerPool, commitmentAndNullifierHash, generateSecretAndNullifier, getFullDenomination, poolsToNumber } from '../utils/depositUtils';
 import { JSONInputStringToList, generateProofCalldata } from '../utils/withdrawUtils';
-import {fetchDeposits} from '../utils/depositUtils';
 import NoteList from './NoteList';
 import typhoonAbi from '../utils/typhoon_abi.json' assert { type: "json" }
 import ecies from 'ecies-geth';
@@ -120,23 +119,6 @@ const MainComponent = () => {
   const [receiverComp, setReceiverComp] = useState()
 
   const [denomination, setDenomination] = useState(denominationsList[tokenToAddress["STRK"]][0])
-
-  const [allPoolDeposits, setAllPoolDeposits] = useState([])
-
-  // useEffect(() => {
-  //   async function getAllPoolDeposits() {
-  //     const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
-
-  //     const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
-  //     let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denomination))
-  //     let poolAddr = '0x' + pool.toString(16)
-  //     console.log("fetched poolAddr", poolAddr)
-  //     let fetchedDeposits = await fetchDeposits(poolAddr)
-  //     console.log("fetchedDeposits", fetchedDeposits)
-  //     setAllPoolDeposits(fetchedDeposits)
-  //   }
-  //   getAllPoolDeposits()
-  // },[srcToken, denomination])
 
   const [openDepositOp, setOpenDepositOp] = useState(false)
 
@@ -617,7 +599,7 @@ const MainComponent = () => {
           </div> : specificAmountField()}
         </div>
         <div className='bg-[#212429] p-4 py-6 rounded-xl mt-5 border-[2px] border-transparent hover:border-zinc-600'>
-         {`Number of Equal deposits: ${allPoolDeposits.length}`}
+         {`Number of Equal deposits: `}
         </div>
 
         <FormGroup className='mb-5'>
