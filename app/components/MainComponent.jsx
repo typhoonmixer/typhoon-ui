@@ -185,6 +185,8 @@ const MainComponent = () => {
     disabled: true
   }
 
+  const [poolCount, setPoolCount] = useState(0n)
+
   const [compT, setCompT] = useState(<DepositField obj={telegramObj} ref={depositRef} />)
 
 
@@ -449,7 +451,24 @@ const MainComponent = () => {
   }, [receiverValue]);
 
 
+  useEffect(() => {
+    async function getDeposits() {
+      const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
 
+      const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
+      let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denomination))
+      let poolAddr = '0x' + pool.toString(16)
+      const { abi: poolAbi } = await provider.getClassAt(poolAddr)
+      const poolC = new Contract(poolAbi, poolAddr, provider);
+      let count = await poolC.getCount()
+      setPoolCount(count)
+    }
+    getDeposits()
+  },[srcToken, denomination])
+
+  useEffect(() => {
+    setContent(depositContent())
+  }, [poolCount]);
 
   return (
     <div className='flex'>
@@ -601,7 +620,7 @@ const MainComponent = () => {
           </div> : specificAmountField()}
         </div>
         <div className='bg-[#212429] p-4 py-6 rounded-xl mt-5 border-[2px] border-transparent hover:border-zinc-600'>
-         {`Number of Equal deposits: `}
+         {`Number of equal doposits: ${poolCount}`}
         </div>
 
         <FormGroup className='mb-5'>
