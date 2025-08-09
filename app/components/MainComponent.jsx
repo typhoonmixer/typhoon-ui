@@ -16,7 +16,7 @@ import WithdrawField from './WithdrawField'
 import toast, { Toaster } from 'react-hot-toast'
 import { DEFAULT_VALUE, ETH, STRK } from '../utils/SupportedCoins'
 import DepositField from './DepositField'
-import { denominationsList, one, tokenList } from '../utils/SupportedDenominations'
+import { denominationsList, one, tokenList, tokenDecimals } from '../utils/SupportedDenominations'
 
 // import { CoinSelector, DenominationSelector } from './Selector';
 import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button } from '@nextui-org/react'
@@ -259,7 +259,7 @@ const MainComponent = () => {
       const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
       let total = 0
       for (let i = 0; i < denominationsList[tokenToAddress[srcToken]].length; i++) {
-        let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denominationsList[tokenToAddress[srcToken]][i]))
+        let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denominationsList[tokenToAddress[srcToken]][i], tokenDecimals[srcToken]))
         let poolAddr = '0x' + pool.toString(16)
         const { abi: poolAbi } = await provider.getClassAt(poolAddr)
         const poolC = new Contract(poolAbi, poolAddr, provider);
@@ -289,7 +289,7 @@ const MainComponent = () => {
       const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
 
       const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
-      let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denomination))
+      let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denomination, tokenDecimals[srcToken]))
       let poolAddr = '0x' + pool.toString(16)
       const { abi: poolAbi } = await provider.getClassAt(poolAddr)
       const poolC = new Contract(poolAbi, poolAddr, provider);
@@ -462,7 +462,7 @@ const MainComponent = () => {
       const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
 
       const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
-      let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denomination))
+      let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denomination,tokenDecimals[srcToken]))
       let poolAddr = '0x' + pool.toString(16)
       const { abi: poolAbi } = await provider.getClassAt(poolAddr)
       const poolC = new Contract(poolAbi, poolAddr, provider);
@@ -702,7 +702,7 @@ const MainComponent = () => {
 
     const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
 
-    let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denomination))
+    let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denomination,tokenDecimals[srcToken]))
     let poolAddr = '0x' + pool.toString(16)
 
     setLoadingText("Depositing...(Do not close neither reload the screen.)")
@@ -715,7 +715,7 @@ const MainComponent = () => {
         entrypoint: 'approve',
         calldata: CallData.compile({
           spender: poolAddr,
-          amount: cairo.uint256(getFullDenomination(denomination)),
+          amount: cairo.uint256(getFullDenomination(denomination,tokenDecimals[srcToken])),
         }),
       },
       // Calling the second contract
@@ -786,7 +786,7 @@ const MainComponent = () => {
       if (poolsAllowance[i] == 0) {
         continue
       }
-      let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denominationsList[i]))
+      let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denominationsList[i],tokenDecimals[srcToken]))
       approvalsAndDeposit.push({
         contractAddress: tokenToAddress[srcToken],
         entrypoint: 'approve',
@@ -795,7 +795,7 @@ const MainComponent = () => {
           amount: cairo.uint256(poolsAllowance[i]),
         }),
       })
-      for (let j = 0; j < BigInt(poolsAllowance[i]) / getFullDenomination(denominationsList[i]); j++) {
+      for (let j = 0; j < BigInt(poolsAllowance[i]) / getFullDenomination(denominationsList[i], tokenDecimals[srcToken]); j++) {
         noteCounter++
         setLoadingText(`Generating Deposit (${noteCounter}/${depositCount})...`)
         const [secret, nullifier] = generateSecretAndNullifier()
