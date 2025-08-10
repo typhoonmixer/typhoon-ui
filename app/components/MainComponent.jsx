@@ -68,7 +68,8 @@ const MainComponent = () => {
     "ETH": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
     "USDC": "0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8",
     "UNO": "0x0719b5092403233201aa822ce928bd4b551d0cdb071a724edd7dc5e5f57b7f34",
-    "WBTC": "0x03fe2b97c1fd336e750087d68b9b867997fd64a2661ff3ca5a7c771641e8e7ac"
+    "WBTC": "0x03fe2b97c1fd336e750087d68b9b867997fd64a2661ff3ca5a7c771641e8e7ac",
+    "tBTC": "0x04daa17763b286d1e59b97c283c0b8c949994c361e426a28f743c67bdfe9a32f"
   }
 
   const [noteValue, setNoteValue] = useState("")
@@ -160,6 +161,7 @@ const MainComponent = () => {
     { key: 'USDC', name: 'USDC' },
     { key: 'UNO', name: 'UNO' },
     { key: 'WBTC', name: 'WBTC' },
+    { key: 'tBTC', name: 'tBTC'}
   ]
   const [cselectedItem, setCSelectedItem] = useState("STRK")
   const [cignoreValue, setCIgnoreValue] = useState("STRK")
@@ -363,6 +365,7 @@ const MainComponent = () => {
       { key: 'USDC', name: 'USDC' },
       { key: 'UNO', name: 'UNO' },
       { key: 'WBTC', name: 'WBTC' },
+      { key: 'tBTC', name: 'tBTC'}
     ]
     let newItems = getDepositFilteredItems(cignoreValue, menu)
     setCMenuItems([...newItems])
@@ -1237,6 +1240,7 @@ const MainComponent = () => {
             { key: 'USDC', name: 'USDC' },
             { key: 'UNO', name: 'UNO' },
             { key: 'WBTC', name: 'WBTC' },
+            { key: 'tBTC', name: 'tBTC'}
           ]
           let newItems = getDepositFilteredItems(key, menu)
           setCMenuItems([...newItems])
