@@ -32,7 +32,7 @@ const Header = () => {
     }
     if ((noteAccountExists || naux != "") && (naux != "undefined" && naux != "null") && naux != null) {
       setNoteValue(naux);
-      if(!noteAccountExists){
+      if (!noteAccountExists) {
         setNoteAccountExists(true)
       }
     } else {
@@ -70,9 +70,9 @@ const Header = () => {
           Get Faucets
         </button> */}
         {/* <NoteAccountButton style={{marginRight: '10px'}}></NoteAccountButton> */}
-        {/* {noteAccountExists == true ? <Popup display="anchored" trigger={<Button style={{ backgroundColor: 'blue', color: 'white', marginRight: '10px' }} className={className}>{noteAccountText()}</Button>} contentStyle={{ width: '400px', height: '150px', borderRadius: '20px' }}>
+        {noteAccountExists == true ? <Popup display="anchored" trigger={<Button style={{ backgroundColor: 'blue', color: 'white', marginRight: '10px' }} className={className}>{noteAccountText()}</Button>} contentStyle={{ width: '400px', height: '150px', borderRadius: '20px' }}>
           <div>
-            <CopyButton style={{color:"black"}}
+            <CopyButton style={{ color: "black" }}
               copyText={noteAccAddr()}
               buttonText={
                 `Note Account: ${noteAccAddr()}`
@@ -80,13 +80,13 @@ const Header = () => {
               className="flex items-center gap-2 text-sm text-yellow-primary"
               iconClassName="rounded-full bg-[--link-card] p-1 text-yellow-primary dark:bg-black"
             />
-            Note Account: 
+            Note Account:
             <button style={{ border: '2px solid black', color: "black" }}
               onClick={(e) => {
                 if (typeof window !== 'undefined') {
                   localStorage.setItem("noteAcc", null)
                 }
-                
+
                 setNoteAccountExists(false)
               }}
               className="w-full rounded-[12px] border-[2px] border-solid border-[--borders] bg-[--modal-disconnect-bg] p-3 text-red-secondary md:p-4"
@@ -144,7 +144,7 @@ const Header = () => {
               </p>
             </div>
           </div>
-        </Popup>} */}
+        </Popup>}
         {address ? (
           <div className="flex items-center gap-4">
             <AddressBar />
@@ -159,28 +159,45 @@ const Header = () => {
   )
 
   function connectNoteAccount(noteAccount) {
+    console.log("Connecting Note Account: ", noteAccount);
     if (typeof window !== 'undefined') {
       localStorage.setItem("noteAcc", noteAccount)
     }
-    
+
     setNoteValue(noteAccount);
+    console.log("note")
     setNoteAccountExists(true);
   }
 
   function noteAccountText() {
-    const acc = new Wallet(noteValue)
-    const address = acc.address;
-    return (
-      <div className="flex items-center gap-2 text-sm text-yellow-primary">
-        Note Account: {address?.slice(0, 6).concat("...").concat(address?.slice(-5))}
-      </div>
-    )
+
+    try {
+      const acc = new Wallet(noteValue)
+      console.log("noteValue", noteValue)
+      const address = acc.address;
+      return (
+        <div className="flex items-center gap-2 text-sm text-yellow-primary">
+          Note Account: {address?.slice(0, 6).concat("...").concat(address?.slice(-5))}
+        </div>
+      )
+
+    } catch (error) {
+      localStorage.setItem("noteAcc", null)
+      setNoteAccountExists(false);
+    }
+
+
   }
 
   function noteAccAddr() {
-    const acc = new Wallet(noteValue)
-    const address = acc.address;
-    return address
+    try {
+      const acc = new Wallet(noteValue)
+      const address = acc.address;
+      return address
+    } catch (error) {
+      localStorage.setItem("noteAcc", null)
+      setNoteAccountExists(false);
+    }
   }
 
 
