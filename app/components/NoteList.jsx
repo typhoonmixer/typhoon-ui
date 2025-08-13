@@ -5,6 +5,7 @@ import { RpcProvider, Contract, constants, cairo, CallData } from 'starknet-v7';
 import Popup from 'reactjs-popup';
 import { createHash } from 'crypto';
 import { generateProofCalldata2 } from '../utils/withdrawUtils';
+import {tokenToSymbol} from '../utils/SupportedDenominations';
 import { bufferToHex } from 'ethereumjs-util';
 import { Signature, Wallet } from 'ethers';
 import {
@@ -74,8 +75,8 @@ function NoteList() {
 
                     let denomination = await getPoolDenomination(poolAddress);
                     let tokenAddr = await getPoolToken(poolAddress);
-                    let cid = await provider.getChainId();
-                    let tokenSymbol = token[cid.toString()][0] == tokenAddr ? "ETH" : "STRK";
+                    // let cid = await provider.getChainId();
+                    let tokenSymbol = tokenToSymbol[tokenAddr.toString()];
 
 
                     notesDenominationsAux.push(denominationShortener(denomination.toString()) + " " + tokenSymbol);
