@@ -70,81 +70,81 @@ const Header = () => {
           Get Faucets
         </button> */}
         {/* <NoteAccountButton style={{marginRight: '10px'}}></NoteAccountButton> */}
-        {noteAccountExists == true ? <Popup display="anchored" trigger={<Button style={{ backgroundColor: 'blue', color: 'white', marginRight: '10px' }} className={className}>{noteAccountText()}</Button>} contentStyle={{ width: '400px', height: '150px', borderRadius: '20px' }}>
-          <div>
-            <CopyButton style={{color:"black"}}
-              copyText={noteAccAddr()}
-              buttonText={
-                `Note Account: ${noteAccAddr()}`
-              }
-              className="flex items-center gap-2 text-sm text-yellow-primary"
-              iconClassName="rounded-full bg-[--link-card] p-1 text-yellow-primary dark:bg-black"
-            />
-            Note Account: 
-            <button style={{ border: '2px solid black', color: "black" }}
-              onClick={(e) => {
-                if (typeof window !== 'undefined') {
-                  localStorage.setItem("noteAcc", null)
-                }
+        // {noteAccountExists == true ? <Popup display="anchored" trigger={<Button style={{ backgroundColor: 'blue', color: 'white', marginRight: '10px' }} className={className}>{noteAccountText()}</Button>} contentStyle={{ width: '400px', height: '150px', borderRadius: '20px' }}>
+        //   <div>
+        //     <CopyButton style={{color:"black"}}
+        //       copyText={noteAccAddr()}
+        //       buttonText={
+        //         `Note Account: ${noteAccAddr()}`
+        //       }
+        //       className="flex items-center gap-2 text-sm text-yellow-primary"
+        //       iconClassName="rounded-full bg-[--link-card] p-1 text-yellow-primary dark:bg-black"
+        //     />
+        //     Note Account: 
+        //     <button style={{ border: '2px solid black', color: "black" }}
+        //       onClick={(e) => {
+        //         if (typeof window !== 'undefined') {
+        //           localStorage.setItem("noteAcc", null)
+        //         }
                 
-                setNoteAccountExists(false)
-              }}
-              className="w-full rounded-[12px] border-[2px] border-solid border-[--borders] bg-[--modal-disconnect-bg] p-3 text-red-secondary md:p-4"
-            >
-              Disconnect
-            </button>
-          </div>
-        </Popup> : <Popup trigger={<button style={{ backgroundColor: 'blue', color: 'white', marginRight: '10px' }} className={className}> Note Account</button>} modal contentStyle={{ borderRadius: '10px' }}>
-          <div>
-            <div className="lg:border-outline-grey ml-5 basis-5/6 lg:col-span-2 lg:border-r-[1px] lg:border-solid lg:py-4 lg:pl-8">
-              <h2 className="my-4 text-center text-[1.125em] font-bold text-black lg:text-start">
-                Connect a Note Account
-              </h2>
-            </div>
-            <div className="flex">
-              <div className="relative bg-[#212429] p-12 py-6 rounded-xl mb-5 ml-5 border-transparent hover:border-zinc-600">
-                <div className="flex items-center rounded-xl">
-                  <input
-                    className={getInputClassname()}
-                    type={"text"}
-                    value={noteValue}
-                    placeholder={"type or paste your private key here..."}
-                    disabled={false}
-                    onChange={(e) => {
-                      setNoteValue(e.target.value);
-                    }}
-                  />
-                </div>
-              </div>
+        //         setNoteAccountExists(false)
+        //       }}
+        //       className="w-full rounded-[12px] border-[2px] border-solid border-[--borders] bg-[--modal-disconnect-bg] p-3 text-red-secondary md:p-4"
+        //     >
+        //       Disconnect
+        //     </button>
+        //   </div>
+        // </Popup> : <Popup trigger={<button style={{ backgroundColor: 'blue', color: 'white', marginRight: '10px' }} className={className}> Note Account</button>} modal contentStyle={{ borderRadius: '10px' }}>
+        //   <div>
+        //     <div className="lg:border-outline-grey ml-5 basis-5/6 lg:col-span-2 lg:border-r-[1px] lg:border-solid lg:py-4 lg:pl-8">
+        //       <h2 className="my-4 text-center text-[1.125em] font-bold text-black lg:text-start">
+        //         Connect a Note Account
+        //       </h2>
+        //     </div>
+        //     <div className="flex">
+        //       <div className="relative bg-[#212429] p-12 py-6 rounded-xl mb-5 ml-5 border-transparent hover:border-zinc-600">
+        //         <div className="flex items-center rounded-xl">
+        //           <input
+        //             className={getInputClassname()}
+        //             type={"text"}
+        //             value={noteValue}
+        //             placeholder={"type or paste your private key here..."}
+        //             disabled={false}
+        //             onChange={(e) => {
+        //               setNoteValue(e.target.value);
+        //             }}
+        //           />
+        //         </div>
+        //       </div>
 
-              <button style={{ backgroundColor: 'blue', color: 'white', marginLeft: '10px' }}
-                aria-haspopup="dialog"
-                onClick={() => connectNoteAccount(noteValue)}
-                className="rounded-[12px]  ml-10 bg-button-primary bg-blue px-4 py-3 text-background-primary-light transition-all duration-300 hover:rounded-[30px] md:py-4"
-              >
-                Connect
-              </button>
-            </div>
-            <div className="items-center lg:border-outline-grey ml-5 basis-5/6 lg:col-span-2 lg:border-r-[1px] lg:border-solid lg:py-4 lg:pl-8">
-              <h2 className="my-4 text-center text-[1.125em] font-bold text-black lg:text-start">
-                Or
-              </h2>
-            </div>
-            <button style={{ backgroundColor: 'blue', color: 'white', marginLeft: '20px' }}
-              aria-haspopup="dialog"
-              onClick={() => createNoteAccount()}
-              className="items-center rounded-[12px] ml-10 bg-button-primary bg-blue px-6 py-3 text-background-primary-light transition-all duration-300 hover:rounded-[30px] md:py-4"
-            >
-              Create Note Account
-            </button>
-            <div className="col-span-8 flex flex-col gap-2">
+        //       <button style={{ backgroundColor: 'blue', color: 'white', marginLeft: '10px' }}
+        //         aria-haspopup="dialog"
+        //         onClick={() => connectNoteAccount(noteValue)}
+        //         className="rounded-[12px]  ml-10 bg-button-primary bg-blue px-4 py-3 text-background-primary-light transition-all duration-300 hover:rounded-[30px] md:py-4"
+        //       >
+        //         Connect
+        //       </button>
+        //     </div>
+        //     <div className="items-center lg:border-outline-grey ml-5 basis-5/6 lg:col-span-2 lg:border-r-[1px] lg:border-solid lg:py-4 lg:pl-8">
+        //       <h2 className="my-4 text-center text-[1.125em] font-bold text-black lg:text-start">
+        //         Or
+        //       </h2>
+        //     </div>
+        //     <button style={{ backgroundColor: 'blue', color: 'white', marginLeft: '20px' }}
+        //       aria-haspopup="dialog"
+        //       onClick={() => createNoteAccount()}
+        //       className="items-center rounded-[12px] ml-10 bg-button-primary bg-blue px-6 py-3 text-background-primary-light transition-all duration-300 hover:rounded-[30px] md:py-4"
+        //     >
+        //       Create Note Account
+        //     </button>
+        //     <div className="col-span-8 flex flex-col gap-2">
 
-              <p className="text-black">
-                Once you click on "Create Note Account", a new private key will be generated and will be downloaded to your computer in ".txt" format. Please keep it safe, as it is the only way to access your Note Account.
-              </p>
-            </div>
-          </div>
-        </Popup>}
+        //       <p className="text-black">
+        //         Once you click on "Create Note Account", a new private key will be generated and will be downloaded to your computer in ".txt" format. Please keep it safe, as it is the only way to access your Note Account.
+        //       </p>
+        //     </div>
+        //   </div>
+        // </Popup>}
         {address ? (
           <div className="flex items-center gap-4">
             <AddressBar />
