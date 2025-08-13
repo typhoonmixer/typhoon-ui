@@ -39,7 +39,7 @@ const Header = () => {
       setNoteValue("");
       setNoteAccountExists(false)
     }
-  }, [noteValue, noteAccountExists])
+  }, [noteAccountExists])
 
   let className = "rounded-[12px] bg-button-primary bg-blue px-6 py-3 text-background-primary-light transition-all duration-300 hover:rounded-[30px] md:py-4"
 
