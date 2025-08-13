@@ -29,7 +29,7 @@ function NoteList() {
     const [receiver, setReceiver] = useState("");
     const [withdrawing, setWithdrawing] = useState(false);
     const [finished, setFinished] = useState(false);
-    let noteAccount = null
+    const [noteAccount, setNoteAccount] = useState(null);
     // if (typeof window !== "undefined") {
     //     noteAccount = localStorage.getItem('noteAcc');
     // }
@@ -38,6 +38,7 @@ function NoteList() {
     const [encryptedNotes, setEncryptedNotes] = useState([]);
     const [decryptedNotes, setDecryptedNotes] = useState([]);
     const [notesDenominations, setNotesDenominations] = useState([]);
+    const [noteExists, setNoteExists] = useState(false);
 
     useEffect(() => {
         async function fetchNotes() {
@@ -94,13 +95,14 @@ function NoteList() {
 
         }
         if (typeof window !== "undefined") {
-            noteAccount = localStorage.getItem('noteAcc');
+            setNoteAccount(localStorage.getItem('noteAcc'));
+            setNoteExists(true)
         }
         if (noteAccount != null && noteAccount != "undefined" && noteAccount != "null" && noteAccount != "") {
             fetchNotes();
         }
 
-    }, [noteAccount, encryptedNotes])
+    }, [noteExists, encryptedNotes])
     // fn getNotes(self: @ContractState, pubKey: EthAddress) -> Array<(u256, u256, u256, u256, u256, u256, u256)>
 
 
