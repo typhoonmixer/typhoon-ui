@@ -15,7 +15,7 @@ import ecies from 'ecies-geth';
 import nacl from "tweetnacl";
 import naclUtil from "tweetnacl-util";
 
-const provider = new RpcProvider({ nodeUrl: 'https://starknet-sepolia.public.blastapi.io/rpc/v0_8' });
+const provider = new RpcProvider({ nodeUrl: 'https://starknet-mainnet.public.blastapi.io/rpc/v0_8' });
 const maxUint256 = (1n << 256n) - 1n;
 const maxUint512 = (1n << 512n) - 1n;
 const typhoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
