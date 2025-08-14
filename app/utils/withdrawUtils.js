@@ -72,7 +72,7 @@ export async function generateProofCalldata(note, recipient) {
 export async function generateProofCalldata2(secret, nullifier, txHash, pool, recipient) {
     await garaga.init();
     const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
-    consoe.log("txhash ", txHash)
+    console.log("txhash ", txHash)
     let receipt = await provider.waitForTransaction(txHash)
     console.log("after txHash")
 
