@@ -123,16 +123,16 @@ function NoteList() {
     async function withdrawNote(noteId) {
         setWithdrawing(true);
         let acc = new Wallet("0x" + noteAccount);
-        console.log("after account")
+        
         let callData = await generateProofCalldata2(decryptedNotes[noteId].secret, decryptedNotes[noteId].nullifier, decryptedNotes[noteId].txHash, decryptedNotes[noteId].pool, receiver);
-        console.log("after calldata")
+      
         // createAndDownloadFile(JSON.stringify(callData.map((x) => x.toString())))
         // console.log("pool ",decryptedNotes[noteId].pool)
         const publicKeyBuffer = Buffer.from(acc.signingKey.publicKey.slice(2), 'hex');
         const privKeyBuffer = Buffer.from(noteAccount, 'hex');
         let keyPair = nacl.box.keyPair.fromSecretKey(privKeyBuffer)
         let encryptedNotesAux = encryptedNotes;
-        console.log("after key pair")
+     
         encryptedNotesAux.splice(noteId, 1)
         const nonce = nacl.randomBytes(nacl.box.nonceLength);
         const msg = nacl.box(
