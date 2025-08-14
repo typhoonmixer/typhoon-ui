@@ -3,7 +3,6 @@ import React, { useEffect, useState, useRef, use } from 'react'
 import Popup from 'reactjs-popup';
 import { Wallet, Signature, verifyMessage, recoverAddress } from 'ethers';
 
-import { encrypt } from '@metamask/eth-sig-util';
 import { bufferToHex } from 'ethereumjs-util';
 
 import FormGroup from '@mui/material/FormGroup';
@@ -24,7 +23,7 @@ import { allowancePerPool, commitmentAndNullifierHash, generateSecretAndNullifie
 import { JSONInputStringToList, generateProofCalldata } from '../utils/withdrawUtils';
 import NoteList from './NoteList';
 import typhoonAbi from '../utils/typhoon_abi.json' assert { type: "json" }
-import ecies from 'ecies-geth';
+
 import nacl from "tweetnacl";
 import naclUtil from "tweetnacl-util";
 
