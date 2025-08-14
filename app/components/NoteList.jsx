@@ -3,17 +3,19 @@ import React, { useEffect, useState } from 'react';
 import { decrypt, encrypt } from '@metamask/eth-sig-util';
 import { RpcProvider, Contract, constants, cairo, CallData } from 'starknet-v7';
 import Popup from 'reactjs-popup';
-import { createHash } from 'crypto';
+import { createHash } from 'crypto-browserify';
 import { generateProofCalldata2 } from '../utils/withdrawUtils';
-import {tokenToSymbol} from '../utils/SupportedDenominations';
+import { tokenToSymbol } from '../utils/SupportedDenominations';
 import { bufferToHex } from 'ethereumjs-util';
 import { Signature, Wallet } from 'ethers';
 import {
     useAccount,
 } from "@starknet-react/core";
 import ecies from 'ecies-geth';
+import nacl from "tweetnacl";
+import naclUtil from "tweetnacl-util";
 
-const provider = new RpcProvider({ nodeUrl: 'https://starknet-mainnet.public.blastapi.io/rpc/v0_8' });
+const provider = new RpcProvider({ nodeUrl: 'https://starknet-sepolia.public.blastapi.io/rpc/v0_8' });
 const maxUint256 = (1n << 256n) - 1n;
 const maxUint512 = (1n << 512n) - 1n;
 const typhoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
@@ -47,24 +49,33 @@ function NoteList() {
                 const { abi: noteAccountAbi } = await provider.getClassAt(noteAccountContract);
                 const ncContract = new Contract(noteAccountAbi, noteAccountContract, provider);
                 let compressedNotesData = await ncContract.getNotes(acc.address);
-
+                const privKeyBuffer = Buffer.from(noteAccount, 'hex');
+                let keyPair = nacl.box.keyPair.fromSecretKey(privKeyBuffer)
                 let decryptedNotesAux = []
                 for (let i = 0; i < compressedNotesData.length; i++) {
                     let dnaux = []
                     for (let j = 0; j < 25; j += 5) {
                         let recover = (maxUint512 * maxUint512) * compressedNotesData[i][j] + (compressedNotesData[i][j + 1] * (maxUint512 * maxUint256)) + (compressedNotesData[i][j + 2] * maxUint512) + (compressedNotesData[i][j + 3] * maxUint256) + compressedNotesData[i][j + 4]
-                        let encrypted = "0x0" + recover.toString(16);
-                        const privateKeyBuffer = Buffer.from(noteAccount, 'hex');
-                        const decrypted = bufferToHex(await ecies.decrypt(privateKeyBuffer, Buffer.from(encrypted.slice(2), 'hex')));
-                        dnaux.push(decrypted);
+                        let encrypted = recover.toString(16).length % 2 == 0 ? recover.toString(16) : "0" + recover.toString(16)
+                        // const privateKeyBuffer = Buffer.from(noteAccount, 'hex');
+                        const decrypted = nacl.box.open(
+                          Buffer.from(encrypted, 'hex'),
+                          Buffer.from(BigInt(compressedNotesData[i][25]).toString(16), 'hex'),
+                          keyPair.publicKey,
+                          keyPair.secretKey
+                        );
+                        // const decrypted = bufferToHex(await ecies.decrypt(privateKeyBuffer, Buffer.from(encrypted.slice(2), 'hex')));
+                        let decryptedHex = bufferToHex(decrypted);
+                        let decryptedStr = Buffer.from(decryptedHex.slice(2), 'hex').toString('utf8')
+                        dnaux.push(decryptedStr);
                     }
 
                     let note = {
-                        "secret": dnaux[0].slice(2).includes("150dd") ? "0x" + dnaux[0].slice(7) : dnaux[0],
-                        "nullifier": dnaux[1].slice(2).includes("150dd") ? "0x" + dnaux[1].slice(7) : dnaux[1],
-                        "txHash": dnaux[2].slice(2).includes("150dd") ? "0x" + dnaux[2].slice(7) : dnaux[2],
-                        "pool": dnaux[3].slice(2).includes("150dd") ? "0x" + dnaux[3].slice(7) : dnaux[3],
-                        "day": dnaux[4].slice(2).includes("150dd") ? "0x" + dnaux[4].slice(7) : dnaux[4],
+                        "secret": dnaux[0].includes("150dd") ? "0x" + dnaux[0].slice(5) : dnaux[0],
+                        "nullifier": dnaux[1].includes("150dd") ? "0x" + dnaux[1].slice(5) : dnaux[1],
+                        "txHash": dnaux[2].includes("150dd") ? "0x" + dnaux[2].slice(5) : dnaux[2],
+                        "pool": dnaux[3].includes("150dd") ? "0x" + dnaux[3].slice(5) : dnaux[3],
+                        "day": dnaux[4].includes("150dd") ? "0x" + dnaux[4].slice(5) : dnaux[4],
                     }
                     decryptedNotesAux.push(note);
                 }
@@ -78,8 +89,6 @@ function NoteList() {
                     let tokenAddr = await getPoolToken(poolAddress);
                     // let cid = await provider.getChainId();
                     let tokenSymbol = tokenToSymbol[tokenAddr.toString()];
-
-
                     notesDenominationsAux.push(denominationShortener(denomination.toString()) + " " + tokenSymbol);
 
                 }
