@@ -11,11 +11,10 @@ import { Signature, Wallet } from 'ethers';
 import {
     useAccount,
 } from "@starknet-react/core";
-import ecies from 'ecies-geth';
 import nacl from "tweetnacl";
 import naclUtil from "tweetnacl-util";
 
-const provider = new RpcProvider({ nodeUrl: 'https://starknet-mainnet.public.blastapi.io/rpc/v0_8' });
+const provider = new RpcProvider({ nodeUrl: 'https://starknet-sepolia.public.blastapi.io/rpc/v0_8' });
 const maxUint256 = (1n << 256n) - 1n;
 const maxUint512 = (1n << 512n) - 1n;
 const typhoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
@@ -59,10 +58,10 @@ function NoteList() {
                         let encrypted = recover.toString(16).length % 2 == 0 ? recover.toString(16) : "0" + recover.toString(16)
                         // const privateKeyBuffer = Buffer.from(noteAccount, 'hex');
                         const decrypted = nacl.box.open(
-                          Buffer.from(encrypted, 'hex'),
-                          Buffer.from(BigInt(compressedNotesData[i][25]).toString(16), 'hex'),
-                          keyPair.publicKey,
-                          keyPair.secretKey
+                            Buffer.from(encrypted, 'hex'),
+                            Buffer.from(BigInt(compressedNotesData[i][25]).toString(16), 'hex'),
+                            keyPair.publicKey,
+                            keyPair.secretKey
                         );
                         // const decrypted = bufferToHex(await ecies.decrypt(privateKeyBuffer, Buffer.from(encrypted.slice(2), 'hex')));
                         let decryptedHex = bufferToHex(decrypted);
@@ -134,8 +133,15 @@ function NoteList() {
         const publicKeyBuffer = Buffer.from(acc.signingKey.publicKey.slice(2), 'hex');
         let encryptedNotesAux = encryptedNotes;
         encryptedNotesAux.splice(noteId, 1)
-        let msg = bufferToHex(await ecies.encrypt(publicKeyBuffer, Buffer.from(encryptedNotesAux.flat().join(''))))
-        let msg_hash_str = createHash('sha256').update(msg).digest('hex')
+        const nonce = nacl.randomBytes(nacl.box.nonceLength);
+        const msg = nacl.box(
+            naclUtil.decodeUTF8(encryptedNotesAux.flat().join('')),
+            nonce,
+            keyPair.publicKey,
+            keyPair.secretKey
+        );
+        // let msg = bufferToHex(await ecies.encrypt(publicKeyBuffer, Buffer.from(encryptedNotesAux.flat().join(''))))
+        let msg_hash_str = createHash('sha256').update(bufferToHex(msg)).digest('hex')
         let signature = acc.signingKey.sign("0x" + msg_hash_str)
         let encriptedNotesData = [];
         for (let i = 0; i < encryptedNotesAux.length; i++) {
