@@ -9,7 +9,7 @@ import { bufferToHex } from 'ethereumjs-util';
 import FormGroup from '@mui/material/FormGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
-import { createHash, sign } from 'crypto';
+import { createHash, sign } from 'crypto-browserify';
 import { RpcProvider, Contract, WalletAccount, CallData, cairo, RPC } from 'starknet';
 
 import WithdrawField from './WithdrawField'
@@ -25,6 +25,8 @@ import { JSONInputStringToList, generateProofCalldata } from '../utils/withdrawU
 import NoteList from './NoteList';
 import typhoonAbi from '../utils/typhoon_abi.json' assert { type: "json" }
 import ecies from 'ecies-geth';
+import nacl from "tweetnacl";
+import naclUtil from "tweetnacl-util";
 
 import {
   useAccount,
@@ -1044,6 +1046,9 @@ const MainComponent = () => {
     let acc = new Wallet("0x" + acckey);
 
     const publicKeyBuffer = Buffer.from(acc.signingKey.publicKey.slice(2), 'hex');
+    const privKeyBuffer = Buffer.from(acckey, 'hex');
+    const nonce = nacl.randomBytes(nacl.box.nonceLength);
+    let keyPair = nacl.box.keyPair.fromSecretKey(privKeyBuffer)
     let compressedData = []
     console.log("tx hash save ", pe)
     for (let i = 0; i < pe.length; i++) {
@@ -1051,8 +1056,31 @@ const MainComponent = () => {
       if (data.length % 2 != 0) {
         data = "150dd" + data
       }
-      let encrypted = bufferToHex(await ecies.encrypt(publicKeyBuffer, Buffer.from(data, "hex")))
-      let en = BigInt(encrypted, 16)
+      console.log("data ", data)
+
+      const encrypted = nacl.box(
+        naclUtil.decodeUTF8(data),
+        nonce,
+        keyPair.publicKey,
+        keyPair.secretKey
+      );
+      console.log("encrypted data ", bufferToHex(encrypted))
+
+      // const decrypted = nacl.box.open(
+      //   Buffer.from(bufferToHex(encrypted).slice(2), 'hex'),
+      //   nonce,
+      //   keyPair.publicKey,
+      //   keyPair.secretKey
+      // );
+      // let decryptedHex = bufferToHex(decrypted)
+      // console.log("decrypted hex ", decryptedHex)
+      // let decryptedStr = Buffer.from(decryptedHex.slice(2), 'hex').toString('utf8')
+      // console.log("decrypted data ", decryptedStr)
+      // console.log("valid: ", decryptedStr == data)
+
+      // let enData = await ecies.encrypt(publicKeyBuffer, Buffer.from(data, "hex"))
+      // let encrypted = bufferToHex(enData)
+      let en = BigInt(bufferToHex(encrypted))
       let times = en / (maxUint512 * maxUint512)
 
       let remainder = en % (maxUint512 * maxUint512)
@@ -1061,6 +1089,11 @@ const MainComponent = () => {
       let remainderRemainderR = ((remainder % (maxUint512 * maxUint256)) % maxUint512) / maxUint256
       let remainderRemainderR2 = ((remainder % (maxUint512 * maxUint256)) % maxUint512) % maxUint256
       let recover = (maxUint512 * maxUint512) * times + (timesR * (maxUint512 * maxUint256)) + (timesRemainderR * maxUint512) + (remainderRemainderR * maxUint256) + remainderRemainderR2
+      // console.log("remainderRemainderR gt ", remainderRemainderR > maxUint256)
+      // console.log("remainderRemainderR2 gt ", remainderRemainderR2 > maxUint256)
+      // console.log("times", times, "timesR", timesR, "timesRemainderR", timesRemainderR, "remainderRemainderR", remainderRemainderR, "remainderRemainderR2", remainderRemainderR2)
+      console.log("recover ", recover.toString(16).length % 2 == 0 ? "0x" + recover.toString(16) : "0x0" + recover.toString(16))
+      console.log(recover.toString(16).length % 2 == 0 ? "0x" + recover.toString(16) : "0x0" + recover.toString(16) == bufferToHex(encrypted))
       // console.log(times > maxUint256)
       // console.log(timesR > maxUint256)
       // console.log(timesRemainderR > maxUint256)
@@ -1074,6 +1107,7 @@ const MainComponent = () => {
       compressedData.push(timesRemainderR.toString())
       compressedData.push(remainderRemainderR.toString())
       compressedData.push(remainderRemainderR2.toString())
+      // compressedData.push(BigInt(bufferToHex(nonce)).toString())
       // const privateKeyBuffer = Buffer.from(noteAcc, 'hex');
       // const decrypted = bufferToHex(await ecies.decrypt(privateKeyBuffer, Buffer.from("0" + recover.toString(16), 'hex')));
       // console.log("proof element ", pe[i], " decrypted: ", decrypted.slice(2).includes("150dd")? "0x"+decrypted.slice(7): decrypted)
@@ -1097,12 +1131,13 @@ const MainComponent = () => {
       // console.log("s", sig.s)
       // console.log("v", sig.v)
       // fn addNote(ref self: TContractState, pubKey: EthAddress, encryptedNote: Span<u256>, msg_hash: u256, r: u256, s: u256, v: u32);
+      console.log("nonce ", BigInt(bufferToHex(nonce)).toString())
       const multiCall = await account.execute({
         contractAddress: noteAccountContract,
         entrypoint: 'addNote',
         calldata: CallData.compile({
           pubKey: acc.address,
-          encryptedNote: cairo.tuple([cairo.uint256(compressedData[0]), cairo.uint256(compressedData[1]), cairo.uint256(compressedData[2]), cairo.uint256(compressedData[3]), cairo.uint256(compressedData[4]), cairo.uint256(compressedData[5]), cairo.uint256(compressedData[6]), cairo.uint256(compressedData[7]), cairo.uint256(compressedData[8]), cairo.uint256(compressedData[9]), cairo.uint256(compressedData[10]), cairo.uint256(compressedData[11]), cairo.uint256(compressedData[12]), cairo.uint256(compressedData[13]), cairo.uint256(compressedData[14]), cairo.uint256(compressedData[15]), cairo.uint256(compressedData[16]), cairo.uint256(compressedData[17]), cairo.uint256(compressedData[18]), cairo.uint256(compressedData[19]), cairo.uint256(compressedData[20]), cairo.uint256(compressedData[21]), cairo.uint256(compressedData[22]), cairo.uint256(compressedData[23]), cairo.uint256(compressedData[24])]),
+          encryptedNote: cairo.tuple([cairo.uint256(compressedData[0]), cairo.uint256(compressedData[1]), cairo.uint256(compressedData[2]), cairo.uint256(compressedData[3]), cairo.uint256(compressedData[4]), cairo.uint256(compressedData[5]), cairo.uint256(compressedData[6]), cairo.uint256(compressedData[7]), cairo.uint256(compressedData[8]), cairo.uint256(compressedData[9]), cairo.uint256(compressedData[10]), cairo.uint256(compressedData[11]), cairo.uint256(compressedData[12]), cairo.uint256(compressedData[13]), cairo.uint256(compressedData[14]), cairo.uint256(compressedData[15]), cairo.uint256(compressedData[16]), cairo.uint256(compressedData[17]), cairo.uint256(compressedData[18]), cairo.uint256(compressedData[19]), cairo.uint256(compressedData[20]), cairo.uint256(compressedData[21]), cairo.uint256(compressedData[22]), cairo.uint256(compressedData[23]), cairo.uint256(compressedData[24]), cairo.uint256(BigInt(bufferToHex(nonce)).toString())]),
           msgHash: cairo.uint256(BigInt("0x" + msg_hash_str).toString()),
           r: cairo.uint256(BigInt(signature.r).toString()),
           s: cairo.uint256(BigInt(signature.s).toString()),
@@ -1122,7 +1157,6 @@ const MainComponent = () => {
     }
 
   }
-
   // function specificAmountField() {
   //   return (
   //     <div className='flex items-center rounded-xl'>
