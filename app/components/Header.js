@@ -207,10 +207,7 @@ const Header = () => {
     if (typeof window !== 'undefined') {
       localStorage.setItem("noteAcc", privKey)
     }
-    let na = JSON.stringify({
-      "privkey": privKey,
-    })
-    createAndDownloadFile(na)
+    createAndDownloadFile(privKey)
     setNoteAccountExists(true);
     setNoteValue(privKey);
   }
