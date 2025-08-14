@@ -70,11 +70,11 @@ function NoteList() {
                     }
 
                     let note = {
-                        "secret": dnaux[0].includes("150dd") ? "0x" + dnaux[0].slice(5) : dnaux[0],
-                        "nullifier": dnaux[1].includes("150dd") ? "0x" + dnaux[1].slice(5) : dnaux[1],
+                        "secret": dnaux[0].includes("150dd") ? dnaux[0].slice(5) : dnaux[0],
+                        "nullifier": dnaux[1].includes("150dd") ? dnaux[1].slice(5) : dnaux[1],
                         "txHash": dnaux[2].includes("150dd") ? "0x" + dnaux[2].slice(5) : dnaux[2],
                         "pool": dnaux[3].includes("150dd") ? "0x" + dnaux[3].slice(5) : dnaux[3],
-                        "day": dnaux[4].includes("150dd") ? "0x" + dnaux[4].slice(5) : dnaux[4],
+                        "day": dnaux[4].includes("150dd") ? dnaux[4].slice(5) : dnaux[4],
                     }
                     decryptedNotesAux.push(note);
                 }
@@ -114,10 +114,6 @@ function NoteList() {
     // fn getNotes(self: @ContractState, pubKey: EthAddress) -> Array<(u256, u256, u256, u256, u256, u256, u256)>
 
 
-
-
-
-
     function getInputClassname() {
         let className =
             ' w-full outline-none h-4  appearance-none text-1xl bg-transparent'
@@ -127,10 +123,12 @@ function NoteList() {
     async function withdrawNote(noteId) {
         setWithdrawing(true);
         let acc = new Wallet("0x" + noteAccount);
-        let callData = await generateProofCalldata2(decryptedNotes[noteId].secret.slice(2), decryptedNotes[noteId].nullifier.slice(2), decryptedNotes[noteId].txHash, decryptedNotes[noteId].pool, receiver);
+        let callData = await generateProofCalldata2(decryptedNotes[noteId].secret, decryptedNotes[noteId].nullifier, decryptedNotes[noteId].txHash, decryptedNotes[noteId].pool, receiver);
         // createAndDownloadFile(JSON.stringify(callData.map((x) => x.toString())))
         // console.log("pool ",decryptedNotes[noteId].pool)
         const publicKeyBuffer = Buffer.from(acc.signingKey.publicKey.slice(2), 'hex');
+        const privKeyBuffer = Buffer.from(noteAccount, 'hex');
+        let keyPair = nacl.box.keyPair.fromSecretKey(privKeyBuffer)
         let encryptedNotesAux = encryptedNotes;
         encryptedNotesAux.splice(noteId, 1)
         const nonce = nacl.randomBytes(nacl.box.nonceLength);
@@ -143,10 +141,7 @@ function NoteList() {
         // let msg = bufferToHex(await ecies.encrypt(publicKeyBuffer, Buffer.from(encryptedNotesAux.flat().join(''))))
         let msg_hash_str = createHash('sha256').update(bufferToHex(msg)).digest('hex')
         let signature = acc.signingKey.sign("0x" + msg_hash_str)
-        let encriptedNotesData = [];
-        for (let i = 0; i < encryptedNotesAux.length; i++) {
-            encriptedNotesData.push(cairo.tuple([cairo.uint256(encryptedNotesAux[i][0]), cairo.uint256(encryptedNotesAux[i][1]), cairo.uint256(encryptedNotesAux[i][2]), cairo.uint256(encryptedNotesAux[i][3]), cairo.uint256(encryptedNotesAux[i][4]), cairo.uint256(encryptedNotesAux[i][5]), cairo.uint256(encryptedNotesAux[i][6]), cairo.uint256(encryptedNotesAux[i][7]), cairo.uint256(encryptedNotesAux[i][8]), cairo.uint256(encryptedNotesAux[i][9]), cairo.uint256(encryptedNotesAux[i][10]), cairo.uint256(encryptedNotesAux[i][11]), cairo.uint256(encryptedNotesAux[i][12]), cairo.uint256(encryptedNotesAux[i][13]), cairo.uint256(encryptedNotesAux[i][14]), cairo.uint256(encryptedNotesAux[i][15]), cairo.uint256(encryptedNotesAux[i][16]), cairo.uint256(encryptedNotesAux[i][17]), cairo.uint256(encryptedNotesAux[i][18]), cairo.uint256(encryptedNotesAux[i][19]), cairo.uint256(encryptedNotesAux[i][20]), cairo.uint256(encryptedNotesAux[i][21]), cairo.uint256(encryptedNotesAux[i][22]), cairo.uint256(encryptedNotesAux[i][23]), cairo.uint256(encryptedNotesAux[i][24])]))
-        }
+
         const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
         const typhoonContract = new Contract(typhoonAbi, typhoonAddress, account);
 
