@@ -72,8 +72,8 @@ function NoteList() {
                     let note = {
                         "secret": dnaux[0].includes("150dd") ? dnaux[0].slice(5) : dnaux[0],
                         "nullifier": dnaux[1].includes("150dd") ? dnaux[1].slice(5) : dnaux[1],
-                        "txHash": dnaux[2].includes("150dd") ? "0x" + dnaux[2].slice(5) : dnaux[2],
-                        "pool": dnaux[3].includes("150dd") ? "0x" + dnaux[3].slice(5) : dnaux[3],
+                        "txHash": dnaux[2].includes("150dd") ? "0x" + dnaux[2].slice(5) : "0x"+dnaux[2],
+                        "pool": dnaux[3].includes("150dd") ? "0x" + dnaux[3].slice(5) : "0x"+dnaux[3],
                         "day": dnaux[4].includes("150dd") ? dnaux[4].slice(5) : dnaux[4],
                     }
                     decryptedNotesAux.push(note);
