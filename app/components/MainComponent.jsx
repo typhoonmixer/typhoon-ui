@@ -1056,7 +1056,6 @@ const MainComponent = () => {
       if (data.length % 2 != 0) {
         data = "150dd" + data
       }
-      console.log("data ", data)
 
       const encrypted = nacl.box(
         naclUtil.decodeUTF8(data),
@@ -1064,7 +1063,6 @@ const MainComponent = () => {
         keyPair.publicKey,
         keyPair.secretKey
       );
-      console.log("encrypted data ", bufferToHex(encrypted))
 
       // const decrypted = nacl.box.open(
       //   Buffer.from(bufferToHex(encrypted).slice(2), 'hex'),
@@ -1092,8 +1090,6 @@ const MainComponent = () => {
       // console.log("remainderRemainderR gt ", remainderRemainderR > maxUint256)
       // console.log("remainderRemainderR2 gt ", remainderRemainderR2 > maxUint256)
       // console.log("times", times, "timesR", timesR, "timesRemainderR", timesRemainderR, "remainderRemainderR", remainderRemainderR, "remainderRemainderR2", remainderRemainderR2)
-      console.log("recover ", recover.toString(16).length % 2 == 0 ? "0x" + recover.toString(16) : "0x0" + recover.toString(16))
-      console.log(recover.toString(16).length % 2 == 0 ? "0x" + recover.toString(16) : "0x0" + recover.toString(16) == bufferToHex(encrypted))
       // console.log(times > maxUint256)
       // console.log(timesR > maxUint256)
       // console.log(timesRemainderR > maxUint256)
@@ -1113,8 +1109,13 @@ const MainComponent = () => {
       // console.log("proof element ", pe[i], " decrypted: ", decrypted.slice(2).includes("150dd")? "0x"+decrypted.slice(7): decrypted)
     }
 
-    let msg = bufferToHex(await ecies.encrypt(publicKeyBuffer, Buffer.from(compressedData.join(''))))
-    let msg_hash_str = createHash('sha256').update(msg).digest('hex')
+    const msg = nacl.box(
+      naclUtil.decodeUTF8(compressedData.join('')),
+      nonce,
+      keyPair.publicKey,
+      keyPair.secretKey
+    );
+    let msg_hash_str = createHash('sha256').update(bufferToHex(msg)).digest('hex')
 
     // let signature = await acc.signMessage(BigInt("0x"+msg_hash_str).toString())
     let signature = acc.signingKey.sign("0x" + msg_hash_str)
@@ -1131,7 +1132,7 @@ const MainComponent = () => {
       // console.log("s", sig.s)
       // console.log("v", sig.v)
       // fn addNote(ref self: TContractState, pubKey: EthAddress, encryptedNote: Span<u256>, msg_hash: u256, r: u256, s: u256, v: u32);
-      console.log("nonce ", BigInt(bufferToHex(nonce)).toString())
+      
       const multiCall = await account.execute({
         contractAddress: noteAccountContract,
         entrypoint: 'addNote',
