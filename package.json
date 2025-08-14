@@ -46,6 +46,7 @@
     "starknet": "^6.11.0",
     "starknet-v7": "npm:starknet@7.6.4",
     "starknetkit": "^1.1.9",
+    "tweetnacl": "^1.0.3",
     "url": "^0.11.4"
   },
   "devDependencies": {
