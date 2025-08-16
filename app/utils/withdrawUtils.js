@@ -19,7 +19,7 @@ const typhoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
 
 const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
 
-export async function generateProofCalldata(note, recipient) {
+export async function generateProofCalldata(note, recipient, paymaster) {
     await garaga.init();
 
     const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
@@ -40,13 +40,20 @@ export async function generateProofCalldata(note, recipient) {
     let dd = getDD(D, currentLevel)
     let [commitment, nullifierHash] = await commitmentAndNullifierHash(note.secret.slice(2), note.nullifier.slice(2))
 
+    let relayerFee = 0n
+    let relayer = 0n
+    if(paymaster){
+        let denomination = getPoolDenomination(note.pool)
+        relayerFee = (denomination / 100n) * 2n
+        relayer = BigInt(process.env.PAYMASTER_ADDR)
+    }
 
     let proofInput = {
         "nullifierHash": nullifierHash,
         "day": BigInt(1),
         "recipient": BigInt(recipient),
-        "relayer": BigInt(0),
-        "relayerFee": BigInt(0),
+        "relayer": relayer,
+        "relayerFee": relayerFee,
         "secret": BigInt(note.secret.slice(2)),
         "nullifier": BigInt(note.nullifier.slice(2)),
         "count": count + 1n,
@@ -69,12 +76,11 @@ export async function generateProofCalldata(note, recipient) {
     return groth16Calldata
 }
 
-export async function generateProofCalldata2(secret, nullifier, txHash, pool, recipient) {
+export async function generateProofCalldata2(secret, nullifier, txHash, pool, recipient, paymaster) {
     await garaga.init();
     const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
-    
-    let receipt = await provider.waitForTransaction(txHash)
 
+    let receipt = await provider.waitForTransaction(txHash)
 
     let depositEvent = typhoon.parseEvents(receipt)[0]["typhoon::Typhoon::Typhoon::Deposit"]
     
@@ -90,12 +96,20 @@ export async function generateProofCalldata2(secret, nullifier, txHash, pool, re
     let dd = getDD(D, currentLevel)
     let [commitment, nullifierHash] = await commitmentAndNullifierHash(secret, nullifier)
 
+    let relayerFee = 0n
+    let relayer = 0n
+    if(paymaster){
+        let denomination = getPoolDenomination(pool)
+        relayerFee = (denomination / 100n) * 2n
+        relayer = BigInt(process.env.PAYMASTER_ADDR)
+    }
+
     let proofInput = {
         "nullifierHash": nullifierHash,
         "day": BigInt(1),
         "recipient": BigInt(recipient),
-        "relayer": BigInt(0),
-        "relayerFee": BigInt(0),
+        "relayer": relayer,
+        "relayerFee": relayerFee,
         "secret": BigInt(secret),
         "nullifier": BigInt(nullifier),
         "count": count + 1n,
@@ -125,6 +139,12 @@ export async function generateProofCalldata2(secret, nullifier, txHash, pool, re
     return groth16Calldata
 }
 
+async function getPoolDenomination(poolAddress) {
+    const { abi: poolAbi } = await provider.getClassAt(poolAddress);
+    const poolContract = new Contract(poolAbi, poolAddress, provider);
+    const denomination = await poolContract.denomination();
+    return denomination;
+}
 // if lvFullIndex % 4 is higher than 0 this function is called
 async function fetchLevel(block_number, level, lvFullIndex, pool) {
     
