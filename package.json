@@ -21,6 +21,7 @@
     "@starknet-react/chains": "^3.1.1",
     "@starknet-react/core": "^3.6.3",
     "@syncfusion/ej2-react-lists": "^29.2.4",
+    "axios": "^1.11.0",
     "crypto-browserify": "^3.12.1",
     "dotenv": "^16.4.7",
     "ecies-geth": "^1.7.5",
