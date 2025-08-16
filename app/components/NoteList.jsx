@@ -35,6 +35,7 @@ function NoteList() {
     const [withdrawing, setWithdrawing] = useState(false);
     const [finished, setFinished] = useState(false);
     const [noteAccount, setNoteAccount] = useState(null);
+    const [paymaster, setPaymaster] = useState(true)
     // if (typeof window !== "undefined") {
     //     noteAccount = localStorage.getItem('noteAcc');
     // }
@@ -128,7 +129,7 @@ function NoteList() {
         setWithdrawing(true);
         let acc = new Wallet("0x" + noteAccount);
         
-        let callData = await generateProofCalldata2(decryptedNotes[noteId].secret, decryptedNotes[noteId].nullifier, decryptedNotes[noteId].txHash, decryptedNotes[noteId].pool, receiver);
+        let callData = await generateProofCalldata2(decryptedNotes[noteId].secret, decryptedNotes[noteId].nullifier, decryptedNotes[noteId].txHash, decryptedNotes[noteId].pool, receiver, false);
       
         // createAndDownloadFile(JSON.stringify(callData.map((x) => x.toString())))
         // console.log("pool ",decryptedNotes[noteId].pool)
