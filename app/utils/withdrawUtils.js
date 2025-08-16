@@ -43,9 +43,9 @@ export async function generateProofCalldata(note, recipient, paymaster) {
     let relayerFee = 0n
     let relayer = 0n
     if(paymaster){
-        let denomination = getPoolDenomination(note.pool)
+        let denomination = await getPoolDenomination(note.pool)
         relayerFee = (denomination / 100n) * 2n
-        relayer = BigInt(process.env.PAYMASTER_ADDR)
+        relayer = BigInt(process.env.NEXT_PUBLIC_PAYMASTER_ADDR)
     }
 
     let proofInput = {
@@ -99,9 +99,9 @@ export async function generateProofCalldata2(secret, nullifier, txHash, pool, re
     let relayerFee = 0n
     let relayer = 0n
     if(paymaster){
-        let denomination = getPoolDenomination(pool)
+        let denomination = await getPoolDenomination(pool)
         relayerFee = (denomination / 100n) * 2n
-        relayer = BigInt(process.env.PAYMASTER_ADDR)
+        relayer = BigInt(process.env.NEXT_PUBLIC_PAYMASTER_ADDR)
     }
 
     let proofInput = {
