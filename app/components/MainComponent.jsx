@@ -85,7 +85,7 @@ const MainComponent = () => {
   const telegramInputRef = useRef()
 
   const depositRef = useRef()
-  const [paymaster, setPaymaster] = useState(true)
+  const [paymaster, setPaymaster] = useState(false)
 
   const specificRef = useRef()
 
@@ -608,7 +608,7 @@ const MainComponent = () => {
         <FormGroup className='' >
 
           <FormControlLabel disableTypography={{ color: 'white' }} onChange={(_, checked) => {
-            setPaymaster(checked)
+            setPaymaster(false)
           }} control={<Switch defaultChecked />} label="Paymaster" />
         </FormGroup>
       </div>
