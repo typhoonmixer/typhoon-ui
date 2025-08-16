@@ -26,6 +26,7 @@ import typhoonAbi from '../utils/typhoon_abi.json' assert { type: "json" }
 
 import nacl from "tweetnacl";
 import naclUtil from "tweetnacl-util";
+import axios from "axios";
 
 import {
   useAccount,
@@ -84,7 +85,7 @@ const MainComponent = () => {
   const telegramInputRef = useRef()
 
   const depositRef = useRef()
-
+  const [paymaster, setPaymaster] = useState(true)
 
   const specificRef = useRef()
 
@@ -606,9 +607,9 @@ const MainComponent = () => {
         </div>
         <FormGroup className='' >
 
-          <FormControlLabel disableTypography={{ color: 'white' }} disabled={true} onChange={(_, checked) => {
-            console.log(checked)
-          }} control={<Switch defaultChecked />} label="Telegram Relayers (coming soon)" />
+          <FormControlLabel disableTypography={{ color: 'white' }} onChange={(_, checked) => {
+            setPaymaster(checked)
+          }} control={<Switch defaultChecked />} label="Paymaster" />
         </FormGroup>
       </div>
     )
@@ -877,22 +878,34 @@ const MainComponent = () => {
     let proofsStringList = JSONInputStringToList(noteValue)
 
     for (let i = 0; i < proofsStringList.length; i++) {
-      setLoadingText(`Generating Proof (${i + 1}/${proofsStringList.length})... (This can take a few seconds)`)
+      setLoadingText(`Generating Proof... (This can take a few seconds)`)
       let proofString = JSON.parse(proofsStringList[i])
-      let callData = await generateProofCalldata(proofString, receiverValue)
-      setLoadingText(`Withdrawing (${i + 1}/${proofsStringList.length})... (This can take a few seconds)`)
-      const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
-      const typhoonContract = new Contract(typhoonAbi, typhoonAddress, account);
-      const call = typhoonContract.populate('withdraw', { full_proof_with_hints: callData });
-      const multiCall = await account.execute({
-        contractAddress: typhoonAddress,
-        entrypoint: 'withdraw',
-        calldata: call.calldata,
-      }, { version: 2 });
-      await account.waitForTransaction(multiCall.transaction_hash);
+      let callData = await generateProofCalldata(proofString, receiverValue, paymaster)
+      if (paymaster) {
+        let cd = callData.map(x => x.toString())
+        try {
+          setLoadingText(`Withdrawing using paymaster... (This can take a few seconds)`)
+          const res = await axios.post("https://typhoon-paymaster.vercel.app/calldata", {
+            calldata: cd
+          });
+          console.log("Response:", res.data);
+        } catch (err) {
+          console.error("Error:", err.response?.data || err.message);
+        }
+      } else {
+        setLoadingText(`Withdrawing... (This can take a few seconds)`)
+        const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
+        const typhoonContract = new Contract(typhoonAbi, typhoonAddress, account);
+        const call = typhoonContract.populate('withdraw', { full_proof_with_hints: callData });
+        const multiCall = await account.execute({
+          contractAddress: typhoonAddress,
+          entrypoint: 'withdraw',
+          calldata: call.calldata,
+        }, { version: 2 });
+        await account.waitForTransaction(multiCall.transaction_hash);
+      }
     }
-
-
+    
     setLoadingText("Withdraw Completed!")
     await new Promise(r => setTimeout(r, 3000));
     setNoteValue("")
