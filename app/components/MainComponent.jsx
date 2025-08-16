@@ -886,7 +886,8 @@ const MainComponent = () => {
         try {
           setLoadingText(`Withdrawing using paymaster... (This can take a few seconds)`)
           const res = await axios.post("https://typhoon-paymaster.vercel.app/calldata", {
-            calldata: cd
+            calldata: cd,
+            note_account_calldata: {}
           });
           console.log("Response:", res.data);
         } catch (err) {
