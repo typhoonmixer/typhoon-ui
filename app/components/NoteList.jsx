@@ -13,6 +13,10 @@ import {
 } from "@starknet-react/core";
 import nacl from "tweetnacl";
 import naclUtil from "tweetnacl-util";
+import FormGroup from '@mui/material/FormGroup';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Switch from '@mui/material/Switch';
+import axios from "axios";
 
 const provider = new RpcProvider({ nodeUrl: 'https://starknet-mainnet.public.blastapi.io/rpc/v0_8' });
 const maxUint256 = (1n << 256n) - 1n;
@@ -220,7 +224,15 @@ function NoteList() {
                                 </button>
                             </div>
                             }
+                            <FormGroup className='' >
 
+                                <FormControlLabel disableTypography={{ color: 'black' }} onChange={(_, checked) => {
+                                    setPaymaster(checked)
+                                }} control={<Switch defaultChecked />} label="Paymaster" sx={{
+                                    color: 'black',
+                                  }}
+                               />
+                            </FormGroup>
                         </div>
                     </Popup>
                 </li>
@@ -228,7 +240,6 @@ function NoteList() {
         </ol>
     </div>
     );
-
     function loadingContent() {
         return (
             <div style={{ marginLeft: "auto", marginRight: "auto", width: "50%" }}>
