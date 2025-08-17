@@ -70,7 +70,7 @@ const Header = () => {
           Get Faucets
         </button> */}
         {/* <NoteAccountButton style={{marginRight: '10px'}}></NoteAccountButton> */}
-        {/* {noteAccountExists == true ? <Popup display="anchored" trigger={<Button style={{ backgroundColor: 'blue', color: 'white', marginRight: '10px' }} className={className}>{noteAccountText()}</Button>} contentStyle={{ width: '400px', height: '150px', borderRadius: '20px' }}>
+        {noteAccountExists == true ? <Popup display="anchored" trigger={<Button style={{ backgroundColor: 'blue', color: 'white', marginRight: '10px' }} className={className}>{noteAccountText()}</Button>} contentStyle={{ width: '400px', height: '150px', borderRadius: '20px' }}>
           <div>
             <CopyButton style={{ color: "black" }}
               copyText={noteAccAddr()}
@@ -144,7 +144,7 @@ const Header = () => {
               </p>
             </div>
           </div>
-        </Popup>} */}
+        </Popup>}
         {address ? (
           <div className="flex items-center gap-4">
             <AddressBar />
