@@ -764,6 +764,14 @@ const MainComponent = () => {
       
       try{
         await saveInNoteAccount(["0x" + secret, "0x" + nullifier, multiCall.transaction_hash.toString(), poolAddr, rewardMode ? "0x" + day.toString() : '0x1'], noteAcc)
+        let proofElements = JSON.stringify({
+          "secret": "0x" + secret,
+          "nullifier": "0x" + nullifier,
+          "txHash": multiCall.transaction_hash.toString(),
+          "pool": poolAddr,
+          "day": rewardMode ? "0x" + day.toString() : '0x1'
+        })
+        createAndDownloadFile(proofElements)
       } catch (e) {
         console.log(e)
         let proofElements = JSON.stringify({
