@@ -128,16 +128,13 @@ function NoteList() {
     async function withdrawNote(noteId) {
         setWithdrawing(true);
         let acc = new Wallet("0x" + noteAccount);
-        
-        let callData = await generateProofCalldata2(decryptedNotes[noteId].secret, decryptedNotes[noteId].nullifier, decryptedNotes[noteId].txHash, decryptedNotes[noteId].pool, receiver, false);
-      
+        let callData = await generateProofCalldata2(decryptedNotes[noteId].secret, decryptedNotes[noteId].nullifier, decryptedNotes[noteId].txHash, decryptedNotes[noteId].pool, receiver, paymaster);
         // createAndDownloadFile(JSON.stringify(callData.map((x) => x.toString())))
         // console.log("pool ",decryptedNotes[noteId].pool)
         const publicKeyBuffer = Buffer.from(acc.signingKey.publicKey.slice(2), 'hex');
         const privKeyBuffer = Buffer.from(noteAccount, 'hex');
         let keyPair = nacl.box.keyPair.fromSecretKey(privKeyBuffer)
         let encryptedNotesAux = encryptedNotes;
-     
         encryptedNotesAux.splice(noteId, 1)
         const nonce = nacl.randomBytes(nacl.box.nonceLength);
         const msg = nacl.box(
@@ -150,33 +147,58 @@ function NoteList() {
         let msg_hash_str = createHash('sha256').update(bufferToHex(msg)).digest('hex')
         let signature = acc.signingKey.sign("0x" + msg_hash_str)
 
-        const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
-        const typhoonContract = new Contract(typhoonAbi, typhoonAddress, account);
+        if (paymaster) {
+            let cd = callData.map(x => x.toString())
+            let b = {
+                calldata: cd,
+                note_account_calldata: [
+                    acc.address,
+                    BigInt("0x" + msg_hash_str).toString(),
+                    BigInt(signature.r).toString(),
+                    BigInt(signature.s).toString(),
+                    signature.v.toString(),
+                    noteId.toString()
+                ]
+            }
+           
+            try {
+                // setLoadingText(`Withdrawing using paymaster... (This can take a few seconds)`)
+                const res = await axios.post("https://typhoon-paymaster.vercel.app/calldata", b);
+                console.log("Response:", res.data);
+            } catch (err) {
+                console.error("Error:", err.response?.data || err.message);
+            }
+        } else {
+            const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
+            const typhoonContract = new Contract(typhoonAbi, typhoonAddress, account);
 
-        const call = typhoonContract.populate('withdraw', { full_proof_with_hints: callData });
+            const call = typhoonContract.populate('withdraw', { full_proof_with_hints: callData });
 
-        // c.shift()
-        // const res = await typhoon.withdraw(call.calldata);
-        const multiCall = await account.execute([
-            {
-                contractAddress: typhoonAddress,
-                entrypoint: 'withdraw',
-                calldata: call.calldata,
-            },
-            {
-                contractAddress: noteAccountContract,
-                entrypoint: 'updateNotes',
-                calldata: CallData.compile({
-                    pubKey: acc.address,
-                    msgHash: cairo.uint256(BigInt("0x" + msg_hash_str).toString()),
-                    r: cairo.uint256(BigInt(signature.r).toString()),
-                    s: cairo.uint256(BigInt(signature.s).toString()),
-                    v: signature.v,
-                    noteIndex: cairo.uint256(noteId)
-                }),
-            }], { version: 2 });
-        // fn updateNotes(ref self: ContractState,pubKey: EthAddress, msg_hash: u256, r: u256, s: u256, v: u32  ,newNotes: Span<Span<u256>>)
-        await account.waitForTransaction(multiCall.transaction_hash);
+            // c.shift()
+            // const res = await typhoon.withdraw(call.calldata);
+            const multiCall = await account.execute([
+                {
+                    contractAddress: typhoonAddress,
+                    entrypoint: 'withdraw',
+                    calldata: call.calldata,
+                },
+                {
+                    contractAddress: noteAccountContract,
+                    entrypoint: 'updateNotes',
+                    calldata: CallData.compile({
+                        pubKey: acc.address,
+                        msgHash: cairo.uint256(BigInt("0x" + msg_hash_str).toString()),
+                        r: cairo.uint256(BigInt(signature.r).toString()),
+                        s: cairo.uint256(BigInt(signature.s).toString()),
+                        v: signature.v,
+                        noteIndex: cairo.uint256(noteId)
+                    }),
+                }], { version: 2 });
+            // fn updateNotes(ref self: ContractState,pubKey: EthAddress, msg_hash: u256, r: u256, s: u256, v: u32  ,newNotes: Span<Span<u256>>)
+            await account.waitForTransaction(multiCall.transaction_hash);
+        }
+
+
         setWithdrawing(false);
         setEncryptedNotes(encryptedNotesAux);
         setFinished(false);
