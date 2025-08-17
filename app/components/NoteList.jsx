@@ -125,9 +125,10 @@ function NoteList() {
         return className
     }
 
-    async function withdrawNote(noteId) {
+     async function withdrawNote(noteId) {
         setWithdrawing(true);
         let acc = new Wallet("0x" + noteAccount);
+        setLoadingText(`Generating Proof... (This can take a few seconds)`)
         let callData = await generateProofCalldata2(decryptedNotes[noteId].secret, decryptedNotes[noteId].nullifier, decryptedNotes[noteId].txHash, decryptedNotes[noteId].pool, receiver, paymaster);
         // createAndDownloadFile(JSON.stringify(callData.map((x) => x.toString())))
         // console.log("pool ",decryptedNotes[noteId].pool)
@@ -148,6 +149,7 @@ function NoteList() {
         let signature = acc.signingKey.sign("0x" + msg_hash_str)
 
         if (paymaster) {
+            setLoadingText(`Withdrawing using paymaster... (This can take a few seconds)`)
             let cd = callData.map(x => x.toString())
             let b = {
                 calldata: cd,
@@ -169,6 +171,7 @@ function NoteList() {
                 console.error("Error:", err.response?.data || err.message);
             }
         } else {
+            setLoadingText(`Withdrawing... (This can take a few seconds)`)
             const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
             const typhoonContract = new Contract(typhoonAbi, typhoonAddress, account);
 
@@ -267,10 +270,10 @@ function NoteList() {
         return (
             <div style={{ marginLeft: "auto", marginRight: "auto", width: "50%" }}>
                 <img src='/Infinity.svg'></img>
-                <div>
+                <div style={{ color: "black" }}>
                     {loadingText}
                 </div>
-                Withdrawing...
+                
             </div>
         )
     }
