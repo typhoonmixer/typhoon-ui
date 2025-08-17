@@ -47,7 +47,7 @@ export async function generateProofCalldata(note, recipient, paymaster) {
         relayerFee = (denomination / 100n) * 2n
         relayer = BigInt(process.env.NEXT_PUBLIC_PAYMASTER_ADDR)
     }
-
+    console.log("0x"+BigInt(relayer).toString(16))
     let proofInput = {
         "nullifierHash": nullifierHash,
         "day": BigInt(1),
