@@ -300,7 +300,7 @@ const MainComponent = () => {
       } else if (btnText == WITHDRAW) {
         setContent(withdrawContent)
       } else if (btnText == PRIVATE_TRANSFER) {
-        setContent(telegramContent)
+        setContent(transferContent)
       }
     }
   }, [overallDeposits, srcToken, account])
@@ -328,7 +328,7 @@ const MainComponent = () => {
       } else if (btnText == WITHDRAW) {
         setContent(withdrawContent)
       } else if (btnText == PRIVATE_TRANSFER) {
-        setContent(telegramContent)
+        setContent(transferContent)
       }
     }
 
@@ -428,7 +428,7 @@ const MainComponent = () => {
       } else if (btnText == WITHDRAW) {
         setContent(withdrawContent)
       } else if (btnText == PRIVATE_TRANSFER) {
-        setContent(telegramContent)
+        setContent(transferContent)
       }
     }
 
