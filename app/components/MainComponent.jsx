@@ -1384,7 +1384,7 @@ const MainComponent = () => {
   function getBtnClassName() {
     let className = 'p-4 w-full my-2 rounded-xl'
     className +=
-      btnText === ENTER_AMOUNT || btnText === CONNECT_WALLET || btnText === PRIVATE_TRANSFER
+      btnText === ENTER_AMOUNT || btnText === CONNECT_WALLET
         ? ' text-zinc-400 bg-zinc-800 pointer-events-none'
         : ' bg-blue-700'
     return className
