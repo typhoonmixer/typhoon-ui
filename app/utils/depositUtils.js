@@ -145,3 +145,41 @@ export function getFullDenomination(denomination, decimals) {
         return denomination + '0'.repeat(decimals)
     }
 }
+
+export function getCompressedDenomination(amount, decimals) {
+    let compressedAmount = '0'
+    if (BigInt(amount) < BigInt(1 * (10 ** decimals))) {
+        let limit = (decimals - 4)
+        if (amount.length < limit) {
+            return '0'
+        }
+        let rest = (BigInt(1 * (10 ** decimals)).toString().length - 1) - amount.length
+        let aux = '0'.repeat(rest) + amount
+        compressedAmount = trimTrailingZeros('0.' + aux.slice(0, 4))
+        return compressedAmount
+    } else {
+        let firstPart = amount.slice(0, -decimals)
+        let secondPart = amount.slice(firstPart.length, amount.length)
+        let aux = secondPart.slice(0, 4)
+        if (aux == '0000') {
+            return firstPart
+        }
+        compressedAmount = trimTrailingZeros([firstPart, aux].join('.'))
+        return compressedAmount
+    }
+}
+
+function trimTrailingZeros(numStr) {
+    if (!numStr.includes(".")) return numStr; // no decimal → return as is
+
+    // Remove trailing zeros
+    let trimmed = numStr.replace(/0+$/, "");
+
+    // If it ends with ".", remove it (e.g. "5." → "5")
+    if (trimmed.endsWith(".")) {
+        trimmed = trimmed.slice(0, -1);
+    }
+
+    return trimmed;
+}
+
