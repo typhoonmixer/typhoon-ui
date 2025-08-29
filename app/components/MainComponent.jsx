@@ -19,7 +19,7 @@ import { denominationsList, one, tokenList, tokenDecimals } from '../utils/Suppo
 
 // import { CoinSelector, DenominationSelector } from './Selector';
 import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button } from '@nextui-org/react'
-import { allowancePerPool, commitmentAndNullifierHash, generateSecretAndNullifier, getFullDenomination, poolsToNumber } from '../utils/depositUtils';
+import { allowancePerPool, commitmentAndNullifierHash, generateSecretAndNullifier,getCompressedDenomination, getFullDenomination, poolsToNumber } from '../utils/depositUtils';
 import { JSONInputStringToList, generateProofCalldata } from '../utils/withdrawUtils';
 import NoteList from './NoteList';
 import typhoonAbi from '../utils/typhoon_abi.json' assert { type: "json" }
@@ -198,6 +198,20 @@ const MainComponent = () => {
 
   const [compT, setCompT] = useState(<DepositField obj={telegramObj} ref={depositRef} />)
 
+  const transferTokens = [
+    { name: "STRK", src: "starknetlogo.svg" },
+    { name: "ETH", src: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png" },
+    { name: "WBTC", src: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599/logo.png" },
+    { name: "tBTC", src: "tbtclogo.png" },
+    { name: "USDC", src: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png" },
+    { name: "UNO", src: "unologo.png" }
+  ]
+  const [selectedTransferToken, setSelectedTransferToken] = useState(transferTokens[0]);
+  const [openTransferTokenDD, setOpenTransferTokenDD] = useState(false);
+  const [transferValue, setTransferValue] = useState()
+  const [transferReceiverValue, setTransferReceiverValue] = useState('')
+  const [balance, setBalance] = useState('0')
+  const [minimalRequired, setMinimalRequired] = useState('10')
 
   // const [depositInputs, setDepositInputs] = useState(<div className='flex items-center' >
   //   Token:
@@ -463,6 +477,37 @@ const MainComponent = () => {
 
   }, [receiverValue]);
 
+   useEffect(() => {
+    setContent(transferContent())
+  }, [transferValue])
+
+  useEffect(() => {
+    setContent(transferContent())
+  }, [transferReceiverValue])
+
+  useEffect(() => {
+    setContent(transferContent())
+  }, [openTransferTokenDD])
+
+  useEffect(() => {
+    setContent(transferContent())
+    let sdk = new TyphoonSDK()
+    async function getMin() {
+      console.log(selectedTransferToken.name)
+      let min = await sdk.get_token_minimal_amount(tokenList[selectedTransferToken.name])
+      setMinimalRequired(getCompressedDenomination(min.toString(), tokenDecimals[selectedTransferToken.name]))
+    }
+    getMin()
+  }, [selectedTransferToken])
+
+  useEffect(() => {
+    setContent(transferContent())
+  }, [balance])
+
+  useEffect(() => {
+    setContent(transferContent())
+  }, [minimalRequired])
+
 
   useEffect(() => {
     async function getDeposits() {
@@ -534,7 +579,7 @@ const MainComponent = () => {
 
         </div>
         {content}
-        {openDepositOp ? depositOptionPopup() : <button
+        <button
           className={getBtnClassName()}
           disabled={loading}
           onClick={async () => {
@@ -547,10 +592,11 @@ const MainComponent = () => {
               }
             }
             else if (btnText === WITHDRAW) await handleWithdraw()
+            else if (btnText === PRIVATE_TRANSFER) await handleTransfer()
           }}
         >
           {btnText}
-        </button>}
+        </button>
 
 
 
@@ -645,28 +691,114 @@ const MainComponent = () => {
     )
   }
 
-  function telegramContent() {
+  async function get_balance(acc) {
+    const { abi: poolAbi } = await provider.getClassAt(tokenList[selectedTransferToken.name]);
+    const poolC = new Contract(poolAbi, tokenList[selectedTransferToken.name], provider);
+    let balance = await poolC.balanceOf(acc);
+    return balance.toString()
+  }
+
+  function transferContent() {
+
+    if (address != undefined) {
+      get_balance(address).then((b) => {
+        let cd = getCompressedDenomination(b, tokenDecimals[selectedTransferToken.name])
+
+        setBalance(cd)
+
+
+      })
+    }
+
+
+
     return (
       <div>
-        <div className='mb-5 mt-5'>
-          Transfer via Telegram (Coming Soon)
+        <div className='mb-5 mt-5 text-white'>
+          Private Transfer
         </div>
 
-        <div className='relative bg-[#212429] p-4 py-6 rounded-xl mb-5 border-[2px] border-transparent hover:border-zinc-600'>
-          {compT}
-        </div>
-        <div className='bg-[#212429] p-4 py-6 rounded-xl mt-5 border-[2px] border-transparent hover:border-zinc-600'>
-          Today deposits: {0}
-        </div>
-        <div className='bg-[#212429] p-4 py-6 rounded-xl mb-2 mt-2 border-[2px] border-transparent hover:border-zinc-600'>
-          <WithdrawField obj={telegramInputObj} ref={telegramInputRef} curValue={telegramValue} />
-        </div>
-        <FormGroup className='mb-5' >
+        <div className="w-full h-full p-4 bg-zinc-800 rounded-2xl shadow-md">
+          {/* Header */}
+          <div className="flex justify-between text-sm text-gray-500 mb-2">
+            <span className="text-white">Amount</span>
+            <span className="text-white">
+              Balance: <span className="font-medium text-white">{`${balance} ${selectedTransferToken.name}`}</span>
+            </span>
+          </div>
 
-          <FormControlLabel disableTypography={{ color: 'white' }} disabled={true} onChange={(_, checked) => {
-            console.log(checked)
-          }} control={<Switch defaultChecked />} label="Reward mode" />
-        </FormGroup>
+          {/* Input row */}
+          <div className="flex items-center gap-3 border rounded-xl p-3 bg-zinc-900">
+            {/* Token selector */}
+            <div className="relative w-40">
+              <button className="flex items-center gap-2 px-3 py-1 bg-zinc-900 rounded-lg shadow-sm " onClick={() => { setOpenTransferTokenDD(!openTransferTokenDD) }}>
+                <img
+                  src={selectedTransferToken.src}
+                  alt={selectedTransferToken.name}
+                  className="w-5 h-5"
+                />
+                <span className="font-medium">{selectedTransferToken.name}</span>
+                <ChevronDown size={16} className="text-white" />
+              </button>
+              {/* Dropdown */}
+              {openTransferTokenDD ? (
+                <div className="absolute mt-1 w-full bg-[#1c1c1c] border border-gray-600 rounded-xl shadow-lg z-10">
+                  {transferTokens.map((token) => (
+                    <button
+                      key={token.name}
+                      onClick={() => {
+                        setSelectedTransferToken(token);
+                        setOpenTransferTokenDD(false);
+                      }}
+                      className="flex items-center gap-2 w-full px-3 py-2 text-left text-white hover:bg-gray-700 rounded-lg"
+                    >
+                      <img src={token.src} alt={token.name} className="w-5 h-5 rounded-full" />
+                      {token.name}
+                    </button>
+                  ))}
+                </div>
+              ) : <div></div>}
+            </div>
+
+
+            {/* Amount input */}
+            <input
+              type='number'
+              inputMode="decimal"
+              placeholder="0"
+              value={transferValue}
+              onChange={(e) => setTransferValue(e.target.value)}
+              className="flex-1 min-w-0 text-right text-2xl font-medium bg-zinc-900 outline-none placeholder:text-gray-400 appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [moz-appearance:textfield]"
+
+            />
+          </div>
+
+          <div className="text-right text-white text-sm mt-1">
+            Minimum amount required: {minimalRequired} {selectedTransferToken.name}
+          </div>
+        </div>
+        <div className="w-full mt-2 h-full p-4 bg-zinc-800 rounded-2xl shadow-md">
+          {/* Header */}
+          <div className="flex justify-between text-sm text-gray-500 mb-2">
+            <span className="text-white">Receiver</span>
+
+          </div>
+
+          {/* Input row */}
+          <div className="flex items-center gap-3 border rounded-xl p-3 bg-zinc-900">
+            {/* Amount input */}
+            <input
+              type="text"
+              inputMode="text"
+              placeholder="0x0"
+              value={transferReceiverValue}
+              onChange={(e) => setTransferReceiverValue(e.target.value)}
+              className="flex-1 min-w-0 text-right text-2xl font-medium bg-zinc-900 outline-none placeholder:text-gray-400"
+
+            />
+          </div>
+        </div>
+
       </div>
     )
   }
@@ -920,6 +1052,12 @@ const MainComponent = () => {
     setNoteValue("")
     setReceiverValue("")
     setLoading(false)
+  }
+
+  async function handleTransfer() {
+    let sdk = new TyphoonSDK()
+    let calls = await sdk.generate_approve_and_deposit_calls(BigInt(transferValue), tokenList[selectedTransferToken.name])
+    console.log(calls)
   }
 
   function depositOptionPopup() {
