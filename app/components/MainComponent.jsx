@@ -34,6 +34,7 @@ import {
   useSendTransaction
 } from "@starknet-react/core";
 import { ChevronDown } from "lucide-react";
+import { TyphoonSDK } from 'typhoon-sdk'
 
 
 
