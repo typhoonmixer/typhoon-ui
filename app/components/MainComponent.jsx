@@ -566,18 +566,23 @@ const MainComponent = () => {
           >
             {WITHDRAW}
           </p>
-          {/* <p
-            className={getNavIconClassName(TELEGRAM)}
+          <p
+            className={getNavIconClassName(TRANSFER)}
             onClick={() => {
-              setSelectedNavItem(TELEGRAM)
+              setSelectedNavItem(TRANSFER)
               if (!loading) {
-                setContent(telegramContent)
+                setContent(transferContent)
               }
-              setBtnText(TELEGRAM_TRANSFER)
+              if (address) {
+                setBtnText(PRIVATE_TRANSFER)
+              } else {
+                setBtnText(CONNECT_WALLET)
+              }
+
             }}
           >
-            {TELEGRAM}
-          </p> */}
+            {TRANSFER}
+          </p>
 
         </div>
         {content}
