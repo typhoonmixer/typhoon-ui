@@ -94,10 +94,10 @@ const MainComponent = () => {
   const ENTER_AMOUNT = 'Enter an amount'
   const CONNECT_WALLET = 'Connect wallet'
   const DEPOSIT = 'Deposit'
-  const TELEGRAM_TRANSFER = "Coming Soon"
+  const PRIVATE_TRANSFER = "Transfer"
 
   const WITHDRAW = 'Withdraw'
-  const TELEGRAM = 'Transfer via Telegram'
+  const TRANSFER = 'Private Transfer'
 
   const [selectedNavItem, setSelectedNavItem] = useState(DEPOSIT)
 
@@ -299,7 +299,7 @@ const MainComponent = () => {
         setContent(depositContent)
       } else if (btnText == WITHDRAW) {
         setContent(withdrawContent)
-      } else if (btnText == TELEGRAM_TRANSFER) {
+      } else if (btnText == PRIVATE_TRANSFER) {
         setContent(telegramContent)
       }
     }
@@ -327,7 +327,7 @@ const MainComponent = () => {
         setContent(depositContent)
       } else if (btnText == WITHDRAW) {
         setContent(withdrawContent)
-      } else if (btnText == TELEGRAM_TRANSFER) {
+      } else if (btnText == PRIVATE_TRANSFER) {
         setContent(telegramContent)
       }
     }
@@ -427,7 +427,7 @@ const MainComponent = () => {
         setContent(depositContent)
       } else if (btnText == WITHDRAW) {
         setContent(withdrawContent)
-      } else if (btnText == TELEGRAM_TRANSFER) {
+      } else if (btnText == PRIVATE_TRANSFER) {
         setContent(telegramContent)
       }
     }
@@ -451,8 +451,8 @@ const MainComponent = () => {
         setBtnText(DEPOSIT)
       } else if (selectedNavItem === WITHDRAW) {
         setBtnText(WITHDRAW)
-      } else if (selectedNavItem === TELEGRAM_TRANSFER) {
-        setBtnText(TELEGRAM_TRANSFER)
+      } else if (selectedNavItem === PRIVATE_TRANSFER) {
+        setBtnText(PRIVATE_TRANSFER)
       }
 
     }
@@ -463,8 +463,8 @@ const MainComponent = () => {
   //     setBtnText(DEPOSIT)
   //   } else if (btnText === WITHDRAW) {
   //     setBtnText(WITHDRAW)
-  //   } else if (btnText === TELEGRAM_TRANSFER) {
-  //     setBtnText(TELEGRAM_TRANSFER)
+  //   } else if (btnText === PRIVATE_TRANSFER) {
+  //     setBtnText(PRIVATE_TRANSFER)
   //   }
   // }, [btnText])
 
@@ -1384,7 +1384,7 @@ const MainComponent = () => {
   function getBtnClassName() {
     let className = 'p-4 w-full my-2 rounded-xl'
     className +=
-      btnText === ENTER_AMOUNT || btnText === CONNECT_WALLET || btnText === TELEGRAM_TRANSFER
+      btnText === ENTER_AMOUNT || btnText === CONNECT_WALLET || btnText === PRIVATE_TRANSFER
         ? ' text-zinc-400 bg-zinc-800 pointer-events-none'
         : ' bg-blue-700'
     return className
