@@ -25,8 +25,17 @@ export async function generateProofCalldata(note, recipient, paymaster) {
     const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
 
     let receipt = await provider.waitForTransaction(note.txHash)
-
-    let depositEvent = typhoon.parseEvents(receipt)[0]["typhoon::Typhoon::Typhoon::Deposit"]
+    
+    let [commitment, nullifierHash] = await commitmentAndNullifierHash(note.secret.slice(2), note.nullifier.slice(2))
+    
+    let depositEvent = {}
+    for (let i = 0; i < typhoon.parseEvents(receipt).length; i++) {
+        let event = typhoon.parseEvents(receipt)[i]["typhoon::Typhoon::Typhoon::Deposit"]
+        if (event.commitments == commitment) {
+            depositEvent = event
+            break
+        }
+    }
 
     const lastBlock = await provider.getBlock('latest');
     const keyFilter = [[num.toHex(hash.starknetKeccak('Add'))]];
@@ -38,8 +47,7 @@ export async function generateProofCalldata(note, recipient, paymaster) {
     
 
     let dd = getDD(D, currentLevel)
-    let [commitment, nullifierHash] = await commitmentAndNullifierHash(note.secret.slice(2), note.nullifier.slice(2))
-
+  
     let relayerFee = 0n
     let relayer = 0n
     if(paymaster){
@@ -79,10 +87,19 @@ export async function generateProofCalldata(note, recipient, paymaster) {
 export async function generateProofCalldata2(secret, nullifier, txHash, pool, recipient, paymaster) {
     await garaga.init();
     const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
-
+    console.log("proof 2")
     let receipt = await provider.waitForTransaction(txHash)
 
-    let depositEvent = typhoon.parseEvents(receipt)[0]["typhoon::Typhoon::Typhoon::Deposit"]
+    let [commitment, nullifierHash] = await commitmentAndNullifierHash(secret, nullifier)
+
+    let depositEvent = {}
+    for (let i = 0; i < typhoon.parseEvents(receipt).length; i++) {
+        let event = typhoon.parseEvents(receipt)[i]["typhoon::Typhoon::Typhoon::Deposit"]
+        if (event.commitments == commitment) {
+            depositEvent = event
+            break
+        }
+    }
     
     const lastBlock = await provider.getBlock('latest');
     const keyFilter = [[num.toHex(hash.starknetKeccak('Add'))]];
@@ -94,7 +111,6 @@ export async function generateProofCalldata2(secret, nullifier, txHash, pool, re
     
 
     let dd = getDD(D, currentLevel)
-    let [commitment, nullifierHash] = await commitmentAndNullifierHash(secret, nullifier)
 
     let relayerFee = 0n
     let relayer = 0n
