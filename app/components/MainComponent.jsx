@@ -19,7 +19,7 @@ import { denominationsList, one, tokenList, tokenDecimals } from '../utils/Suppo
 
 // import { CoinSelector, DenominationSelector } from './Selector';
 import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button } from '@nextui-org/react'
-import { allowancePerPool, commitmentAndNullifierHash, generateSecretAndNullifier,getCompressedDenomination, getFullDenomination, poolsToNumber } from '../utils/depositUtils';
+import { allowancePerPool, commitmentAndNullifierHash, generateSecretAndNullifier, getCompressedDenomination, getFullDenomination, poolsToNumber } from '../utils/depositUtils';
 import { JSONInputStringToList, generateProofCalldata } from '../utils/withdrawUtils';
 import NoteList from './NoteList';
 import typhoonAbi from '../utils/typhoon_abi.json' assert { type: "json" }
@@ -33,7 +33,7 @@ import {
   useContract,
   useSendTransaction
 } from "@starknet-react/core";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Info } from "lucide-react";
 import { TyphoonSDK } from 'typhoon-sdk'
 
 
@@ -58,6 +58,14 @@ const MainComponent = () => {
     "coin": "STRK"
   }]
 
+  const tokenToSrc = {
+    "STRK": "starknetlogo.svg",
+    "ETH": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png",
+    "WBTC": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599/logo.png",
+    "tBTC": "tbtclogo.png",
+    "USDC": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png",
+    "UNO": "unologo.png"
+  }
   const [srcToken, setSrcToken] = useState(STRK)
   const [loading, setLoading] = useState(false)
   const [loadingText, setLoadingText] = useState('')
@@ -153,6 +161,7 @@ const MainComponent = () => {
     { key: denominationsList[tokenList["STRK"]][1], name: denominationsList[tokenList["STRK"]][1] },
     { key: denominationsList[tokenList["STRK"]][2], name: denominationsList[tokenList["STRK"]][2] },
     { key: denominationsList[tokenList["STRK"]][3], name: denominationsList[tokenList["STRK"]][3] },
+    { key: denominationsList[tokenList["STRK"]][3], name: denominationsList[tokenList["STRK"]][4] },
   ]
 
   const [dselectedItem, setDSelectedItem] = useState(denominationsList[tokenList["STRK"]][0])
@@ -165,7 +174,7 @@ const MainComponent = () => {
     { key: 'USDC', name: 'USDC' },
     { key: 'UNO', name: 'UNO' },
     { key: 'WBTC', name: 'WBTC' },
-    { key: 'tBTC', name: 'tBTC'}
+    { key: 'tBTC', name: 'tBTC' }
   ]
   const [cselectedItem, setCSelectedItem] = useState("STRK")
   const [cignoreValue, setCIgnoreValue] = useState("STRK")
@@ -215,6 +224,17 @@ const MainComponent = () => {
   const [balance, setBalance] = useState('0')
   const [minimalRequired, setMinimalRequired] = useState('10')
 
+
+  const depositTokens = [
+    { name: "STRK" },
+    { name: "ETH" },
+    { name: "WBTC" },
+    { name: "tBTC" },
+    { name: "USDC" },
+    { name: "UNO" }
+  ]
+  const [openDepositTokenDD, setOpenDepositTokenDD] = useState(false);
+
   // const [depositInputs, setDepositInputs] = useState(<div className='flex items-center' >
   //   Token:
   //   <CoinSelector
@@ -239,6 +259,8 @@ const MainComponent = () => {
 
 
   const [accountExists, setAccountExists] = useState(false)
+
+
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -311,7 +333,7 @@ const MainComponent = () => {
       const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
 
       const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
-      let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denomination, tokenDecimals[srcToken]))
+      let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(dselectedItem, tokenDecimals[srcToken]))
       let poolAddr = '0x' + pool.toString(16)
       const { abi: poolAbi } = await provider.getClassAt(poolAddr)
       const poolC = new Contract(poolAbi, poolAddr, provider);
@@ -360,16 +382,17 @@ const MainComponent = () => {
 
 
 
-  useEffect(() => {
-    const menu = [
-      { key: denominationsList[tokenList[srcToken]][0], name: denominationsList[tokenList[srcToken]][0] },
-      { key: denominationsList[tokenList[srcToken]][1], name: denominationsList[tokenList[srcToken]][1] },
-      { key: denominationsList[tokenList[srcToken]][2], name: denominationsList[tokenList[srcToken]][2] },
-      { key: denominationsList[tokenList[srcToken]][3], name: denominationsList[tokenList[srcToken]][3] },
-    ]
-    let newItems = getDepositFilteredItems(dignoreValue, menu)
-    setDMenuItems([...newItems])
-  }, [dignoreValue])
+  // useEffect(() => {
+  //   const menu = [
+  //     { key: denominationsList[tokenList[srcToken]][0], name: denominationsList[tokenList[srcToken]][0] },
+  //     { key: denominationsList[tokenList[srcToken]][1], name: denominationsList[tokenList[srcToken]][1] },
+  //     { key: denominationsList[tokenList[srcToken]][2], name: denominationsList[tokenList[srcToken]][2] },
+  //     { key: denominationsList[tokenList[srcToken]][3], name: denominationsList[tokenList[srcToken]][3] },
+  //     { key: denominationsList[tokenList[srcToken]][4], name: denominationsList[tokenList[srcToken]][4] },
+  //   ]
+  //   let newItems = getDepositFilteredItems(dignoreValue, menu)
+  //   setDMenuItems([...newItems])
+  // }, [dignoreValue])
 
   useEffect(() => {
     setDIgnoreValue(dselectedItem)
@@ -383,7 +406,7 @@ const MainComponent = () => {
       { key: 'USDC', name: 'USDC' },
       { key: 'UNO', name: 'UNO' },
       { key: 'WBTC', name: 'WBTC' },
-      { key: 'tBTC', name: 'tBTC'}
+      { key: 'tBTC', name: 'tBTC' }
     ]
     let newItems = getDepositFilteredItems(cignoreValue, menu)
     setCMenuItems([...newItems])
@@ -451,7 +474,7 @@ const MainComponent = () => {
         setBtnText(DEPOSIT)
       } else if (selectedNavItem === WITHDRAW) {
         setBtnText(WITHDRAW)
-      } else if (selectedNavItem === PRIVATE_TRANSFER) {
+      } else if (selectedNavItem === TRANSFER) {
         setBtnText(PRIVATE_TRANSFER)
       }
 
@@ -479,7 +502,7 @@ const MainComponent = () => {
 
   }, [receiverValue]);
 
-   useEffect(() => {
+  useEffect(() => {
     setContent(transferContent())
   }, [transferValue])
 
@@ -490,6 +513,11 @@ const MainComponent = () => {
   useEffect(() => {
     setContent(transferContent())
   }, [openTransferTokenDD])
+
+  useEffect(() => {
+    setContent(depositContent())
+  }, [openDepositTokenDD])
+
 
   useEffect(() => {
     setContent(transferContent())
@@ -510,13 +538,20 @@ const MainComponent = () => {
     setContent(transferContent())
   }, [minimalRequired])
 
+  useEffect(() => {
+    if (selectedNavItem === WITHDRAW) {
+      setContent(withdrawContent())
+    } else if (selectedNavItem === TRANSFER) {
+      setContent(transferContent())
+    }
+  }, [paymaster])
 
   useEffect(() => {
     async function getDeposits() {
       const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
 
       const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
-      let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denomination,tokenDecimals[srcToken]))
+      let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(dselectedItem, tokenDecimals[srcToken]))
       let poolAddr = '0x' + pool.toString(16)
       const { abi: poolAbi } = await provider.getClassAt(poolAddr)
       const poolC = new Contract(poolAbi, poolAddr, provider);
@@ -524,15 +559,23 @@ const MainComponent = () => {
       setPoolCount(count)
     }
     getDeposits()
-  },[srcToken, denomination])
+  }, [srcToken, dselectedItem])
 
   useEffect(() => {
     setContent(depositContent())
   }, [poolCount]);
 
+  
+
+  let marginTopRelative = {
+    DEPOSIT:'50px',
+    WITHDRAW:'',
+    TRANSFER:''
+  }
+
   return (
-    <div className='flex'>
-      <div className='bg-zinc-900 w5-[35%] p-4 px-6 rounded-xl' >
+    <div className='flex' >
+      <div className='relative bg-zinc-900 w5-[35%] p-4 px-6 rounded-xl  min-h-[200px]' style={{ width: '550px', height: '500px'}}>
         <div className='bg-zinc-900 h-fit flex items-center justify-around rounded-full mx-6'>
           <p
             className={getNavIconClassName(DEPOSIT)}
@@ -587,6 +630,7 @@ const MainComponent = () => {
         </div>
         {content}
         <button
+          style={{ position: 'absolute', bottom: '5px', right:'16px', left:'16px', width:'500'}}
           className={getBtnClassName()}
           disabled={loading}
           onClick={async () => {
@@ -620,49 +664,54 @@ const MainComponent = () => {
           <p>Withdraw</p>
 
         </div>
+        <div className="w-full mt-2 h-full p-4 bg-zinc-800 rounded-2xl shadow-md">
 
-        Note
-        <div className='relative bg-[#212429] p-4 py-6 rounded-xl mb-5 border-[2px] border-transparent hover:border-zinc-600'>
-
-          <div className='flex items-center rounded-xl'>
-            <input
-              ref={noteValueRef}
-              className={getInputClassname()}
-              type={"text"}
-              value={noteValue}
-              placeholder={"note"}
-              disabled={false}
-              onChange={e => {
-                setNoteValue(e.target.value)
-              }
-              }
-            />
+          <div className="flex justify-between text-sm text-gray-500 mb-2">
+            <span className="text-white text-base">Note</span>
 
           </div>
+
+          {/* Input row */}
+          <div className="flex items-center gap-3 border rounded-xl p-3 bg-zinc-900">
+            {/* Amount input */}
+            <input
+              ref={noteValueRef}
+              type="text"
+              inputMode="text"
+              placeholder="{note}"
+              value={noteValue}
+              onChange={(e) => setNoteValue(e.target.value)}
+              className="flex-1 min-w-0 text-right text-2xl font-medium bg-zinc-900 outline-none placeholder:text-gray-400"
+            />
+          </div>
         </div>
-        Receiver
-        <div className='bg-[#212429] p-4 py-6 rounded-xl mb-2 mt-2 border-[2px] border-transparent hover:border-zinc-600'>
-          <div className='flex items-center rounded-xl'>
+        <div className="w-full mt-2 h-full p-4 bg-zinc-800 rounded-2xl shadow-md">
+
+          <div className="flex justify-between text-sm text-gray-500 mb-2">
+            <span className="text-white text-base">Receiver</span>
+
+          </div>
+
+          {/* Input row */}
+          <div className="flex items-center gap-3 border rounded-xl p-3 bg-zinc-900">
+            {/* Amount input */}
             <input
               ref={receiverValueRef}
-              className={getInputClassname()}
-              type='text'
+              type="text"
+              inputMode="text"
+              placeholder="0x0"
               value={receiverValue}
-              placeholder={"0x"}
-              disabled={false}
-              onChange={e => {
-                setReceiverValue(e.target.value)
-              }
-              }
+              onChange={(e) => setReceiverValue(e.target.value)}
+              className="flex-1 min-w-0 text-right text-2xl font-medium bg-zinc-900 outline-none placeholder:text-gray-400"
             />
-
           </div>
         </div>
         <FormGroup className='' >
 
-          <FormControlLabel disableTypography={{ color: 'white' }} onChange={(_, checked) => {
-            setPaymaster(checked)
-          }} control={<Switch defaultChecked />} label="Paymaster" />
+          <FormControlLabel disableTypography={{ color: 'white' }} control={<Switch
+            checked={paymaster}
+            onChange={(_, checked) => setPaymaster(checked)}
+          />} label="Paymaster" />
         </FormGroup>
       </div>
     )
@@ -677,23 +726,79 @@ const MainComponent = () => {
         </div>
 
         <div className='relative bg-[#212429] p-4 py-6 rounded-xl mb-5 border-[2px] border-transparent hover:border-zinc-600'>
-          {selectedDepositType === "Defined denominations" ? <div className='flex items-center' >
-            Token:
-            {CoinSelector("coin", false)}
-            Denomination:
-            {DenominationSelector("denomination", false)}
+          <div className='flex items-center gap-2' >
+          <span className='text-white text-base min-w-[50px]'>Token: </span> 
+            {/* {CoinSelector("coin", false)} */}
+            <div className="relative w-40" style={{ zIndex: 1000 }}> {/* Increased z-index */}
+              <button className="flex items-center gap-2 px-3 py-1 bg-zinc-900 rounded-lg shadow-sm" onClick={() => { setOpenDepositTokenDD(!openDepositTokenDD) }}>
+                <img
+                  src={tokenToSrc[srcToken]}
+                  alt={srcToken}
+                  className="w-5 h-5"
+                />
+                <span className="font-medium">{srcToken}</span>
+                <ChevronDown size={16} className="text-white" />
+              </button>
+              {/* Dropdown */}
+              {openDepositTokenDD ? (
+                <div className="absolute mt-1 w-full bg-[#1c1c1c] border border-gray-600 rounded-xl shadow-lg" style={{ zIndex: 1000 }}> {/* Removed z-5, set to 1000 */}
+                  {depositTokens.map((token) => (
+                    <button
+                      key={token.name}
+                      onClick={() => {
+                        setSrcToken(token.name);
+                        setOpenDepositTokenDD(false);
+                        setDSelectedItem(denominationsList[tokenList[token.name]][0])
+                      }}
+                      className="flex items-center gap-2 w-full px-3 py-2 text-left text-white hover:bg-gray-700 rounded-lg"
+                    >
+                      <img src={tokenToSrc[token.name]} alt={token.name} className="w-5 h-5 rounded-full" />
+                      {token.name}
+                    </button>
+                  ))}
+                </div>
+              ) : <div></div>}
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-col gap-3  font-mono">
+          {/* Label with info icon */}
+          <div className="flex items-center gap-1">
+            <span className='text-white text-base min-w-[50px]'>Amount</span>
+          </div>
 
-          </div> : specificAmountField()}
+          {/* Slider */}
+          <div className="relative w-full flex items-center justify-between" style={{ zIndex: 500 }}> {/* Added z-index */}
+            {/* Background line */}
+            <div className="pointer-events-none absolute left-0 right-0 top-1/2 h-[2px] 
+       bg-blue-300 -translate-y-1/2 z-0"></div>
+
+            {denominationsList[tokenList[srcToken]].map((amount) => (
+              <label key={amount} className="relative z-10 flex flex-col items-center cursor-pointer">
+                {/* Circle (radio) */}
+                <input
+                  type="radio"
+                  value={amount}
+                  checked={dselectedItem === amount}
+                  onChange={() => setDSelectedItem(amount)}
+                  className="peer hidden"
+                />
+                <div className="w-5 h-5 border-2 border-blue-300 rounded-full flex items-center justify-center peer-checked:bg-black peer-checked:border-4" />
+                {/* Label text */}
+                <span
+                  className={`mt-2 ${dselectedItem === amount ? "text-blue-300 font-bold" : "text-blue-500 opacity-70"
+                    }`}
+                >
+                  {amount} {srcToken}
+                </span>
+              </label>
+            ))}
+          </div>
         </div>
         <div className='bg-[#212429] p-4 py-6 rounded-xl mt-5 border-[2px] border-transparent hover:border-zinc-600'>
-         {`Number of equal deposits: ${poolCount}`}
+          {`Number of equal deposits: ${poolCount}`}
         </div>
 
-        <FormGroup className='mb-5'>
-          <FormControlLabel disableTypography={{ color: 'white' }} disabled={true} onChange={(_, checked) => {
-            setRewardMode(checked)
-          }} control={<Switch defaultChecked={false} />} label="Reward mode" />
-        </FormGroup>
       </div>
     )
   }
@@ -728,8 +833,8 @@ const MainComponent = () => {
         <div className="w-full h-full p-4 bg-zinc-800 rounded-2xl shadow-md">
           {/* Header */}
           <div className="flex justify-between text-sm text-gray-500 mb-2">
-            <span className="text-white">Amount</span>
-            <span className="text-white">
+            <span className="text-white text-base">Amount</span>
+            <span className="text-white text-base">
               Balance: <span className="font-medium text-white">{`${balance} ${selectedTransferToken.name}`}</span>
             </span>
           </div>
@@ -780,12 +885,12 @@ const MainComponent = () => {
             />
           </div>
 
-          <div className="text-right text-white text-sm mt-1">
+          <div className="text-right text-white text-base mt-1">
             Minimum amount required: {minimalRequired} {selectedTransferToken.name}
           </div>
         </div>
         <div className="w-full mt-2 h-full p-4 bg-zinc-800 rounded-2xl shadow-md">
-          {/* Header */}
+
           <div className="flex justify-between text-sm text-gray-500 mb-2">
             <span className="text-white">Receiver</span>
 
@@ -805,7 +910,13 @@ const MainComponent = () => {
             />
           </div>
         </div>
+        <FormGroup className='' >
 
+          <FormControlLabel disableTypography={{ color: 'white' }} control={<Switch
+            checked={paymaster}
+            onChange={(_, checked) => setPaymaster(checked)}
+          />} label="Paymaster" />
+        </FormGroup>
       </div>
     )
   }
@@ -848,7 +959,7 @@ const MainComponent = () => {
 
     const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
 
-    let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denomination,tokenDecimals[srcToken]))
+    let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(dselectedItem, tokenDecimals[srcToken]))
     let poolAddr = '0x' + pool.toString(16)
 
     setLoadingText("Depositing...(Do not close neither reload the screen.)")
@@ -861,7 +972,7 @@ const MainComponent = () => {
         entrypoint: 'approve',
         calldata: CallData.compile({
           spender: poolAddr,
-          amount: cairo.uint256(getFullDenomination(denomination,tokenDecimals[srcToken])),
+          amount: cairo.uint256(getFullDenomination(dselectedItem, tokenDecimals[srcToken])),
         }),
       },
       // Calling the second contract
@@ -900,8 +1011,8 @@ const MainComponent = () => {
       createAndDownloadFile(proofElements)
     } else {
       setLoadingText("Saving in Note Account!(Do not close neither reload the screen.)")
-      
-      try{
+
+      try {
         await saveInNoteAccount(["0x" + secret, "0x" + nullifier, multiCall.transaction_hash.toString(), poolAddr, rewardMode ? "0x" + day.toString() : '0x1'], noteAcc)
         let proofElements = JSON.stringify({
           "secret": "0x" + secret,
@@ -922,7 +1033,7 @@ const MainComponent = () => {
         })
         createAndDownloadFile(proofElements)
       }
-      
+
     }
 
     await new Promise(r => setTimeout(r, 2000));
@@ -954,7 +1065,7 @@ const MainComponent = () => {
       if (poolsAllowance[i] == 0) {
         continue
       }
-      let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denominationsList[i],tokenDecimals[srcToken]))
+      let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denominationsList[i], tokenDecimals[srcToken]))
       approvalsAndDeposit.push({
         contractAddress: tokenToAddress[srcToken],
         entrypoint: 'approve',
@@ -1053,7 +1164,7 @@ const MainComponent = () => {
         await account.waitForTransaction(multiCall.transaction_hash);
       }
     }
-    
+
     setLoadingText("Withdraw Completed!")
     await new Promise(r => setTimeout(r, 3000));
     setNoteValue("")
@@ -1298,7 +1409,7 @@ const MainComponent = () => {
       // console.log("s", sig.s)
       // console.log("v", sig.v)
       // fn addNote(ref self: TContractState, pubKey: EthAddress, encryptedNote: Span<u256>, msg_hash: u256, r: u256, s: u256, v: u32);
-      
+
       const multiCall = await account.execute({
         contractAddress: noteAccountContract,
         entrypoint: 'addNote',
@@ -1382,7 +1493,7 @@ const MainComponent = () => {
   }
 
   function getBtnClassName() {
-    let className = 'p-4 w-full my-2 rounded-xl'
+    let className = 'p-4  my-2 rounded-xl'
     className +=
       btnText === ENTER_AMOUNT || btnText === CONNECT_WALLET
         ? ' text-zinc-400 bg-zinc-800 pointer-events-none'
@@ -1420,6 +1531,7 @@ const MainComponent = () => {
             { key: denominationsList[tokenList[srcToken]][1], name: denominationsList[tokenList[srcToken]][1] },
             { key: denominationsList[tokenList[srcToken]][2], name: denominationsList[tokenList[srcToken]][2] },
             { key: denominationsList[tokenList[srcToken]][3], name: denominationsList[tokenList[srcToken]][3] },
+            { key: denominationsList[tokenList[srcToken]][4], name: denominationsList[tokenList[srcToken]][4] },
           ]
           let newItems = getDepositFilteredItems(key, menu)
           setDMenuItems([...newItems])
@@ -1455,7 +1567,7 @@ const MainComponent = () => {
             { key: 'USDC', name: 'USDC' },
             { key: 'UNO', name: 'UNO' },
             { key: 'WBTC', name: 'WBTC' },
-            { key: 'tBTC', name: 'tBTC'}
+            { key: 'tBTC', name: 'tBTC' }
           ]
           let newItems = getDepositFilteredItems(key, menu)
           setCMenuItems([...newItems])
@@ -1467,6 +1579,7 @@ const MainComponent = () => {
             { key: denominationsList[tokenList[key]][1], name: denominationsList[tokenList[key]][1] },
             { key: denominationsList[tokenList[key]][2], name: denominationsList[tokenList[key]][2] },
             { key: denominationsList[tokenList[key]][3], name: denominationsList[tokenList[key]][3] },
+            { key: denominationsList[tokenList[key]][4], name: denominationsList[tokenList[key]][4] },
           ]
           let newdItems = getDepositFilteredItems(denominationsList[tokenList[key]][0], dmenu)
           setDMenuItems([...newdItems])
