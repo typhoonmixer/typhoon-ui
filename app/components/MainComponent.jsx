@@ -1173,9 +1173,34 @@ const MainComponent = () => {
   }
 
   async function handleTransfer() {
+    setLoading(true)
+    setLoadingText("Generating deposit calls...")
     let sdk = new TyphoonSDK()
-    let calls = await sdk.generate_approve_and_deposit_calls(BigInt(transferValue), tokenList[selectedTransferToken.name])
-    console.log(calls)
+    let calls = await sdk.generate_approve_and_deposit_calls(BigInt(getFullDenomination(transferValue, tokenDecimals[srcToken])), tokenList[selectedTransferToken.name])
+    setLoadingText("Depositing...")
+    const multiCall = await account.execute(calls, { version: 2 });
+    await account.waitForTransaction(multiCall.transaction_hash);
+    let secrets = sdk.get_secrets()
+    let nullifiers = sdk.get_nullifiers()
+    let pools = sdk.get_pools()
+    let proofsElements = []
+    for (let i = 0; i < secrets.length; i++) {
+      proofsElements.push(
+        JSON.stringify({
+          "secret": secrets[i],
+          "nullifier": nullifiers[i],
+          "txHash": multiCall.transaction_hash,
+          "pool": pools[i],
+          "day": '1'
+        })
+      )
+    }
+    createAndDownloadFile(proofsElements.join('\n'))
+    setLoadingText("Withdrawing to destiny...")
+    await sdk.withdraw(multiCall.transaction_hash, [transferReceiverValue])
+    setTransferReceiverValue('')
+    setTransferValue(undefined)
+    setLoading(false)
   }
 
   function depositOptionPopup() {
