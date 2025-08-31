@@ -575,7 +575,7 @@ const MainComponent = () => {
 
   return (
     <div className='flex' >
-      <div className='relative bg-zinc-900 w5-[35%] p-4 px-6 rounded-xl  min-h-[200px]' style={{ width: '550px', height: '500px'}}>
+      <div className='relative bg-zinc-900 w5-[35%] p-4 px-6 rounded-xl  min-h-[200px]' style={{ width: '550px', height: '500px', marginBottom:'100px'}}>
         <div className='bg-zinc-900 h-fit flex items-center justify-around rounded-full mx-6'>
           <p
             className={getNavIconClassName(DEPOSIT)}
