@@ -55,11 +55,11 @@ const Header = () => {
   }
 
   return (
-    <div className='fixed left-0 top-0 w-full px-8 py-4 flex items-center justify-between'>
-      <div className='flex items-center'>
-        <img src='/Typhoon_logo.png' className='h-12' />
+    <div className='fixed left-0 top-0 w-full px-8 py-4 flex items-center justify-between z-1000' style={{zIndex:600, marginLeft: '900px'}}>
+        {/* <div className='flex items-center'>
+          <img src='/Typhoon_logo.png' className='h-12' />
 
-      </div>
+        </div> */}
 
       <div className='flex'>
         {/* <button style={{ backgroundColor: 'blue', color: 'white' , marginRight: '10px'}}
