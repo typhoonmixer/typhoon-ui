@@ -26,12 +26,13 @@ export async function generateProofCalldata(note, recipient, paymaster) {
 
     let receipt = await provider.waitForTransaction(note.txHash)
     
-    let [commitment, nullifierHash] = await commitmentAndNullifierHash(note.secret.slice(2), note.nullifier.slice(2))
+    let [commitment, nullifierHash] = await commitmentAndNullifierHash(note.secret.includes('0x')? note.secret.slice(2): note.secret, note.nullifier.includes('0x')? note.nullifier.slice(2): note.nullifier)
     
     let depositEvent = {}
     for (let i = 0; i < typhoon.parseEvents(receipt).length; i++) {
         let event = typhoon.parseEvents(receipt)[i]["typhoon::Typhoon::Typhoon::Deposit"]
         if (event.commitments == commitment) {
+            
             depositEvent = event
             break
         }
@@ -55,15 +56,15 @@ export async function generateProofCalldata(note, recipient, paymaster) {
         relayerFee = (denomination / 100n) * 2n
         relayer = BigInt(process.env.NEXT_PUBLIC_PAYMASTER_ADDR)
     }
-    console.log("0x"+BigInt(relayer).toString(16))
+    
     let proofInput = {
         "nullifierHash": nullifierHash,
         "day": BigInt(1),
         "recipient": BigInt(recipient),
         "relayer": relayer,
         "relayerFee": relayerFee,
-        "secret": BigInt(note.secret.slice(2)),
-        "nullifier": BigInt(note.nullifier.slice(2)),
+        "secret": BigInt(note.secret.includes('0x')? note.secret.slice(2): note.secret),
+        "nullifier": BigInt(note.nullifier.includes('0x')? note.nullifier.slice(2): note.nullifier),
         "count": count + 1n,
         "dd": dd,
         "D": D,
