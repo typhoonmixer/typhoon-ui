@@ -985,7 +985,7 @@ const MainComponent = () => {
           _reward: rewardMode
         }),
       },
-    ], { version: 2 });
+    ]);
 
     await account.waitForTransaction(multiCall.transaction_hash);
 
@@ -1160,7 +1160,7 @@ const MainComponent = () => {
           contractAddress: typhoonAddress,
           entrypoint: 'withdraw',
           calldata: call.calldata,
-        }, { version: 2 });
+        });
         await account.waitForTransaction(multiCall.transaction_hash);
       }
     }
@@ -1178,7 +1178,7 @@ const MainComponent = () => {
     let sdk = new TyphoonSDK()
     let calls = await sdk.generate_approve_and_deposit_calls(BigInt(getFullDenomination(transferValue, tokenDecimals[srcToken])), tokenList[selectedTransferToken.name])
     setLoadingText("Depositing...")
-    const multiCall = await account.execute(calls, { version: 2 });
+    const multiCall = await account.execute(calls);
     await account.waitForTransaction(multiCall.transaction_hash);
     let secrets = sdk.get_secrets()
     let nullifiers = sdk.get_nullifiers()
