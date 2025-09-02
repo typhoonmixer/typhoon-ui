@@ -17,10 +17,11 @@ const provider = new RpcProvider({ nodeUrl: "https://starknet-mainnet.public.bla
 const typhoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
 
 
-const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
+
 
 export async function generateProofCalldata(note, recipient, paymaster) {
     await garaga.init();
+    const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
 
     const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
 
