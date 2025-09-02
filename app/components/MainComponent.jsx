@@ -61,6 +61,7 @@ const MainComponent = () => {
   const tokenToSrc = {
     "STRK": "starknetlogo.svg",
     "ETH": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png",
+    "SCHIZODIO": "schizodio_logo.jpg",
     "WBTC": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599/logo.png",
     "tBTC": "tbtclogo.png",
     "USDC": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png",
@@ -81,7 +82,8 @@ const MainComponent = () => {
     "USDC": "0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8",
     "UNO": "0x0719b5092403233201aa822ce928bd4b551d0cdb071a724edd7dc5e5f57b7f34",
     "WBTC": "0x03fe2b97c1fd336e750087d68b9b867997fd64a2661ff3ca5a7c771641e8e7ac",
-    "tBTC": "0x04daa17763b286d1e59b97c283c0b8c949994c361e426a28f743c67bdfe9a32f"
+    "tBTC": "0x04daa17763b286d1e59b97c283c0b8c949994c361e426a28f743c67bdfe9a32f",
+    "SCHIZODIO": "0x00acc2fa3bb7f6a6726c14d9e142d51fe3984dbfa32b5907e1e76425177875e2"
   }
 
   const [noteValue, setNoteValue] = useState("")
@@ -212,6 +214,7 @@ const MainComponent = () => {
   const transferTokens = [
     { name: "STRK", src: "starknetlogo.svg" },
     { name: "ETH", src: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png" },
+    { name: "SCHIZODIO", src: "schizodio_logo.jpg"},
     { name: "WBTC", src: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599/logo.png" },
     { name: "tBTC", src: "tbtclogo.png" },
     { name: "USDC", src: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png" },
@@ -228,6 +231,7 @@ const MainComponent = () => {
   const depositTokens = [
     { name: "STRK" },
     { name: "ETH" },
+    { name: "SCHIZODIO"},
     { name: "WBTC" },
     { name: "tBTC" },
     { name: "USDC" },
@@ -575,7 +579,7 @@ const MainComponent = () => {
 
   return (
     <div className='flex' >
-      <div className='relative bg-zinc-900 w5-[35%] p-4 px-6 rounded-xl  min-h-[200px]' style={{ width: '550px', height: '500px', marginBottom:'100px'}}>
+      <div className='relative bg-zinc-900 w5-[35%] p-4 px-6 rounded-xl  min-h-[200px]' style={{ width: '600px', height: '500px', marginBottom:'100px'}}>
         <div className='bg-zinc-900 h-fit flex items-center justify-around rounded-full mx-6'>
           <p
             className={getNavIconClassName(DEPOSIT)}
@@ -789,7 +793,7 @@ const MainComponent = () => {
                   className={`mt-2 ${dselectedItem === amount ? "text-blue-300 font-bold" : "text-blue-500 opacity-70"
                     }`}
                 >
-                  {amount} {srcToken}
+                  {summarizeNumber(Number(amount))} {srcToken}
                 </span>
               </label>
             ))}
@@ -801,6 +805,24 @@ const MainComponent = () => {
 
       </div>
     )
+  }
+
+  function summarizeNumber(num) {
+    if (typeof num !== 'number' || isNaN(num)) return 'Invalid input';
+    
+    const suffixes = [
+      { threshold: 1e9, suffix: 'B' },
+      { threshold: 1e6, suffix: 'M' },
+      { threshold: 1e3, suffix: 'k' },
+      { threshold: 1, suffix: '' }
+    ];
+  
+    for (let { threshold, suffix } of suffixes) {
+      if (Math.abs(num) >= threshold) {
+        const value = (num / threshold).toFixed(1).replace(/\.0$/, '');
+        return `${value}${suffix}`;
+      }
+    }
   }
 
   async function get_balance(acc) {
@@ -886,7 +908,7 @@ const MainComponent = () => {
           </div>
 
           <div className="text-right text-white text-base mt-1">
-            Minimum amount required: {minimalRequired} {selectedTransferToken.name}
+            Minimum amount required: {summarizeNumber(Number(minimalRequired))} {selectedTransferToken.name}
           </div>
         </div>
         <div className="w-full mt-2 h-full p-4 bg-zinc-800 rounded-2xl shadow-md">
