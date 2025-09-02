@@ -13,7 +13,7 @@ import * as snarkjs from "snarkjs";
 const infuraKey = process.env.NEXT_PUBLIC_API_KEY
 const genBlockNumber = process.env.NEXT_PUBLIC_GEN_BLOCK_NUMBER
 
-const provider = new RpcProvider({ nodeUrl: "https://starknet-mainnet.public.blastapi.io/rpc/v0_8" });
+const provider = new RpcProvider({ nodeUrl: "https://rpc.starknet.lava.build:443" });
 const typhoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
 
 
@@ -88,6 +88,7 @@ export async function generateProofCalldata(note, recipient, paymaster) {
 
 export async function generateProofCalldata2(secret, nullifier, txHash, pool, recipient, paymaster) {
     await garaga.init();
+    const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
     const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
     console.log("proof 2")
     let receipt = await provider.waitForTransaction(txHash)

@@ -9,7 +9,7 @@ import FormGroup from '@mui/material/FormGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
 import { createHash, sign } from 'crypto-browserify';
-import { RpcProvider, Contract, WalletAccount, CallData, cairo, RPC } from 'starknet';
+import { RpcProvider, Contract, WalletAccount, CallData, cairo, RPC, constants } from 'starknet';
 
 import WithdrawField from './WithdrawField'
 import toast, { Toaster } from 'react-hot-toast'
@@ -41,7 +41,7 @@ import { TyphoonSDK } from 'typhoon-sdk'
 import dotenv from 'dotenv'
 dotenv.config()
 
-const provider = new RpcProvider({ nodeUrl: 'https://starknet-mainnet.public.blastapi.io/rpc/v0_8' });
+const provider = new RpcProvider({ nodeUrl: "https://rpc.starknet.lava.build:443" });
 const typhoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
 const noteAccountContract = process.env.NEXT_PUBLIC_NOTE_ACCOUNT_ADDR
 const maxUint256 = (1n << 256n) - 1n;
