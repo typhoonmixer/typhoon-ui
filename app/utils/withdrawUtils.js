@@ -240,20 +240,17 @@ async function getCandRl(leafs, addEvents, pool, block_number) {
     let RL = []
     let leafLevel = []
     let count = 0n
-
     leafLevel = leafs.filter(val => val != 0n)
 
     let currentLevel = 0n
     let currentLL = leafLevel.length
 
-
+    debugger;
     RL = [...leafs]
     C.push([leafs[0], leafs[1], leafs[2], leafs[3]])
     for (let i = 0; i < 125; i++) {
         C.push(Array(4).fill(0n))
     }
-
-    
 
     let leafIndex = 0
     for (let i = 0; i < addEvents.length; i++) {
@@ -268,52 +265,52 @@ async function getCandRl(leafs, addEvents, pool, block_number) {
         if (addEvents[i].level == 0n) {
             count = addEvents[i].lvFullIndex
         }
-        if (C[currentLevel][3] != 0n) {
+        if (C[currentLevel][3] != 0n && addEvents[i].level > currentLevel) {
             currentLevel += 1n;
-        } 
+            C[currentLevel][addEvents[i].lvFullIndex % 4n] = addEvents[i].value
+            let filteredEvents = addEvents.filter(val => val.level == currentLevel && val.lvFullIndex < addEvents[i].lvFullIndex)
+            let nonZeroIndex = addEvents[i].lvFullIndex
+            for (let j = filteredEvents.length - 1; j > 0; j--) {
+                C[currentLevel][filteredEvents[j].lvFullIndex % 4n] = filteredEvents[j].value
+                nonZeroIndex = filteredEvents[j].lvFullIndex
+            }
+            if (C[currentLevel][0] == 0n) {
+                let previousRoots = await fetchLevel(block_number, currentLevel, nonZeroIndex, pool)
+
+                previousRoots.reverse()
+                for (let j = 0; j < previousRoots.length; j++) {
+                    C[currentLevel][j] = previousRoots[j]
+                }
+            }
+
+        }
         if (addEvents[i].level == currentLevel) {
             let ll = addEvents[i].lvFullIndex % 4n
-            
             if (ll == 0n) {
                 C[currentLevel][0] = addEvents[i].value
                 RL = C[currentLevel]
             } else if (ll != 0n && C[currentLevel][ll - 1n] != 0n) {
                 C[currentLevel][ll] = addEvents[i].value
                 RL = C[currentLevel]
-            } else {
+            } else if (C[currentLevel][0] == 0n) {
+
                 let previousRoots = await fetchLevel(block_number, addEvents[i].level, addEvents[i].lvFullIndex, pool)
+
                 if (!previousRoots.includes(addEvents[i].value)) {
                     previousRoots[ll] = addEvents[i].value
-                }
 
+                }
                 RL = [0n, 0n, 0n, 0n]
                 for (let j = 0; j < previousRoots.length; j++) {
                     RL[j] = previousRoots[j]
                 }
-                C[currentLevel][0] = addEvents[i].value
+                C[currentLevel] = previousRoots
             }
         }
-
     }
-
-    // for (let i = leafIndex + 1; i < addEvents.length; i++) {
-
-    //     if (currentLL == 4) {
-    //         currentLevel += 1
-    //         currentLL = 0
-    //     }
-    //     if (Number(addEvents[i].level.toString()) == currentLevel) {
-    //         if (currentLevel == 0) {
-    //             count = addEvents[i].lvFullIndex
-    //         }
-    //         C[currentLevel][currentLL] = addEvents[i].value
-    //         currentLL += 1
-    //     }
-    // }
 
     return [C, RL, currentLevel, count]
 }
-
 
 
 export function JSONInputStringToList(input) {
