@@ -136,39 +136,42 @@ export default function Home() {
           <div className="flex-1 border-0 shadow-none text-right rounded-2xl p-4">
             <div className="p-0">
               <h2 className="text-xl font-bold">Withdrawal</h2>
-              <p className="text-blue-400">Verified</p>
+              <p className="text-blue-400">${reportedData.to != ''? "Verified": "unspent"}</p>
               <p className="mt-2 text-lg font-mono">
-                {compressedWithdrawAmount} {symbol}
+                {reportedData.to != ''?compressedWithdrawAmount: "--"} {symbol}
                 <div className='flex'>
                   <span className="block text-gray-400 text-sm">
-                    withdrawal fee {compressedWithdrawFee} {symbol}
+                    withdrawal fee {reportedData.to != ''? compressedWithdrawFee: "--"} {symbol}
                   </span>
                   <span className="block text-gray-400 text-sm ml-6">
-                    Paymaster fee {compressedPaymasterFee} {symbol}
+                    Paymaster fee {reportedData.to != ''? compressedPaymasterFee: "--"} {symbol}
                   </span>
                 </div>
 
               </p>
 
               <div className="mt-4 space-y-2">
-                <Row label="Date" right content={formattedwithdrawDate} />
-                <Row label="Transaction" right content={reportData.withdrawTxHash} />
-                <Row label="To" right content={reportData.to} />
-                <Row label="NullifierHash" right content={reportData.nullifierHash} />
+                <Row label="Date" right content={reportedData.to != ''? formattedwithdrawDate : "--"} />
+                <Row label="Transaction" right content={reportedData.to != ''? reportData.withdrawTxHash: "--"} />
+                <Row label="To" right content={reportedData.to != ''? reportData.to: "--"} />
+                <Row label="NullifierHash" right content={reportedData.to != ''? reportData.nullifierHash : "--"} />
               </div>
             </div>
           </div>
         </div>
         <div className="flex items-center justify-center">
-          <button className="bg-gradient-to-r from-blue-400/30 to-blue-400/80 px-2 py-3 rounded-xl" onClick={() => {
+          {reportedData.to != ''? <button className="bg-gradient-to-r from-blue-400/30 to-blue-400/80 px-2 py-3 rounded-xl" onClick={() => {
             const htmlReport = generateComplianceReport({ secret, nullifier, pool, depositAmount: compressedDepositAmount, withdrawalAmount: compressedWithdrawAmount, withdrawFee: compressedWithdrawFee, relayerFee: compressedPaymasterFee, depositDate: formattedDepositDate, depositTx: reportData.depositTxHash, depositFrom: reportData.from, commitment: reportData.commitment, withdrawalDate: formattedwithdrawDate, withdrawalTx: reportData.withdrawTxHash, withdrawalTo: reportData.to, nullifierHash: reportData.nullifierHash, symbol });
             // htmlStringToJpeg(htmlReport);
             // createAndDownloadFile(htmlReport)
             // convertToPdf(htmlReport);
-            openReportAndPrint(htmlReport);
+            if (typeof window !== "undefined") {
+              openReportAndPrint(htmlReport);
+            }
+            
           }}>
             Download PDF
-          </button>
+          </button>: <div></div>}
         </div>
       </div>
 
