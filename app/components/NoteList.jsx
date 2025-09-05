@@ -18,7 +18,7 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
 import axios from "axios";
 
-const provider = new RpcProvider({ nodeUrl: 'https://starknet-mainnet.public.blastapi.io/rpc/v0_8' });
+const provider = new RpcProvider({ nodeUrl: "https://rpc.starknet.lava.build:443" });
 const maxUint256 = (1n << 256n) - 1n;
 const maxUint512 = (1n << 512n) - 1n;
 const typhoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
