@@ -179,14 +179,18 @@ export default function Home() {
   }
 
   function openReportAndPrint(htmlString) {
+    if (typeof window === 'undefined') {
+      console.error('This function requires a browser environment.');
+      return;
+    }
+  
     const reportWindow = window.open("", "_blank");
     reportWindow.document.write(htmlString);
     reportWindow.document.close();
-
-    // Wait a bit for rendering before opening print dialog
+  
     reportWindow.onload = () => {
       reportWindow.focus();
-      reportWindow.print(); // triggers the browser "Print → Save as PDF"
+      reportWindow.print();
     };
   }
   async function htmlStringToJpeg(htmlString) {
