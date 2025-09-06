@@ -793,7 +793,7 @@ const MainComponent = () => {
                   className={`mt-2 ${dselectedItem === amount ? "text-blue-300 font-bold" : "text-blue-500 opacity-70"
                     }`}
                 >
-                  {summarizeNumber(Number(amount))} {srcToken}
+                  {amount[0] == '0'?amount: summarizeNumber(Number(amount))} {srcToken}
                 </span>
               </label>
             ))}
