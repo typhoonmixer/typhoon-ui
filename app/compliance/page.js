@@ -5,8 +5,6 @@ import { ArrowRight } from "lucide-react";
 import { RpcProvider, Contract } from 'starknet-v7';
 import { tokenDecimals, tokenToSymbol } from '../utils/SupportedDenominations';
 import { getCompressedDenomination } from '../utils/depositUtils';
-import html2pdf from 'html2pdf.js';
-import html2canvas from "html2canvas";
 
 export default function Home() {
   const provider = new RpcProvider({ nodeUrl: "https://rpc.starknet.lava.build:443" });
@@ -193,27 +191,7 @@ export default function Home() {
       reportWindow.print();
     };
   }
-  async function htmlStringToJpeg(htmlString) {
-    // Create a hidden container
-    const container = document.createElement("div");
-    container.innerHTML = htmlString;
-    container.style.position = "absolute";
-    document.body.appendChild(container);
-
-    // Render into canvas
-    const canvas = await html2canvas(container, { backgroundColor: "#fff" });
-    document.body.removeChild(container);
-
-    // Convert to JPEG
-    const dataUrl = canvas.toDataURL("image/jpeg", 1.0);
-
-    // Trigger download
-    const link = document.createElement("a");
-    link.href = dataUrl;
-    link.download = "report.jpg";
-    link.click();
-  }
-
+  
   // Small row component for labels
   function Row({ label, right, content }) {
     return (
@@ -230,17 +208,6 @@ export default function Home() {
       </div>
     );
   }
-  function convertToPdf(htmlString) {
-    const opt = {
-      margin: 10,
-      filename: 'typhoon-compliance-report.pdf',
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    };
-
-    html2pdf().from(htmlString).save();
-  };
 
   function generateComplianceReport({
     secret = '',
