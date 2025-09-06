@@ -105,11 +105,11 @@ export default function Home() {
       <div>
         <div className=" text-white p-6 rounded-2xl flex items-center justify-between ">
           {/* Deposit */}
-          <div className="flex-1 border-0 shadow-none rounded-2xl p-4">
+          <div className="flex-1 border-0 shadow-none rounded-2xl p-4 text-left">
             <div className="p-0">
               <div className='mb-12'>
                 <h2 className="text-xl font-bold">Deposit</h2>
-                <p className="text-blue-400 ">Verified</p>
+                <p className="text-blue-400">Verified</p>
                 <p className="mt-2 text-lg font-mono">{compressedDepositAmount} {symbol}</p>
               </div>
 
@@ -134,10 +134,10 @@ export default function Home() {
           <div className="flex-1 border-0 shadow-none text-right rounded-2xl p-4">
             <div className="p-0">
               <h2 className="text-xl font-bold">Withdrawal</h2>
-              <p className="text-blue-400">${reportData.to != ''? "Verified": "unspent"}</p>
+              <p className="text-blue-400">{reportData.to != ''? "Verified": "unspent"}</p>
               <p className="mt-2 text-lg font-mono">
                 {reportData.to != ''?compressedWithdrawAmount: "--"} {symbol}
-                <div className='flex'>
+                <div className='flex text-right'>
                   <span className="block text-gray-400 text-sm">
                     withdrawal fee {reportData.to != ''? compressedWithdrawFee: "--"} {symbol}
                   </span>
