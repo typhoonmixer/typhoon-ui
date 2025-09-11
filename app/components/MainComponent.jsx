@@ -657,7 +657,7 @@ const MainComponent = () => {
 
         <Toaster />
       </div>
-      {account != undefined ? <NoteList /> : <div></div>}
+      {/* {account != undefined ? <NoteList /> : <div></div>} */}
     </div>
   )
 
