@@ -1,7 +1,10 @@
 
 import * as garaga from 'garaga';
 
-import { RpcProvider, Contract, constants, types, hash, events, CallData, num } from 'starknet-v7';
+import { RpcProvider, Contract, constants, types, hash, events, CallData, num } from 'starknet';
+import { getNodeUrl } from './network';
+import typhoonMain from '../../typhoon.json' assert { type: 'json' }
+import typhoonTestnet from '../../typhoon-testnet.json' assert { type: 'json' }
 import Hasher from './mimc5.js';
 import { commitmentAndNullifierHash } from './depositUtils.js';
 import vk from './verification_key.json' assert { type: "json" }
@@ -13,17 +16,39 @@ import * as snarkjs from "snarkjs";
 const infuraKey = process.env.NEXT_PUBLIC_API_KEY
 const genBlockNumber = process.env.NEXT_PUBLIC_GEN_BLOCK_NUMBER
 
-const provider = new RpcProvider({ nodeUrl: "https://rpc.starknet.lava.build:443" });
-const typhoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
+const provider = new RpcProvider({ nodeUrl: getNodeUrl() });
+
+async function loadAbi(address) {
+    const klass = await provider.getClassAt(address);
+    let abi = klass?.abi;
+    if (typeof abi === 'string') {
+        abi = JSON.parse(abi);
+    }
+    if (!Array.isArray(abi)) {
+        throw new Error('ABI not array for ' + address);
+    }
+    return abi;
+}
+const envTyphoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
+const resolvedTyphoonAddress = (() => {
+    if (envTyphoonAddress && typeof envTyphoonAddress === 'string' && envTyphoonAddress.startsWith('0x')) {
+        return envTyphoonAddress;
+    }
+    const chainHint = (process.env.NEXT_PUBLIC_CHAIN || '').toLowerCase();
+    if (chainHint.includes('main')) {
+        return typhoonMain?.typhoon || null;
+    }
+    return typhoonTestnet?.typhoon || null;
+})();
 
 
 
 
 export async function generateProofCalldata(note, recipient, paymaster) {
     await garaga.init();
-    const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
-
-    const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
+    if (!resolvedTyphoonAddress) throw new Error('Typhoon address not configured');
+    const typhoonAbi = await loadAbi(resolvedTyphoonAddress);
+    const typhoon = new Contract(typhoonAbi, resolvedTyphoonAddress, provider);
 
     let receipt = await provider.waitForTransaction(note.txHash)
     
@@ -88,8 +113,9 @@ export async function generateProofCalldata(note, recipient, paymaster) {
 
 export async function generateProofCalldata2(secret, nullifier, txHash, pool, recipient, paymaster) {
     await garaga.init();
-    const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
-    const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
+    if (!resolvedTyphoonAddress) throw new Error('Typhoon address not configured');
+    const typhoonAbi = await loadAbi(resolvedTyphoonAddress);
+    const typhoon = new Contract(typhoonAbi, resolvedTyphoonAddress, provider);
     console.log("proof 2")
     let receipt = await provider.waitForTransaction(txHash)
 
@@ -159,7 +185,7 @@ export async function generateProofCalldata2(secret, nullifier, txHash, pool, re
 }
 
 async function getPoolDenomination(poolAddress) {
-    const { abi: poolAbi } = await provider.getClassAt(poolAddress);
+    const poolAbi = await loadAbi(poolAddress);
     const poolContract = new Contract(poolAbi, poolAddress, provider);
     const denomination = await poolContract.denomination();
     return denomination;
@@ -199,7 +225,7 @@ async function getAddEvents(from_block_number, to_block_number, pool, filter) {
         allEvents = allEvents.concat(eventsList.events)
     }
 
-    const { abi: poolAbi } = await provider.getClassAt(pool);
+    const poolAbi = await loadAbi(pool);
     const abiEvents = events.getAbiEvents(poolAbi);
     const abiStructs = CallData.getAbiStruct(poolAbi);
     const abiEnums = CallData.getAbiEnum(poolAbi);

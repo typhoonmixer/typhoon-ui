@@ -4,6 +4,8 @@ import {
   alchemyProvider,
   argent,
   braavos,
+  publicProvider,
+  jsonRpcProvider,
   infuraProvider,
   lavaProvider,
   blastProvider,
@@ -23,7 +25,7 @@ dotenv.config()
 
 export function StarknetProvider({ children }) {
   const { connectors: injected } = useInjectedConnectors({
-    recommended: [, argent(), braavos()],
+    recommended: [argent(), braavos()],
     includeRecommended: "always",
   });
 
@@ -35,23 +37,38 @@ export function StarknetProvider({ children }) {
 
   const apiKey = process.env.NEXT_PUBLIC_API_KEY
   const nodeProvider = process.env.NEXT_PUBLIC_PROVIDER
+  const explicitRpcUrl = process.env.NEXT_PUBLIC_RPC_URL
 
   let provider;
-  if (nodeProvider == "infura") {
+  if (explicitRpcUrl) {
+    provider = jsonRpcProvider({ rpc: () => ({ nodeUrl: explicitRpcUrl }) });
+  } else if (nodeProvider == "infura" && apiKey) {
     provider = infuraProvider({ apiKey });
-  } else if (nodeProvider == "alchemy") {
+  } else if (nodeProvider == "alchemy" && apiKey) {
     provider = alchemyProvider({ apiKey });
-  } else if (nodeProvider == "lava") {
+  } else if (nodeProvider == "lava" && apiKey) {
     provider = lavaProvider({ apiKey });
-  } else if (nodeProvider == "nethermind") {
+  } else if (nodeProvider == "nethermind" && apiKey) {
     provider = nethermindProvider({ apiKey });
-  }
-  else if (nodeProvider == "blast") {
+  } else if (nodeProvider == "blast" && apiKey) {
     provider = blastProvider({ apiKey });
-  } else {
+  } else if (nodeProvider == "reddio" && apiKey) {
     provider = reddioProvider({ apiKey });
+  } else {
+    // Default to Blast public RPC (non-random) per chain
+    provider = jsonRpcProvider({
+      rpc: (chain) => {
+        const isMainnet = chain.id === mainnet.id;
+        const nodeUrl = isMainnet
+          ? "https://starknet-mainnet.public.blastapi.io/rpc/v0_9"
+          : "https://starknet-sepolia.public.blastapi.io/rpc/v0_9";
+        return { nodeUrl };
+      },
+    });
   }
 
+  const chainHint = (process.env.NEXT_PUBLIC_CHAIN || '').toLowerCase();
+  const defaultChainId = chainHint.includes('main') ? mainnet.id : sepolia.id;
   // const provider = new RpcProvider({ nodeUrl: 'https://free-rpc.nethermind.io/sepolia-juno/v0_7' });
   return (
     <StarknetConfig
@@ -60,6 +77,7 @@ export function StarknetProvider({ children }) {
       provider={provider}
       explorer={starkscan}
       autoConnect
+      defaultChainId={defaultChainId}
     >
       {children}
     </StarknetConfig>

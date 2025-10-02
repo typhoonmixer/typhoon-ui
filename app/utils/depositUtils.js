@@ -2,9 +2,34 @@ import { one, two, three, four, five } from "./SupportedDenominations";
 import { ethers } from 'ethers'
 import $u from './$u.js';
 const wc = require("./witness_calculator.js");
-import { RpcProvider, Contract, constants, types, hash, events, CallData, num } from 'starknet-v7';
-const typhoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
-const provider = new RpcProvider({ nodeUrl: "https://starknet-mainnet.public.blastapi.io/rpc/v0_8" });
+import { RpcProvider, Contract, constants, types, hash, events, CallData, num } from 'starknet';
+import { getNodeUrl } from './network';
+import typhoonMain from '../../typhoon.json' assert { type: 'json' }
+import typhoonTestnet from '../../typhoon-testnet.json' assert { type: 'json' }
+const envTyphoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
+const resolvedTyphoonAddress = (() => {
+    if (envTyphoonAddress && typeof envTyphoonAddress === 'string' && envTyphoonAddress.startsWith('0x')) {
+        return envTyphoonAddress;
+    }
+    const chainHint = (process.env.NEXT_PUBLIC_CHAIN || '').toLowerCase();
+    if (chainHint.includes('main')) {
+        return typhoonMain?.typhoon || null;
+    }
+    return typhoonTestnet?.typhoon || null;
+})();
+const provider = new RpcProvider({ nodeUrl: getNodeUrl() });
+
+async function loadAbi(address) {
+    const klass = await provider.getClassAt(address);
+    let abi = klass?.abi;
+    if (typeof abi === 'string') {
+        abi = JSON.parse(abi);
+    }
+    if (!Array.isArray(abi)) {
+        throw new Error('ABI not array for ' + address);
+    }
+    return abi;
+}
 
 
 export async function fetchDeposits(pool) {
@@ -28,7 +53,7 @@ async function getDepositEvents(from_block_number, to_block_number, filter) {
     let continuationToken = '0';
     while (continuationToken != undefined) {
         const eventsList = await provider.getEvents({
-            address: typhoonAddress,
+            address: resolvedTyphoonAddress,
             from_block: { block_number: from_block_number },
             to_block: { block_number: to_block_number },
             keys: filter,
@@ -39,7 +64,8 @@ async function getDepositEvents(from_block_number, to_block_number, filter) {
         allEvents = allEvents.concat(eventsList.events)
     }
 
-    const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
+    if (!resolvedTyphoonAddress) return [];
+    const typhoonAbi = await loadAbi(resolvedTyphoonAddress);
     const abiEvents = events.getAbiEvents(typhoonAbi);
     const abiStructs = CallData.getAbiStruct(typhoonAbi);
     const abiEnums = CallData.getAbiEnum(typhoonAbi);
@@ -182,4 +208,3 @@ function trimTrailingZeros(numStr) {
 
     return trimmed;
 }
-

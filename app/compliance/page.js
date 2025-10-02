@@ -2,12 +2,13 @@
 import React, { useEffect, useState, useRef, use } from 'react'
 import { TyphoonSDK } from 'typhoon-sdk';
 import { ArrowRight } from "lucide-react";
-import { RpcProvider, Contract } from 'starknet-v7';
+import { RpcProvider, Contract } from 'starknet';
+import { getNodeUrl } from '../utils/network';
 import { tokenDecimals, tokenToSymbol } from '../utils/SupportedDenominations';
 import { getCompressedDenomination } from '../utils/depositUtils';
 
 export default function Home() {
-  const provider = new RpcProvider({ nodeUrl: "https://rpc.starknet.lava.build:443" });
+  const provider = new RpcProvider({ nodeUrl: getNodeUrl() });
   const [note, setNote] = useState('');
   const [complianceContent, setComplianceContent] = useState(<div></div>);
 
@@ -29,7 +30,7 @@ export default function Home() {
     let sdk = new TyphoonSDK()
     let jsonNote = JSON.parse(note)
     let reportData = await sdk.get_compliance_data(jsonNote.secret.includes('0x') ? jsonNote.secret.slice(2) : jsonNote.secret, jsonNote.nullifier.includes('0x') ? jsonNote.nullifier.slice(2) : jsonNote.nullifier, jsonNote.txHash, jsonNote.pool)
-    const { abi: poolAbi } = await provider.getClassAt(jsonNote.pool);
+    const poolAbi = await loadAbi(provider, jsonNote.pool);
     const poolContract = new Contract(poolAbi, jsonNote.pool, provider);
     const token = await poolContract.token();
     const symbol = tokenToSymbol[token.toString()];
@@ -416,3 +417,10 @@ export default function Home() {
 
 }
 
+async function loadAbi(provider, address) {
+  const klass = await provider.getClassAt(address);
+  let abi = klass?.abi;
+  if (typeof abi === 'string') abi = JSON.parse(abi);
+  if (!Array.isArray(abi)) throw new Error('ABI not array for ' + address);
+  return abi;
+}

@@ -1,4 +1,6 @@
+"use client";
 import Image from "next/image";
+import React, { useEffect, useState } from "react";
 import { Connector, useConnect } from "@starknet-react/core";
 import Close from "../../../public/svg/Close";
 import GenericModal from "../../utils/GenericModal";
@@ -66,6 +68,12 @@ const Wallet = ({
 
 const ConnectModal = () => {
   const { connectors } = useConnect();
+  const [mounted, setMounted] = useState(false);
+
+  // Render connector list only after mount to avoid SSR/client mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   return (
     <GenericModal
       popoverId="connect-modal"
@@ -94,15 +102,16 @@ const ConnectModal = () => {
             <h4 className="text-text-grey mb-[1rem] font-semibold">Popular</h4>
 
             <div className="flex flex-col gap-4 py-8">
-              {connectors.map((connector, index) => (
-                <Wallet
-                  key={connector.id || index}
-                  src={getLightTheme(connector.icon)}
-                  name={connector.name}
-                  connector={connector}
-                  alt="alt"
-                />
-              ))}
+              {mounted &&
+                connectors.map((connector, index) => (
+                  <Wallet
+                    key={connector.id || index}
+                    src={getLightTheme(connector.icon)}
+                    name={connector.name}
+                    connector={connector}
+                    alt="alt"
+                  />
+                ))}
             </div>
           </div>
           <div className="border-red h-fit border-t-[.5px] border-solid p-4 lg:col-span-3 lg:flex lg:h-full lg:flex-col lg:border-none lg:px-8 lg:py-0">

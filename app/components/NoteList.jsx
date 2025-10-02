@@ -1,7 +1,10 @@
 "use client"
 import React, { useEffect, useState } from 'react';
 import { decrypt, encrypt } from '@metamask/eth-sig-util';
-import { RpcProvider, Contract, constants, cairo, CallData } from 'starknet-v7';
+import { Contract, constants, cairo, CallData, RpcProvider } from 'starknet';
+import { useProvider } from '@starknet-react/core';
+import typhoonMain from '../../typhoon.json' assert { type: 'json' }
+import typhoonTestnet from '../../typhoon-testnet.json' assert { type: 'json' }
 import Popup from 'reactjs-popup';
 import { createHash } from 'crypto-browserify';
 import { generateProofCalldata2 } from '../utils/withdrawUtils';
@@ -18,13 +21,23 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
 import axios from "axios";
 
-const provider = new RpcProvider({ nodeUrl: "https://rpc.starknet.lava.build:443" });
 const maxUint256 = (1n << 256n) - 1n;
 const maxUint512 = (1n << 512n) - 1n;
-const typhoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
+const envTyphoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
+const resolvedTyphoonAddress = (() => {
+    if (envTyphoonAddress && typeof envTyphoonAddress === 'string' && envTyphoonAddress.startsWith('0x')) {
+        return envTyphoonAddress;
+    }
+    const chainHint = (process.env.NEXT_PUBLIC_CHAIN || '').toLowerCase();
+    if (chainHint.includes('main')) {
+        return typhoonMain?.typhoon || null;
+    }
+    return typhoonTestnet?.typhoon || null;
+})();
 const noteAccountContract = process.env.NEXT_PUBLIC_NOTE_ACCOUNT_ADDR
 
 function NoteList() {
+    const { provider } = useProvider();
     const { address, account } = useAccount();
     const ethAddressSepolia = "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
     const strkAddressSepolia = "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d"
@@ -50,8 +63,8 @@ function NoteList() {
         async function fetchNotes() {
             try {
                 let acc = new Wallet("0x" + noteAccount);
-                const { abi: noteAccountAbi } = await provider.getClassAt(noteAccountContract);
-                const ncContract = new Contract(noteAccountAbi, noteAccountContract, provider);
+                const noteAbi = await loadAbi(provider, noteAccountContract)
+                const ncContract = new Contract(noteAbi, noteAccountContract, provider);
                 let compressedNotesData = await ncContract.getNotes(acc.address);
                 const privKeyBuffer = Buffer.from(noteAccount, 'hex');
                 let keyPair = nacl.box.keyPair.fromSecretKey(privKeyBuffer)
@@ -89,8 +102,8 @@ function NoteList() {
                 for (let i = 0; i < decryptedNotes.length; i++) {
                     const poolAddress = decryptedNotes[i].pool;
 
-                    let denomination = await getPoolDenomination(poolAddress);
-                    let tokenAddr = await getPoolToken(poolAddress);
+                    let denomination = await getPoolDenomination(provider, poolAddress);
+                    let tokenAddr = await getPoolToken(provider, poolAddress);
                     // let cid = await provider.getChainId();
                     let tokenSymbol = tokenToSymbol[tokenAddr.toString()];
                     notesDenominationsAux.push(denominationShortener(denomination.toString()) + " " + tokenSymbol);
@@ -172,8 +185,9 @@ function NoteList() {
             }
         } else {
             setLoadingText(`Withdrawing... (This can take a few seconds)`)
-            const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
-            const typhoonContract = new Contract(typhoonAbi, typhoonAddress, account);
+            if (!resolvedTyphoonAddress) return;
+            const typhoonAbi = await loadAbi(provider, resolvedTyphoonAddress);
+            const typhoonContract = new Contract(typhoonAbi, resolvedTyphoonAddress, account);
 
             const call = typhoonContract.populate('withdraw', { full_proof_with_hints: callData });
 
@@ -181,7 +195,7 @@ function NoteList() {
             // const res = await typhoon.withdraw(call.calldata);
             const multiCall = await account.execute([
                 {
-                    contractAddress: typhoonAddress,
+                    contractAddress: resolvedTyphoonAddress,
                     entrypoint: 'withdraw',
                     calldata: call.calldata,
                 },
@@ -286,18 +300,26 @@ function denominationShortener(denomination) {
     return denomination.slice(0, -18)
 }
 
-async function getPoolDenomination(poolAddress) {
-    const { abi: poolAbi } = await provider.getClassAt(poolAddress);
+async function getPoolDenomination(provider, poolAddress) {
+    const poolAbi = await loadAbi(provider, poolAddress);
     const poolContract = new Contract(poolAbi, poolAddress, provider);
     const denomination = await poolContract.denomination();
     return denomination;
 }
 
-async function getPoolToken(poolAddress) {
-    const { abi: poolAbi } = await provider.getClassAt(poolAddress);
+async function getPoolToken(provider, poolAddress) {
+    const poolAbi = await loadAbi(provider, poolAddress);
     const poolContract = new Contract(poolAbi, poolAddress, provider);
     const tokenAddr = await poolContract.token();
     return tokenAddr;
+}
+
+async function loadAbi(provider, address) {
+    const klass = await provider.getClassAt(address);
+    let abi = klass?.abi;
+    if (typeof abi === 'string') abi = JSON.parse(abi);
+    if (!Array.isArray(abi)) throw new Error('ABI not array for ' + address);
+    return abi;
 }
 
 function createAndDownloadFile(content) {

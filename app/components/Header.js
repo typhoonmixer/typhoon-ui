@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { useAccount } from "@starknet-react/core";
 import AddressBar from "./lib/AddressBar";
 import ConnectButton from "./lib/Connect";
+import NetworkSwitcher from "./lib/NetworkSwitcher";
 import { Wallet, Signature } from 'ethers';
 
 import toast, { Toaster } from 'react-hot-toast'
@@ -14,7 +15,7 @@ import Popup from 'reactjs-popup';
 import 'reactjs-popup/dist/index.css';
 import { Button } from 'react-bootstrap';
 
-const providerUrl = 'https://free-rpc.nethermind.io/sepolia-juno/v0_7';
+const providerUrl = 'https://starknet-sepolia.public.blastapi.io/rpc/v0_9';
 
 
 const Header = () => {
@@ -61,7 +62,7 @@ const Header = () => {
 
         </div> */}
 
-      <div className='flex'>
+      <div className='flex items-center gap-2'>
         {/* <button style={{ backgroundColor: 'blue', color: 'white' , marginRight: '10px'}}
           aria-haspopup="dialog"
           onClick={() => openLink("https://starknet-faucet.vercel.app/")}
@@ -145,6 +146,7 @@ const Header = () => {
             </div>
           </div>
         </Popup>} */}
+        <NetworkSwitcher />
         {address ? (
           <div className="flex items-center gap-4">
             <AddressBar />

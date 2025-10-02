@@ -9,7 +9,9 @@ import FormGroup from '@mui/material/FormGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
 import { createHash, sign } from 'crypto-browserify';
-import { RpcProvider, Contract, WalletAccount, CallData, cairo, RPC, constants } from 'starknet';
+import { Contract, CallData, cairo, constants } from 'starknet';
+import { useProvider, useNetwork } from '@starknet-react/core';
+import { mainnet } from '@starknet-react/chains';
 
 import WithdrawField from './WithdrawField'
 import toast, { Toaster } from 'react-hot-toast'
@@ -23,6 +25,8 @@ import { allowancePerPool, commitmentAndNullifierHash, generateSecretAndNullifie
 import { JSONInputStringToList, generateProofCalldata } from '../utils/withdrawUtils';
 import NoteList from './NoteList';
 import typhoonAbi from '../utils/typhoon_abi.json' assert { type: "json" }
+import typhoonMain from '../../typhoon.json' assert { type: 'json' }
+import typhoonTestnet from '../../typhoon-testnet.json' assert { type: 'json' }
 
 import nacl from "tweetnacl";
 import naclUtil from "tweetnacl-util";
@@ -41,14 +45,57 @@ import { TyphoonSDK } from 'typhoon-sdk'
 import dotenv from 'dotenv'
 dotenv.config()
 
-const provider = new RpcProvider({ nodeUrl: "https://rpc.starknet.lava.build:443" });
-const typhoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
-const noteAccountContract = process.env.NEXT_PUBLIC_NOTE_ACCOUNT_ADDR
+const envTyphoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR;
+const noteAccountContract = process.env.NEXT_PUBLIC_NOTE_ACCOUNT_ADDR;
 const maxUint256 = (1n << 256n) - 1n;
 const maxUint512 = (1n << 512n) - 1n;
 
+// Debug helpers for robust ABI/Contract creation and logs
+async function loadAbi(address, prov) {
+  try {
+    const klass = await prov.getClassAt(address);
+    let abi = klass?.abi;
+    if (typeof abi === 'string') {
+      try {
+        abi = JSON.parse(abi);
+      } catch (e) {
+        console.error('[ABI] JSON.parse failed for', address, e);
+      }
+    }
+    if (!Array.isArray(abi)) {
+      console.error('[ABI] Not an array for', address, { typeofAbi: typeof abi });
+      return null;
+    }
+    console.debug('[ABI] Loaded', address, { length: abi.length });
+    return abi;
+  } catch (e) {
+    console.error('[ABI] getClassAt failed for', address, e);
+    return null;
+  }
+}
+
+async function getContractAt(address, providerOrAccount) {
+  const abi = await loadAbi(address, providerOrAccount);
+  if (!abi) return null;
+  try {
+    const c = new Contract({abi: abi, address: address, providerOrAccount: providerOrAccount});
+    return c;
+  } catch (e) {
+    console.error('[Contract] creation failed for', address, e);
+    return null;
+  }
+}
+
 const MainComponent = () => {
   const { sendAsync, data, status, isSuccess } = useSendTransaction({ calls: [] });
+  const { provider } = useProvider();
+  const { chain } = useNetwork();
+
+  const resolvedTyphoonAddress = React.useMemo(() => {
+    if (envTyphoonAddress && envTyphoonAddress.startsWith('0x')) return envTyphoonAddress;
+    const isMainnet = chain?.id === mainnet.id;
+    return isMainnet ? typhoonMain?.typhoon : typhoonTestnet?.typhoon;
+  }, [chain?.id]);
   const { address, account } = useAccount();
 
 
@@ -301,21 +348,28 @@ const MainComponent = () => {
 
   useEffect(() => {
     async function getDeposits() {
-      let denominations = poolsToNumber()
-      const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
-
-      const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
-      let total = 0
-      for (let i = 0; i < denominationsList[tokenToAddress[srcToken]].length; i++) {
-        let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denominationsList[tokenToAddress[srcToken]][i], tokenDecimals[srcToken]))
-        let poolAddr = '0x' + pool.toString(16)
-        const { abi: poolAbi } = await provider.getClassAt(poolAddr)
-        const poolC = new Contract(poolAbi, poolAddr, provider);
-        let day = await poolC.currentDay()
-        let deposits = await poolC.liquidityProviders(day)
-        total = total + Number(deposits)
+      if (!provider) return;
+      try {
+        if (!resolvedTyphoonAddress) return; // guard missing config
+        let denominations = poolsToNumber()
+        const typhoon = await getContractAt(resolvedTyphoonAddress, provider);
+        if (!typhoon) throw new Error('Typhoon contract not available');
+        let total = 0
+        for (let i = 0; i < denominationsList[tokenToAddress[srcToken]].length; i++) {
+          let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denominationsList[tokenToAddress[srcToken]][i], tokenDecimals[srcToken]))
+          let poolAddr = '0x' + pool.toString(16)
+          const poolC = await getContractAt(poolAddr, provider);
+          if (!poolC) continue;
+          let day = await poolC.currentDay()
+          let deposits = await poolC.liquidityProviders(day)
+          total = total + Number(deposits)
+        }
+        setOverallDeposits(total)
+      } catch (e) {
+        console.warn('getDeposits (overall) failed:', e);
+        // avoid crashing UI on RPC/CORS errors
+        setOverallDeposits(0)
       }
-      setOverallDeposits(total)
     }
     if (account) {
       getDeposits()
@@ -334,16 +388,22 @@ const MainComponent = () => {
 
   useEffect(() => {
     async function getDeposits() {
-      const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
-
-      const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
-      let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(dselectedItem, tokenDecimals[srcToken]))
-      let poolAddr = '0x' + pool.toString(16)
-      const { abi: poolAbi } = await provider.getClassAt(poolAddr)
-      const poolC = new Contract(poolAbi, poolAddr, provider);
-      let day = await poolC.currentDay()
-      let deposits = await poolC.liquidityProviders(day)
-      setTodayDeposits(deposits)
+      if (!provider) return;
+      try {
+        if (!resolvedTyphoonAddress) return; // guard missing config
+        const typhoon = await getContractAt(resolvedTyphoonAddress, provider);
+        if (!typhoon) throw new Error('Typhoon contract not available');
+        let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(dselectedItem, tokenDecimals[srcToken]))
+        let poolAddr = '0x' + pool.toString(16)
+        const poolC = await getContractAt(poolAddr, provider);
+        if (!poolC) return;
+        let day = await poolC.currentDay()
+        let deposits = await poolC.liquidityProviders(day)
+        setTodayDeposits(deposits)
+      } catch (e) {
+        console.warn('getDeposits (today) failed:', e);
+        setTodayDeposits(0)
+      }
     }
     if (account) {
       getDeposits()
@@ -552,15 +612,21 @@ const MainComponent = () => {
 
   useEffect(() => {
     async function getDeposits() {
-      const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
-
-      const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
-      let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(dselectedItem, tokenDecimals[srcToken]))
-      let poolAddr = '0x' + pool.toString(16)
-      const { abi: poolAbi } = await provider.getClassAt(poolAddr)
-      const poolC = new Contract(poolAbi, poolAddr, provider);
-      let count = await poolC.getCount()
-      setPoolCount(count)
+      if (!provider) return;
+      try {
+        if (!resolvedTyphoonAddress) return; // guard missing config
+        const typhoon = await getContractAt(resolvedTyphoonAddress, provider);
+        if (!typhoon) throw new Error('Typhoon contract not available');
+        let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(dselectedItem, tokenDecimals[srcToken]))
+        let poolAddr = '0x' + pool.toString(16)
+        const poolC = await getContractAt(poolAddr, provider);
+        if (!poolC) return;
+        let count = await poolC.getCount()
+        setPoolCount(count)
+      } catch (e) {
+        console.warn('getDeposits (count) failed:', e);
+        setPoolCount(0n)
+      }
     }
     getDeposits()
   }, [srcToken, dselectedItem])
@@ -826,10 +892,16 @@ const MainComponent = () => {
   }
 
   async function get_balance(acc) {
-    const { abi: poolAbi } = await provider.getClassAt(tokenList[selectedTransferToken.name]);
-    const poolC = new Contract(poolAbi, tokenList[selectedTransferToken.name], provider);
-    let balance = await poolC.balanceOf(acc);
-    return balance.toString()
+    try {
+      const tokenAddr = tokenList[selectedTransferToken.name];
+      const tokenC = await getContractAt(tokenAddr, provider);
+      if (!tokenC) return '0';
+      const balance = await tokenC.balanceOf(acc);
+      return balance.toString();
+    } catch (e) {
+      console.warn('[balance] failed', e);
+      return '0';
+    }
   }
 
   function transferContent() {
@@ -976,10 +1048,13 @@ const MainComponent = () => {
 
     setLoading(true)
     setLoadingText("Initiating deposit...(Do not close neither reload the screen.)")
+    if (!resolvedTyphoonAddress) {
+      setLoading(false);
+      return;
+    }
 
-    const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
-
-    const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
+    const typhoon = await getContractAt(resolvedTyphoonAddress, provider);
+    if (!typhoon) { setLoading(false); return; }
 
     let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(dselectedItem, tokenDecimals[srcToken]))
     let poolAddr = '0x' + pool.toString(16)
@@ -999,7 +1074,7 @@ const MainComponent = () => {
       },
       // Calling the second contract
       {
-        contractAddress: typhoonAddress,
+        contractAddress: resolvedTyphoonAddress,
         entrypoint: 'deposit',
         calldata: CallData.compile({
           _commitment: cairo.uint256(cn[0]),
@@ -1011,8 +1086,8 @@ const MainComponent = () => {
 
     await account.waitForTransaction(multiCall.transaction_hash);
 
-    const { abi: poolAbi } = await provider.getClassAt(poolAddr)
-    const poolC = new Contract(poolAbi, poolAddr, provider);
+    const poolC = await getContractAt(poolAddr, provider);
+    if (!poolC) { setLoading(false); return; }
 
     let day = await poolC.currentDay()
 
@@ -1064,12 +1139,16 @@ const MainComponent = () => {
 
   async function handleSpecificAmountDeposit() {
     setLoading(true)
-    const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
-    const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
+    if (!resolvedTyphoonAddress) {
+      setLoading(false);
+      return;
+    }
+    const typhoon = await getContractAt(resolvedTyphoonAddress, provider);
+    if (!typhoon) { setLoading(false); return; }
 
 
-    const { abi: tokenAbi } = await provider.getClassAt(tokenToAddress[srcToken])
-    const token = new Contract(tokenAbi, tokenToAddress[srcToken], provider);
+    const token = await getContractAt(tokenToAddress[srcToken], provider);
+    if (!token) { setLoading(false); return; }
 
 
     let proofsElements = []
@@ -1109,7 +1188,7 @@ const MainComponent = () => {
     }
 
     approvalsAndDeposit.push({
-      contractAddress: typhoonAddress,
+      contractAddress: resolvedTyphoonAddress,
       entrypoint: 'deposit',
       calldata: CallData.compile({
         _commitment: cairo.tuple(commitments.map(x => cairo.uint256(x))),
@@ -1122,8 +1201,8 @@ const MainComponent = () => {
 
     await account.waitForTransaction(multiCall.transaction_hash);
 
-    const { abi: poolAbi } = await provider.getClassAt(pools[0])
-    const poolC = new Contract(poolAbi, pools[0], provider);
+    const poolC = await getContractAt(pools[0], provider);
+    if (!poolC) { setLoading(false); return; }
 
     let day = await poolC.currentDay()
 
@@ -1175,11 +1254,12 @@ const MainComponent = () => {
         }
       } else {
         setLoadingText(`Withdrawing... (This can take a few seconds)`)
-        const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
-        const typhoonContract = new Contract(typhoonAbi, typhoonAddress, account);
+        const typhoonAbi = await loadAbi(resolvedTyphoonAddress, provider);
+        if (!typhoonAbi) { setLoading(false); return; }
+        const typhoonContract = new Contract(typhoonAbi, resolvedTyphoonAddress, account);
         const call = typhoonContract.populate('withdraw', { full_proof_with_hints: callData });
         const multiCall = await account.execute({
-          contractAddress: typhoonAddress,
+          contractAddress: resolvedTyphoonAddress,
           entrypoint: 'withdraw',
           calldata: call.calldata,
         });
@@ -1532,7 +1612,7 @@ const MainComponent = () => {
 
   async function estimateGasFee(entry, calldata) {
     const { suggestedMaxFee: estimatedFee1, gas_price: gasPrice } = await account.estimateInvokeFee({
-      contractAddress: typhoonAddress,
+      contractAddress: resolvedTyphoonAddress,
       entrypoint: entry,
       calldata: calldata,
     });
