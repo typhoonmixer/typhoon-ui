@@ -2,7 +2,7 @@ import { one, two, three, four, five } from "./SupportedDenominations";
 import { ethers } from 'ethers'
 import $u from './$u.js';
 const wc = require("./witness_calculator.js");
-import { RpcProvider, Contract, constants, types, hash, events, CallData, num } from 'starknet';
+import { RpcProvider, Contract, constants, types, hash, events, CallData, num, createAbiParser } from 'starknet';
 import { getNodeUrl } from './network';
 import typhoonMain from '../../typhoon.json' assert { type: 'json' }
 import typhoonTestnet from '../../typhoon-testnet.json' assert { type: 'json' }
@@ -69,7 +69,8 @@ async function getDepositEvents(from_block_number, to_block_number, filter) {
     const abiEvents = events.getAbiEvents(typhoonAbi);
     const abiStructs = CallData.getAbiStruct(typhoonAbi);
     const abiEnums = CallData.getAbiEnum(typhoonAbi);
-    const parsed = events.parseEvents(allEvents, abiEvents, abiStructs, abiEnums);
+    const parser = createAbiParser(typhoonAbi);
+    const parsed = events.parseEvents(allEvents, abiEvents, abiStructs, abiEnums, parser);
 
     return parsed.map((e) => e["typhoon::Typhoon::Typhoon::Deposit"])
 }

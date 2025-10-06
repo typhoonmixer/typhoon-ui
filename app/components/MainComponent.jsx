@@ -1238,8 +1238,14 @@ const MainComponent = () => {
 
     for (let i = 0; i < proofsStringList.length; i++) {
       setLoadingText(`Generating Proof... (This can take a few seconds)`)
-      let proofString = JSON.parse(proofsStringList[i])
-      let callData = await generateProofCalldata(proofString, receiverValue, paymaster)
+      let parsed
+      try {
+        parsed = JSON.parse(proofsStringList[i])
+      } catch (e) {
+        console.error('[withdraw] invalid JSON line', { index: i, value: proofsStringList[i], error: e })
+        continue
+      }
+      let callData = await generateProofCalldata(parsed, receiverValue, paymaster)
       if (paymaster) {
         let cd = callData.map(x => x.toString())
         try {
@@ -1256,13 +1262,15 @@ const MainComponent = () => {
         setLoadingText(`Withdrawing... (This can take a few seconds)`)
         const typhoonAbi = await loadAbi(resolvedTyphoonAddress, provider);
         if (!typhoonAbi) { setLoading(false); return; }
-        const typhoonContract = new Contract(typhoonAbi, resolvedTyphoonAddress, account);
+        const typhoonContract = new Contract({abi: typhoonAbi, address: resolvedTyphoonAddress, providerOrAccount: account});
         const call = typhoonContract.populate('withdraw', { full_proof_with_hints: callData });
-        const multiCall = await account.execute({
+        // TODO: Calculate fees
+        const resourceBounds = account.estimateInvokeFee({
           contractAddress: resolvedTyphoonAddress,
           entrypoint: 'withdraw',
-          calldata: call.calldata,
-        });
+          calldata: call.calldata
+        })
+        const multiCall = await account.execute(call, resourceBounds);
         await account.waitForTransaction(multiCall.transaction_hash);
       }
     }
