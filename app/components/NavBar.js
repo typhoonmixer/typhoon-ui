@@ -33,7 +33,7 @@ export default function Navbar() {
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="hidden sm:inline text-sm text-muted-foreground">Network:</span>
+          <span className="hidden sm:inline text-sm text-muted-foreground"></span>
           <NetworkSwitcher />
           {address ? <AddressBar /> : <ConnectButton />}
         </div>

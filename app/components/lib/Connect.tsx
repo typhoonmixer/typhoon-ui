@@ -77,12 +77,12 @@ const ConnectModal = () => {
   return (
     <GenericModal
       popoverId="connect-modal"
-      style="text-white border-outline-grey mx-auto w-[90vw] rounded-[25px] border-[1px] border-solid bg-[#1c1b1f] md:h-[30rem] md:w-[45rem]"
+      style="text-card-foreground mx-auto w-[90vw] rounded-[16px] border border-border bg-card md:h-[30rem] md:w-[45rem]"
     >
       <div className="flex flex-col">
         <div className="flex w-full p-4 lg:grid lg:grid-cols-5 lg:p-0">
           <div className="lg:border-outline-grey basis-5/6 lg:col-span-2 lg:border-r-[1px] lg:border-solid lg:py-4 lg:pl-8">
-            <h2 className="my-4 text-center text-[1.125em] font-bold text-white lg:text-start">
+            <h2 className="my-4 text-center text-[1.125em] font-bold text-card-foreground lg:text-start">
               Connect a Wallet
             </h2>
           </div>
@@ -91,7 +91,7 @@ const ConnectModal = () => {
               //@ts-ignore
               popoverTarget="connect-modal"
               popoverTargetAction="hide"
-              className="bg-outline-grey grid h-8 w-8 place-content-center rounded-full"
+              className="grid h-8 w-8 place-content-center rounded-full border border-border"
             >
               <Close />
             </button>
@@ -99,7 +99,7 @@ const ConnectModal = () => {
         </div>
         <div className="flex flex-1 flex-col justify-between lg:grid lg:grid-cols-5">
           <div className="lg:border-outline-grey px-8 lg:col-span-2 lg:h-full lg:border-r-[1px] lg:border-solid">
-            <h4 className="text-text-grey mb-[1rem] font-semibold">Popular</h4>
+            <h4 className="text-muted-foreground mb-[1rem] font-semibold">Popular</h4>
 
             <div className="flex flex-col gap-4 py-8">
               {mounted &&
@@ -212,10 +212,9 @@ const ConnectButton = ({
   return (
     <>
       <button
-        style={{ backgroundColor: "blue", color: "white", marginLeft: "10px" }}
         aria-haspopup="dialog"
         onClick={() => togglePopover({ targetId: "connect-modal" })}
-        className={className}
+        className={`${className} bg-accent text-foreground ml-2`}
       >
         {text}
       </button>

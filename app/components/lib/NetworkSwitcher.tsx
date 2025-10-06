@@ -17,10 +17,10 @@ export default function NetworkSwitcher() {
   return (
     <div className="relative inline-block text-left mr-2">
       <div className="flex items-center gap-2">
-        <label className="text-white text-sm">Network:</label>
+        <label className="text-muted-foreground text-sm">Network:</label>
         <select
           disabled={isPending}
-          className="bg-zinc-900 text-white rounded-md px-2 py-1 border border-zinc-700"
+          className="bg-muted text-card-foreground rounded-md px-2 py-1 border border-border focus:outline-none focus:ring-2 focus:ring-accent/60 disabled:opacity-60"
           value={String(chain?.id || sepolia.id)}
           onChange={(e) => {
             const id = BigInt(e.target.value);
@@ -37,4 +37,3 @@ export default function NetworkSwitcher() {
     </div>
   );
 }
-

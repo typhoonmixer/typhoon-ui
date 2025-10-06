@@ -223,13 +223,13 @@ function NoteList() {
 
     let className = "rounded-[12px] bg-button-primary bg-blue px-3 py-1 text-background-primary-light transition-all duration-300 hover:rounded-[30px] md:py-4"
 
-    return (<div className="note-list ml-10" >
+    return (<div className="note-list" >
         <h1 >Note List</h1>
         <ol style={{ maxHeight: "300px", overflow: "auto", padding: "0", justifyContent: "space-between" }}>
             {notesDenominations.map((note, index) =>
-                <li key={index} className="flex justify-between w-full" style={{ fontWeight: "bold", padding: "10px", backgroundColor: "white", color: "black", marginBottom: "10px", border: "3px solid black", borderRadius: "5px", alignItems: "center", display: "flex", justifyContent: "space-between" }}>
+                <li key={index} className="flex justify-between w-full" style={{ fontWeight: "bold", padding: "10px", backgroundColor: "var(--card)", color: "var(--card-foreground)", marginBottom: "10px", border: "2px solid var(--border)", borderRadius: "8px", alignItems: "center", display: "flex", justifyContent: "space-between" }}>
                     <span className='text' style={{ flex: "1" }}>{note}</span>
-                    <Popup trigger={<button style={{ backgroundColor: 'blue', color: 'white', marginRight: '10px' }} className={className}> Withdraw</button>} modal contentStyle={{ borderRadius: '10px', width: "600px" }} open={finished} onClose={() => setFinished(false)}>
+                    <Popup trigger={<button className={`${className} bg-accent text-foreground`}> Withdraw</button>} modal contentStyle={{ borderRadius: '10px', width: "600px" }} open={finished} onClose={() => setFinished(false)}>
                         <div>
                             <div className="lg:border-outline-grey ml-5 basis-5/6 lg:col-span-2 lg:border-r-[1px] lg:border-solid lg:py-4 lg:pl-8">
                                 <h2 className="my-4 text-center text-[1.125em] font-bold text-black lg:text-start">
@@ -240,7 +240,7 @@ function NoteList() {
                                 <h2 className="my-4 text-center text-[1.125em] font-bold text-black lg:text-start">
                                     Receiver:
                                 </h2>
-                                <div className="relative bg-[#212429] p-12 py-6 rounded-xl mb-5 ml-5 border-transparent hover:border-zinc-600">
+                                <div className="relative bg-card p-12 py-6 rounded-xl mb-5 ml-5 border-transparent hover:border-border">
                                     <div className="flex items-center rounded-xl">
                                         <input
                                             className={getInputClassname()}
@@ -255,10 +255,10 @@ function NoteList() {
                                     </div>
                                 </div>
 
-                                <button style={{ backgroundColor: 'blue', color: 'white', marginLeft: '10px' }}
+                                <button
                                     aria-haspopup="dialog"
                                     onClick={async () => await withdrawNote(index)}
-                                    className="rounded-[12px]  ml-10 bg-button-primary bg-blue px-4 py-3 text-background-primary-light transition-all duration-300 hover:rounded-[30px] md:py-4"
+                                    className="rounded-[12px] ml-10 bg-accent text-foreground px-4 py-3 transition-all duration-300 hover:rounded-[30px] md:py-4"
                                 >
                                     Withdraw
                                 </button>

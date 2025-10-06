@@ -24,6 +24,7 @@ import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button } from '@
 import { allowancePerPool, commitmentAndNullifierHash, generateSecretAndNullifier, getCompressedDenomination, getFullDenomination, poolsToNumber } from '../utils/depositUtils';
 import { JSONInputStringToList, generateProofCalldata } from '../utils/withdrawUtils';
 import NoteList from './NoteList';
+import ReadPanel from './ReadPanel';
 import typhoonAbi from '../utils/typhoon_abi.json' assert { type: "json" }
 import typhoonMain from '../../typhoon.json' assert { type: 'json' }
 import typhoonTestnet from '../../typhoon-testnet.json' assert { type: 'json' }
@@ -269,7 +270,7 @@ const MainComponent = () => {
   ]
   const [selectedTransferToken, setSelectedTransferToken] = useState(transferTokens[0]);
   const [openTransferTokenDD, setOpenTransferTokenDD] = useState(false);
-  const [transferValue, setTransferValue] = useState()
+  const [transferValue, setTransferValue] = useState("")
   const [transferReceiverValue, setTransferReceiverValue] = useState('')
   const [balance, setBalance] = useState('0')
   const [minimalRequired, setMinimalRequired] = useState('10')
@@ -644,9 +645,9 @@ const MainComponent = () => {
   }
 
   return (
-    <div className='flex w-full justify-center px-4'>
-      <div className='relative bg-card text-card-foreground w-full max-w-md sm:max-w-lg md:max-w-xl p-4 sm:p-6 rounded-xl min-h-[200px] pb-20 mb-24 shadow-md border border-border'>
-        <div className='bg-card h-fit flex items-center justify-around rounded-full mx-2 sm:mx-6'>
+    <div className='grid w-full px-4 gap-6 grid-cols-1 lg:grid-cols-2'>
+      <div className='relative bg-card text-card-foreground w-full p-4 sm:p-6 rounded-xl min-h-[200px] mb-6 lg:mb-0 shadow-md border border-border flex flex-col'>
+        <div className='bg-card h-fit flex items-center justify-start rounded-full mx-2 sm:mx-0 border border-border px-1 py-1 gap-2 overflow-x-auto mb-4'>
           <p
             className={getNavIconClassName(DEPOSIT)}
             onClick={() => {
@@ -698,9 +699,10 @@ const MainComponent = () => {
           </p>
 
         </div>
-        {content}
+        <div className='flex-1'>
+          {content}
+        </div>
         <button
-          style={{ position: 'absolute', bottom: 8, right: 16, left: 16 }}
           className={getBtnClassName()}
           disabled={loading}
           onClick={async () => {
@@ -723,60 +725,49 @@ const MainComponent = () => {
 
         <Toaster />
       </div>
-      {/* {account != undefined ? <NoteList /> : <div></div>} */}
+      <ReadPanel
+        token={srcToken}
+        denomination={dselectedItem}
+        poolCount={poolCount}
+        todayDeposits={todayDeposits}
+        overallDeposits={overallDeposits}
+      />
     </div>
   )
 
   function withdrawContent() {
     return (
-      <div>
-        <div className='flex items-center justify-between py-4 px-1'>
-          <p>Withdraw</p>
-
+      <div className='space-y-4'>
+        <div className='flex items-center justify-between py-2 px-1'>
+          <p className="sr-only">Withdraw</p>
         </div>
-        <div className="w-full mt-2 h-full p-4 bg-card rounded-2xl shadow-md border border-border">
-
-          <div className="flex justify-between text-sm text-muted-foreground mb-2">
-            <span className="text-card-foreground text-base">Note</span>
-
-          </div>
-
-          {/* Input row */}
-          <div className="flex items-center gap-3 border border-border rounded-xl p-3 bg-muted">
-            {/* Amount input */}
-            <input
-              ref={noteValueRef}
-              type="text"
-              inputMode="text"
-              placeholder="{note}"
-              value={noteValue}
-              onChange={(e) => setNoteValue(e.target.value)}
-              className="flex-1 min-w-0 text-right text-2xl font-medium bg-transparent outline-none placeholder:text-muted-foreground"
-            />
-          </div>
+        {/* Note */}
+        <div>
+          <label className="block text-sm text-muted-foreground mb-2">Note</label>
+          <input
+            ref={noteValueRef}
+            type="text"
+            inputMode="text"
+            placeholder="{note}"
+            value={noteValue}
+            onChange={(e) => setNoteValue(e.target.value)}
+            className="w-full px-3 py-2 bg-card border border-border rounded-lg text-card-foreground placeholder:text-muted-foreground"
+          />
         </div>
-        <div className="w-full mt-2 h-full p-4 bg-card rounded-2xl shadow-md border border-border">
-
-          <div className="flex justify-between text-sm text-muted-foreground mb-2">
-            <span className="text-card-foreground text-base">Receiver</span>
-
-          </div>
-
-          {/* Input row */}
-          <div className="flex items-center gap-3 border border-border rounded-xl p-3 bg-muted">
-            {/* Amount input */}
-            <input
-              ref={receiverValueRef}
-              type="text"
-              inputMode="text"
-              placeholder="0x0"
-              value={receiverValue}
-              onChange={(e) => setReceiverValue(e.target.value)}
-              className="flex-1 min-w-0 text-right text-2xl font-medium bg-transparent outline-none placeholder:text-muted-foreground"
-            />
-          </div>
+        {/* Receiver */}
+        <div>
+          <label className="block text-sm text-muted-foreground mb-2">Receiver</label>
+          <input
+            ref={receiverValueRef}
+            type="text"
+            inputMode="text"
+            placeholder="0x0"
+            value={receiverValue}
+            onChange={(e) => setReceiverValue(e.target.value)}
+            className="w-full px-3 py-2 bg-card border border-border rounded-lg text-card-foreground placeholder:text-muted-foreground"
+          />
         </div>
-        <FormGroup className='' >
+        <FormGroup className='mt-2' >
 
           <FormControlLabel disableTypography={{ color: 'white' }} control={<Switch
             checked={paymaster}
@@ -788,86 +779,85 @@ const MainComponent = () => {
   }
 
   function depositContent() {
+    const options = denominationsList[tokenList[srcToken]];
+    const selIndex = options.findIndex((a) => a === dselectedItem);
+    const len = options.length || 1;
+    const progressPct = Math.max(0, (selIndex / (len - 1)) * 100);
     return (
-      <div>
-        <div className='flex items-center justify-between py-4 px-1'>
-          Deposit
-          {/* {depositTypeSelector()} */}
+      <div className='space-y-4'>
+        <div className='flex items-center justify-between py-2 px-1'>
+          <p className="sr-only">Deposit</p>
         </div>
 
-        <div className='relative bg-card p-4 py-6 rounded-xl mb-5 border-[2px] border-transparent hover:border-border'>
-          <div className='flex items-center gap-2' >
-          <span className='text-card-foreground text-base min-w-[50px]'>Token: </span> 
-            {/* {CoinSelector("coin", false)} */}
-            <div className="relative w-40" style={{ zIndex: 1000 }}> {/* Increased z-index */}
-              <button className="flex items-center gap-2 px-3 py-1 bg-muted rounded-lg shadow-sm border border-border" onClick={() => { setOpenDepositTokenDD(!openDepositTokenDD) }}>
-                <img
-                  src={tokenToSrc[srcToken]}
-                  alt={srcToken}
-                  className="w-5 h-5"
-                />
-                <span className="font-medium">{srcToken}</span>
-                <ChevronDown size={16} className="text-foreground" />
-              </button>
-              {/* Dropdown */}
-              {openDepositTokenDD ? (
-                <div className="absolute mt-1 w-full bg-card border border-border rounded-xl shadow-lg" style={{ zIndex: 1000 }}> {/* Removed z-5, set to 1000 */}
-                  {depositTokens.map((token) => (
-                    <button
-                      key={token.name}
-                      onClick={() => {
-                        setSrcToken(token.name);
-                        setOpenDepositTokenDD(false);
-                        setDSelectedItem(denominationsList[tokenList[token.name]][0])
-                      }}
-                      className="flex items-center gap-2 w-full px-3 py-2 text-left text-card-foreground hover:bg-muted rounded-lg"
-                    >
-                      <img src={tokenToSrc[token.name]} alt={token.name} className="w-5 h-5 rounded-full" />
-                      {token.name}
-                    </button>
-                  ))}
-                </div>
-              ) : <div></div>}
+        {/* Token */}
+        <div className='relative'>
+          <label className='block text-sm text-muted-foreground mb-2'>Token</label>
+          <div className="relative" style={{ zIndex: 1000 }}>
+            <button className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-card rounded-lg border border-border" onClick={() => { setOpenDepositTokenDD(!openDepositTokenDD) }}>
+              <span className="flex items-center gap-2">
+                <img src={tokenToSrc[srcToken]} alt={srcToken} className="w-5 h-5" />
+                <span className="font-medium text-card-foreground">{srcToken}</span>
+              </span>
+              <ChevronDown size={16} className="text-muted-foreground" />
+            </button>
+            {openDepositTokenDD ? (
+              <div className="absolute mt-1 w-full bg-card border border-border rounded-xl shadow-lg" style={{ zIndex: 1000 }}>
+                {depositTokens.map((token) => (
+                  <button
+                    key={token.name}
+                    onClick={() => {
+                      setSrcToken(token.name);
+                      setOpenDepositTokenDD(false);
+                      setDSelectedItem(denominationsList[tokenList[token.name]][0])
+                    }}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-left text-card-foreground hover:bg-muted rounded-lg"
+                  >
+                    <img src={tokenToSrc[token.name]} alt={token.name} className="w-5 h-5 rounded-full" />
+                    {token.name}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 font-mono">
+          <div className="flex items-center gap-2">
+            <span className='text-card-foreground text-base'>Amount</span>
+          </div>
+
+          {/* Discrete selector */}
+          <div className="w-full" style={{ zIndex: 500 }}>
+            {/* Dot row with track */}
+            <div className="relative h-8">
+              <div className="pointer-events-none absolute left-0 right-0 top-1/2 h-px bg-border -translate-y-1/2"></div>
+              <div className="pointer-events-none absolute left-0 top-1/2 h-[2px] bg-accent -translate-y-1/2 rounded-full" style={{ width: `${progressPct}%` }}></div>
+              <div role="radiogroup" aria-label="Amount options" className="grid grid-cols-5 h-8 place-items-center">
+                {options.map((amount, idx) => {
+                  const id = `amount-opt-${idx}`;
+                  const isSelected = dselectedItem === amount;
+                  return (
+                    <div key={id} className="relative flex flex-col items-center">
+                      <input id={id} type="radio" value={amount} checked={isSelected} onChange={() => setDSelectedItem(amount)} className="peer sr-only" />
+                      <label htmlFor={id} className={`block w-4 h-4 rounded-full border-2 transition-all duration-150 ${isSelected ? 'bg-accent border-accent' : 'border-accent/70 bg-transparent hover:bg-accent/15'} peer-focus-visible:ring-2 peer-focus-visible:ring-accent`} />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            {/* Label row */}
+            <div className="grid grid-cols-5 place-items-center mt-2">
+              {options.map((amount, idx) => {
+                const id = `amount-opt-${idx}`;
+                const isSelected = dselectedItem === amount;
+                return (
+                  <label key={`lbl-${id}`} htmlFor={id} className={`text-sm tracking-wide cursor-pointer select-none ${isSelected ? 'text-accent font-semibold' : 'text-muted-foreground hover:text-card-foreground'}`}>
+                    {amount[0] == '0' ? amount : summarizeNumber(Number(amount))} {srcToken}
+                  </label>
+                );
+              })}
             </div>
           </div>
         </div>
-        <div className="flex flex-col gap-3  font-mono">
-          {/* Label with info icon */}
-          <div className="flex items-center gap-1">
-            <span className='text-card-foreground text-base min-w-[50px]'>Amount</span>
-          </div>
-
-          {/* Slider */}
-          <div className="relative w-full flex items-center justify-between" style={{ zIndex: 500 }}> {/* Added z-index */}
-            {/* Background line */}
-            <div className="pointer-events-none absolute left-0 right-0 top-1/2 h-[2px] bg-accent -translate-y-1/2 z-0"></div>
-
-            {denominationsList[tokenList[srcToken]].map((amount) => (
-              <label key={amount} className="relative z-10 flex flex-col items-center cursor-pointer">
-                {/* Circle (radio) */}
-                <input
-                  type="radio"
-                  value={amount}
-                  checked={dselectedItem === amount}
-                  onChange={() => setDSelectedItem(amount)}
-                  className="peer hidden"
-                />
-                <div className="w-5 h-5 border-2 border-accent rounded-full flex items-center justify-center peer-checked:bg-background peer-checked:border-4" />
-                {/* Label text */}
-                <span
-                  className={`mt-2 ${dselectedItem === amount ? "text-accent font-bold" : "text-accent/70"
-                    }`}
-                >
-                  {amount[0] == '0'?amount: summarizeNumber(Number(amount))} {srcToken}
-                </span>
-              </label>
-            ))}
-          </div>
-        </div>
-        <div className='bg-card p-4 py-6 rounded-xl mt-5 border-[2px] border-transparent hover:border-border'>
-          {`Number of equal deposits: ${poolCount}`}
-        </div>
-
       </div>
     )
   }
@@ -908,103 +898,78 @@ const MainComponent = () => {
     if (address != undefined) {
       get_balance(address).then((b) => {
         let cd = getCompressedDenomination(b, tokenDecimals[selectedTransferToken.name])
-
         setBalance(cd)
-
-
       })
     }
 
-
-
     return (
-      <div>
-        <div className='mb-5 mt-5 text-card-foreground'>
+      <div className='space-y-4'>
+        <div className='mb-1 mt-2 text-card-foreground'>
           Private Transfer
         </div>
-
-        <div className="w-full h-full p-4 bg-card rounded-2xl shadow-md border border-border">
-          {/* Header */}
-          <div className="flex justify-between text-sm text-muted-foreground mb-2">
-            <span className="text-card-foreground text-base">Amount</span>
-            <span className="text-card-foreground text-base">
-              Balance: <span className="font-medium text-card-foreground">{`${balance} ${selectedTransferToken.name}`}</span>
-            </span>
-          </div>
-
-          {/* Input row */}
-          <div className="flex items-center gap-3 border border-border rounded-xl p-3 bg-muted">
-            {/* Token selector */}
-            <div className="relative w-40">
-              <button className="flex items-center gap-2 px-3 py-1 bg-muted rounded-lg shadow-sm border border-border " onClick={() => { setOpenTransferTokenDD(!openTransferTokenDD) }}>
-                <img
-                  src={selectedTransferToken.src}
-                  alt={selectedTransferToken.name}
-                  className="w-5 h-5"
-                />
+        {/* Token */}
+        <div>
+          <label className="block text-sm text-muted-foreground mb-2">Token</label>
+          <div className="relative" style={{ zIndex: 1000 }}>
+            <button className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-card rounded-lg border border-border" onClick={() => { setOpenTransferTokenDD(!openTransferTokenDD) }}>
+              <span className="flex items-center gap-2">
+                <img src={selectedTransferToken.src} alt={selectedTransferToken.name} className="w-5 h-5" />
                 <span className="font-medium">{selectedTransferToken.name}</span>
-                <ChevronDown size={16} className="text-foreground" />
-              </button>
-              {/* Dropdown */}
-              {openTransferTokenDD ? (
-                <div className="absolute mt-1 w-full bg-card border border-border rounded-xl shadow-lg z-10">
-                  {transferTokens.map((token) => (
-                    <button
-                      key={token.name}
-                      onClick={() => {
-                        setSelectedTransferToken(token);
-                        setOpenTransferTokenDD(false);
-                      }}
-                      className="flex items-center gap-2 w-full px-3 py-2 text-left text-card-foreground hover:bg-muted rounded-lg"
-                    >
-                      <img src={token.src} alt={token.name} className="w-5 h-5 rounded-full" />
-                      {token.name}
-                    </button>
-                  ))}
-                </div>
-              ) : <div></div>}
-            </div>
-
-
-            {/* Amount input */}
-            <input
-              type='number'
-              inputMode="decimal"
-              placeholder="0"
-              value={transferValue}
-              onChange={(e) => setTransferValue(e.target.value)}
-              className="flex-1 min-w-0 text-right text-2xl font-medium bg-transparent outline-none placeholder:text-muted-foreground appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [moz-appearance:textfield]"
-
-            />
+              </span>
+              <ChevronDown size={16} className="text-muted-foreground" />
+            </button>
+            {openTransferTokenDD ? (
+              <div className="absolute mt-1 w-full bg-card border border-border rounded-xl shadow-lg z-10">
+                {transferTokens.map((token) => (
+                  <button
+                    key={token.name}
+                    onClick={() => {
+                      setSelectedTransferToken(token);
+                      setOpenTransferTokenDD(false);
+                    }}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-left text-card-foreground hover:bg-muted rounded-lg"
+                  >
+                    <img src={token.src} alt={token.name} className="w-5 h-5 rounded-full" />
+                    {token.name}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
+        </div>
 
-          <div className="text-right text-muted-foreground text-base mt-1">
+        {/* Amount */}
+        <div>
+          <div className="flex justify-between text-sm text-muted-foreground mb-2">
+            <span className="text-card-foreground">Amount</span>
+            <span className="text-card-foreground">Balance: <span className="font-medium">{`${balance} ${selectedTransferToken.name}`}</span></span>
+          </div>
+          <input
+            type='number'
+            inputMode="decimal"
+            placeholder="0"
+            value={transferValue}
+            onChange={(e) => setTransferValue(e.target.value)}
+            className="w-full px-3 py-2 bg-card border border-border rounded-lg text-card-foreground placeholder:text-muted-foreground appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [moz-appearance:textfield]"
+          />
+          <div className="text-right text-muted-foreground text-sm mt-1">
             Minimum amount required: {summarizeNumber(Number(minimalRequired))} {selectedTransferToken.name}
           </div>
         </div>
-        <div className="w-full mt-2 h-full p-4 bg-card rounded-2xl shadow-md border border-border">
 
-          <div className="flex justify-between text-sm text-muted-foreground mb-2">
-            <span className="text-card-foreground">Receiver</span>
-
-          </div>
-
-          {/* Input row */}
-          <div className="flex items-center gap-3 border border-border rounded-xl p-3 bg-muted">
-            {/* Amount input */}
-            <input
-              type="text"
-              inputMode="text"
-              placeholder="0x0"
-              value={transferReceiverValue}
-              onChange={(e) => setTransferReceiverValue(e.target.value)}
-              className="flex-1 min-w-0 text-right text-2xl font-medium bg-transparent outline-none placeholder:text-muted-foreground"
-
-            />
-          </div>
+        {/* Receiver */}
+        <div>
+          <label className="block text-sm text-muted-foreground mb-2">Receiver</label>
+          <input
+            type="text"
+            inputMode="text"
+            placeholder="0x0"
+            value={transferReceiverValue}
+            onChange={(e) => setTransferReceiverValue(e.target.value)}
+            className="w-full px-3 py-2 bg-card border border-border rounded-lg text-card-foreground placeholder:text-muted-foreground"
+          />
         </div>
-        <FormGroup className='' >
-
+        <FormGroup className='mt-2' >
           <FormControlLabel disableTypography={{ color: 'white' }} control={<Switch
             checked={paymaster}
             onChange={(_, checked) => setPaymaster(checked)}
@@ -1308,7 +1273,7 @@ const MainComponent = () => {
     setLoadingText("Withdrawing to destiny...")
     await sdk.withdraw(multiCall.transaction_hash, [transferReceiverValue])
     setTransferReceiverValue('')
-    setTransferValue(undefined)
+    setTransferValue('')
     setLoading(false)
   }
 
@@ -1337,7 +1302,7 @@ const MainComponent = () => {
               </h2>
             </div>
             <div className="flex">
-              <button style={{ backgroundColor: 'blue', color: 'white', marginLeft: '10px' }}
+              <button
                 aria-haspopup="dialog"
                 onClick={() => {
                   let proofElements = JSON.stringify({
@@ -1351,12 +1316,12 @@ const MainComponent = () => {
                   setDownloaded(true)
                   setOpenDepositOp(false)
                 }}
-                className="rounded-[12px] bg-button-primary bg-blue px-4 py-3 text-background-primary-light transition-all duration-300 hover:rounded-[30px] md:py-4"
+                className="rounded-[12px] bg-accent text-foreground ml-2 px-4 py-3 transition-all duration-300 hover:rounded-[30px] md:py-4"
               >
                 Download Note
               </button>
 
-              <Popup trigger={<button style={{ backgroundColor: 'blue', color: 'white', marginRight: '5px', marginLeft: "10px" }} className={"rounded-[12px] bg-button-primary bg-blue px-4 py-3 text-background-primary-light transition-all duration-300 hover:rounded-[30px] md:py-4"}> Connect/Create Note Account</button>} modal contentStyle={{ borderRadius: '10px' }}>
+              <Popup trigger={<button className={"rounded-[12px] bg-accent text-foreground ml-2 px-4 py-3 transition-all duration-300 hover:rounded-[30px] md:py-4"}> Connect/Create Note Account</button>} modal contentStyle={{ borderRadius: '10px' }}>
                 <div>
                   <div className="lg:border-outline-grey ml-5 basis-5/6 lg:col-span-2 lg:border-r-[1px] lg:border-solid lg:py-4 lg:pl-8">
                     <h2 className="my-4 text-center text-[1.125em] font-bold text-black lg:text-start">
@@ -1379,7 +1344,7 @@ const MainComponent = () => {
                       </div>
                     </div>
 
-                    <button style={{ backgroundColor: 'blue', color: 'white', marginLeft: '10px' }}
+                    <button
                       aria-haspopup="dialog"
                       onClick={async () => {
                         connectNoteAccount(noteValue)
@@ -1388,7 +1353,7 @@ const MainComponent = () => {
                         setOpenDepositOp(false)
                       }
                       }
-                      className="rounded-[12px]  ml-10 bg-button-primary bg-blue px-4 py-3 text-background-primary-light transition-all duration-300 hover:rounded-[30px] md:py-4"
+                      className="rounded-[12px]  ml-10 bg-accent text-foreground px-4 py-3 transition-all duration-300 hover:rounded-[30px] md:py-4"
                     >
                       Connect
                     </button>
@@ -1398,7 +1363,7 @@ const MainComponent = () => {
                       Or
                     </h2>
                   </div>
-                  <button style={{ backgroundColor: 'blue', color: 'white', marginLeft: '20px' }}
+                  <button
                     aria-haspopup="dialog"
                     onClick={async () => {
                       let acc = createNoteAccount()
@@ -1406,7 +1371,7 @@ const MainComponent = () => {
                       setDownloaded(true)
                       setOpenDepositOp(false)
                     }}
-                    className="items-center rounded-[12px] ml-10 bg-button-primary bg-blue px-6 py-3 text-background-primary-light transition-all duration-300 hover:rounded-[30px] md:py-4"
+                    className="items-center rounded-[12px] ml-10 bg-accent text-foreground px-6 py-3 transition-all duration-300 hover:rounded-[30px] md:py-4"
                   >
                     Create Note Account
                   </button>
@@ -1627,10 +1592,10 @@ const MainComponent = () => {
   }
 
   function getBtnClassName() {
-    let className = 'p-4 my-2 rounded-xl'
+    let className = 'w-full p-4 mt-6 rounded-xl hover:opacity-90 transition-colors'
     className +=
       btnText === ENTER_AMOUNT || btnText === CONNECT_WALLET
-        ? ' text-muted-foreground bg-muted pointer-events-none'
+        ? ' text-muted-foreground bg-muted pointer-events-none opacity-60'
         : ' bg-accent text-foreground'
     return className
   }
@@ -1638,8 +1603,8 @@ const MainComponent = () => {
 
 
   function getNavIconClassName(name) {
-    let className = 'p-1 px-4 cursor-pointer border-[4px] border-transparent flex items-center'
-    className += name === selectedNavItem ? ' bg-muted border-border rounded-full' : ''
+    let className = 'py-2 px-5 cursor-pointer border-[4px] border-transparent flex items-center rounded-full text-card-foreground/80 hover:bg-muted/80 transition-colors'
+    className += name === selectedNavItem ? ' bg-muted border-border text-accent font-semibold' : ''
     return className
   }
 

@@ -16,7 +16,7 @@ export default function Home() {
   return (
     <div className="container" style={{ justifyContent: 'center' }}>
       <h1>
-        <span className="text-white text-xl font-bold">Coming Soon...</span>
+        <span className="text-card-foreground text-xl font-bold">Coming Soon...</span>
       </h1>
     </div>
   );

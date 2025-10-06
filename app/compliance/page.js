@@ -40,7 +40,7 @@ export default function Home() {
   return (
     <div className="container" style={{ justifyContent: 'center' }}>
       <h1>
-        <span className="text-white text-xl font-bold">Typhoon</span> compliance tool
+        <span className="text-card-foreground text-xl font-bold">Typhoon</span> compliance tool
       </h1>
       <p>
         Maintaining financial privacy is essential to preserving our freedoms. However, it should not come at the cost of non-compliance. With Typhoon, you can always provide cryptographically verified proof of transactional history using the "note.txt" that you download in the moment of the deposit. This might be necessary in cases where you need to show the origin of assets in your withdrawal address.
@@ -49,23 +49,16 @@ export default function Home() {
         To generate a compliance report, please enter your Typhoon note below.
       </p>
       <div className="mt-5">
-        <label style={{ display: 'block', marginBottom: '5px', fontSize: '1.2em' }}>Note</label>
-        <div style={{ gap: '10px', justifyContent: 'center', display: 'flex' }}>
-          <input style={{ width: '100%', maxWidth: '600px', padding: '10px', fontSize: '1em', backgroundColor: '#222', color: '#fff', border: '1px solid #555', borderRadius: '5px' }}
+        <label className="block mb-1 text-lg text-card-foreground">Note</label>
+        <div className="flex gap-2 justify-center">
+          <input
+            className="w-full max-w-[600px] px-3 py-2 bg-muted text-card-foreground border border-border rounded-md"
             type="text"
             value={note}
             onChange={handleInputChange}
             placeholder="Please enter your note"
           />
-          <button style={{
-            padding: '10px 20px',
-            fontSize: '1em',
-            backgroundColor: 'blue',
-            border: 'none',
-            color: '#fff',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }} onClick={handleSubmit}>Generate</button>
+          <button className="px-4 py-2 bg-accent text-foreground rounded-md" onClick={handleSubmit}>Generate</button>
         </div>
 
       </div>
@@ -104,7 +97,7 @@ export default function Home() {
 
     return (
       <div>
-        <div className=" text-white p-6 rounded-2xl flex items-center justify-between ">
+        <div className=" text-card-foreground p-6 rounded-2xl flex items-center justify-between ">
           {/* Deposit */}
           <div className="flex-1 border-0 shadow-none rounded-2xl p-4 text-left">
             <div className="p-0">
@@ -126,8 +119,8 @@ export default function Home() {
 
           {/* Arrow */}
           <div className="flex items-center justify-center">
-            <div className="bg-gradient-to-r from-blue-400/30 to-blue-400/80 px-2 py-6 rounded-xl">
-              <ArrowRight className="text-white w-8 h-8" />
+            <div className="bg-gradient-to-r from-accent/30 to-accent/80 px-2 py-6 rounded-xl">
+              <ArrowRight className="text-card-foreground w-8 h-8" />
             </div>
           </div>
 
