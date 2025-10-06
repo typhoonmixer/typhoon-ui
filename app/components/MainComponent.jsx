@@ -647,8 +647,11 @@ const MainComponent = () => {
   return (
     <div className='grid w-full px-4 gap-6 grid-cols-1 lg:grid-cols-2'>
       <div className='relative bg-card text-card-foreground w-full p-4 sm:p-6 rounded-xl min-h-[200px] mb-6 lg:mb-0 shadow-md border border-border flex flex-col'>
-        <div className='bg-card h-fit flex items-center justify-start rounded-full mx-2 sm:mx-0 border border-border px-1 py-1 gap-2 overflow-x-auto mb-4'>
-          <p
+        <div className='w-full flex justify-center overflow-x-auto mb-4' role="tablist" aria-label="Action tabs">
+          <div className='inline-flex items-center rounded-full border border-border bg-muted/20 px-1 py-1 gap-1 sm:gap-2'>
+          <button type="button"
+            role="tab"
+            aria-selected={selectedNavItem===DEPOSIT}
             className={getNavIconClassName(DEPOSIT)}
             onClick={() => {
               setSelectedNavItem(DEPOSIT)
@@ -663,8 +666,10 @@ const MainComponent = () => {
             }}
           >
             {DEPOSIT}
-          </p>
-          <p
+          </button>
+          <button type="button"
+            role="tab"
+            aria-selected={selectedNavItem===WITHDRAW}
             className={getNavIconClassName(WITHDRAW)}
             onClick={() => {
               setSelectedNavItem(WITHDRAW)
@@ -679,8 +684,10 @@ const MainComponent = () => {
             }}
           >
             {WITHDRAW}
-          </p>
-          <p
+          </button>
+          <button type="button"
+            role="tab"
+            aria-selected={selectedNavItem===TRANSFER}
             className={getNavIconClassName(TRANSFER)}
             onClick={() => {
               setSelectedNavItem(TRANSFER)
@@ -696,8 +703,8 @@ const MainComponent = () => {
             }}
           >
             {TRANSFER}
-          </p>
-
+          </button>
+          </div>
         </div>
         <div className='flex-1'>
           {content}
@@ -782,7 +789,7 @@ const MainComponent = () => {
     const options = denominationsList[tokenList[srcToken]];
     const selIndex = options.findIndex((a) => a === dselectedItem);
     const len = options.length || 1;
-    const progressPct = Math.max(0, (selIndex / (len - 1)) * 100);
+    const progressPct = len > 1 ? (selIndex / (len - 1)) * 100 : 0;
     return (
       <div className='space-y-4'>
         <div className='flex items-center justify-between py-2 px-1'>
@@ -827,25 +834,39 @@ const MainComponent = () => {
 
           {/* Discrete selector */}
           <div className="w-full" style={{ zIndex: 500 }}>
-            {/* Dot row with track */}
+            {/* Continuous single-color track */}
             <div className="relative h-8">
-              <div className="pointer-events-none absolute left-0 right-0 top-1/2 h-px bg-border -translate-y-1/2"></div>
-              <div className="pointer-events-none absolute left-0 top-1/2 h-[2px] bg-accent -translate-y-1/2 rounded-full" style={{ width: `${progressPct}%` }}></div>
-              <div role="radiogroup" aria-label="Amount options" className="grid grid-cols-5 h-8 place-items-center">
+              <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[2px] rounded-full bg-accent" />
+
+              {/* Dots */}
+              <div
+                role="radiogroup"
+                aria-label="Amount options"
+                className="grid h-8 place-items-center"
+                style={{ gridTemplateColumns: `repeat(${len}, 1fr)` }}
+              >
                 {options.map((amount, idx) => {
                   const id = `amount-opt-${idx}`;
                   const isSelected = dselectedItem === amount;
                   return (
                     <div key={id} className="relative flex flex-col items-center">
                       <input id={id} type="radio" value={amount} checked={isSelected} onChange={() => setDSelectedItem(amount)} className="peer sr-only" />
-                      <label htmlFor={id} className={`block w-4 h-4 rounded-full border-2 transition-all duration-150 ${isSelected ? 'bg-accent border-accent' : 'border-accent/70 bg-transparent hover:bg-accent/15'} peer-focus-visible:ring-2 peer-focus-visible:ring-accent`} />
+                      <label
+                        htmlFor={id}
+                        className={`block w-5 h-5 rounded-full border-2 transition-all duration-150 peer-focus-visible:ring-2 peer-focus-visible:ring-accent ${
+                          isSelected
+                            ? 'bg-accent border-accent scale-110'
+                            : 'bg-card border-accent-soft hover:bg-accent-soft/20'
+                        }`}
+                      />
                     </div>
                   );
                 })}
               </div>
             </div>
+
             {/* Label row */}
-            <div className="grid grid-cols-5 place-items-center mt-2">
+            <div className="grid place-items-center mt-2" style={{ gridTemplateColumns: `repeat(${len}, 1fr)` }}>
               {options.map((amount, idx) => {
                 const id = `amount-opt-${idx}`;
                 const isSelected = dselectedItem === amount;
@@ -1603,9 +1624,10 @@ const MainComponent = () => {
 
 
   function getNavIconClassName(name) {
-    let className = 'py-2 px-5 cursor-pointer border-[4px] border-transparent flex items-center rounded-full text-card-foreground/80 hover:bg-muted/80 transition-colors'
-    className += name === selectedNavItem ? ' bg-muted border-border text-accent font-semibold' : ''
-    return className
+    const base = 'px-4 sm:px-5 py-2 rounded-full text-sm sm:text-base font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-accent transition-colors whitespace-nowrap';
+    return name === selectedNavItem
+      ? `${base} bg-accent/10 text-accent`
+      : `${base} text-foreground/80 hover:bg-muted`;
   }
 
   function getInputClassname() {

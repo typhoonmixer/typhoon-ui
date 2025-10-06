@@ -3,28 +3,32 @@
 @tailwind utilities;
 
 :root {
-  /* Default to dark palette to preserve current look */
-  --background: #2D242F;
-  --foreground: #ededed;
+  /* Dark neutral grayscale palette */
+  --background: #0f1115;        /* near-black neutral */
+  --foreground: #e5e7eb;        /* neutral-200 */
   /* Semantic color tokens for app surfaces */
-  --card: #212429;
-  --card-foreground: #ededed;
-  --muted: #1f2226;
-  --muted-foreground: #a3a3a3;
-  --border: #2f3238;
-  --accent: #60a5fa;
+  --card: #14171b;              /* neutral-900-ish */
+  --card-foreground: #e5e7eb;
+  --muted: #1a1d22;             /* subdued surface */
+  --muted-foreground: #9ca3af;  /* neutral-400 */
+  --border: #2a2f36;            /* neutral-700 */
+  /* Accent: soft but high-contrast on dark (blue-600) */
+  --accent: #2563eb;            /* used for buttons, selected states */
+  --accent-soft: #60a5fa;       /* used for subtle lines/hover tints */
 }
 
+/* Keep the same grayscale palette regardless of system scheme */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #2D242F;
-    --foreground: #ededed;
-    --card: #212429; /* aligns with prior hardcoded surface */
-    --card-foreground: #ededed;
-    --muted: #1f2226;
-    --muted-foreground: #a3a3a3;
-    --border: #2f3238;
-    --accent: #60a5fa;
+    --background: #0f1115;
+    --foreground: #e5e7eb;
+    --card: #14171b;
+    --card-foreground: #e5e7eb;
+    --muted: #1a1d22;
+    --muted-foreground: #9ca3af;
+    --border: #2a2f36;
+    --accent: #2563eb;
+    --accent-soft: #60a5fa;
   }
 }
 
