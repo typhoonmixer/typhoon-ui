@@ -7,8 +7,8 @@ import Copy from "./Copy";
 function CopyButton({
   copyText,
   buttonText,
-  className = "rounded-full bg-[--link-card] p-1 text-yellow-primary dark:bg-black",
-  iconClassName = "",
+  className = "flex items-center gap-2 text-sm text-muted-foreground",
+  iconClassName = "text-accent",
 }) {
   const [isCopied, setIsCopied] = useState(false);
 
@@ -56,7 +56,7 @@ function CopyButton({
       }}
       className={className}
     >
-      <span style={{color:"black"}}>{buttonText}</span>
+      <span className="truncate">{buttonText}</span>
       <span aria-hidden className={iconClassName}>
         {isCopied ? <Check /> : <Copy />}
       </span>

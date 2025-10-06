@@ -151,9 +151,6 @@ export default function ReadPanel({
           <span className="mx-1">•</span>
           <span>Today</span>
           <span className="text-card-foreground font-semibold">{todayDeposits?.toString?.() ?? String(todayDeposits)}</span>
-          <span className="mx-1">•</span>
-          <span>Total</span>
-          <span className="text-card-foreground font-semibold">{overallDeposits?.toString?.() ?? String(overallDeposits)}</span>
         </div>
 
         {/* Latest deposits list */}
