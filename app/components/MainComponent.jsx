@@ -672,8 +672,8 @@ const MainComponent = () => {
   }
 
   return (
-    <div className='grid w-full px-4 gap-6 grid-cols-1 lg:grid-cols-2 items-stretch'>
-      <div className='relative bg-card text-card-foreground w-full px-4 sm:px-6 pt-1 sm:pt-2 pb-4 sm:pb-6 rounded-xl min-h-[200px] mb-6 lg:mb-0 shadow-md border border-border flex flex-col'>
+    <div className='grid w-full gap-6 grid-cols-1 lg:grid-cols-2 items-stretch'>
+      <div className='relative bg-card text-card-foreground w-full px-4 sm:px-6 pt-1 sm:pt-2 pb-4 sm:pb-6 rounded-xl min-h-[200px] mb-2 lg:mb-0 shadow-md border border-border flex flex-col'>
         <div className='w-full flex justify-center overflow-x-auto mt-2 mb-2' role="tablist" aria-label="Action tabs">
           <div className='inline-flex items-center rounded-full border border-border bg-muted/20 px-1 py-0.5 gap-1 sm:gap-2'>
           <button type="button"
@@ -1278,7 +1278,7 @@ const MainComponent = () => {
           entrypoint: 'withdraw',
           calldata: call.calldata
         })
-        const multiCall = await account.execute(call, resourceBounds);
+        const multiCall = await account.execute(call, undefined, resourceBounds);
         await account.waitForTransaction(multiCall.transaction_hash);
       }
     }

@@ -38,18 +38,19 @@ export default function Home() {
     setComplianceContent(complianceReport(reportData, symbol, jsonNote.secret.includes('0x') ? jsonNote.secret.slice(2) : jsonNote.secret, jsonNote.nullifier.includes('0x') ? jsonNote.nullifier.slice(2) : jsonNote.nullifier, jsonNote.pool));
   }
   return (
-    <div className="container" style={{ justifyContent: 'center' }}>
-      <h1>
-        <span className="text-card-foreground text-xl font-bold">Typhoon</span> compliance tool
-      </h1>
-      <p>
-        Maintaining financial privacy is essential to preserving our freedoms. However, it should not come at the cost of non-compliance. With Typhoon, you can always provide cryptographically verified proof of transactional history using the "note.txt" that you download in the moment of the deposit. This might be necessary in cases where you need to show the origin of assets in your withdrawal address.
-      </p>
-      <p>
-        To generate a compliance report, please enter your Typhoon note below.
-      </p>
-      <div className="mt-5">
-        <label className="block mb-1 text-lg text-card-foreground">Note</label>
+    <div className="w-full">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
+        <h1 className="text-center text-2xl font-bold text-card-foreground">Typhoon compliance tool</h1>
+        <div className="mt-4 max-w-3xl mx-auto text-justify text-sm leading-7 text-muted-foreground">
+          <p>
+            Maintaining financial privacy is essential to preserving our freedoms. However, it should not come at the cost of non-compliance. With Typhoon, you can always provide cryptographically verified proof of transactional history using the "note.txt" that you download in the moment of the deposit. This might be necessary in cases where you need to show the origin of assets in your withdrawal address.
+          </p>
+          <p className="mt-3">
+            To generate a compliance report, please enter your Typhoon note below.
+          </p>
+        </div>
+      <div className="mt-5 max-w-3xl mx-auto">
+        <label className="block mb-1 text-lg text-card-foreground text-center">Note</label>
         <div className="flex gap-2 justify-center">
           <input
             className="w-full max-w-[600px] px-3 py-2 bg-muted text-card-foreground border border-border rounded-md"
@@ -60,10 +61,12 @@ export default function Home() {
           />
           <button className="px-4 py-2 bg-accent text-accent-foreground rounded-md" onClick={handleSubmit}>Generate</button>
         </div>
-
       </div>
-      {complianceContent}
-    </div >
+      <div className="max-w-5xl mx-auto mt-6">
+        {complianceContent}
+      </div>
+      </div>
+    </div>
   );
 
 
