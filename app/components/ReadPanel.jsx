@@ -1,13 +1,13 @@
 "use client"
 import React, { useEffect, useMemo, useState } from 'react'
-import { useAccount, useNetwork, useProvider } from "@starknet-react/core";
+import { useNetwork, useProvider } from "@starknet-react/core";
 import { Contract, hash } from 'starknet';
 import { mainnet } from '@starknet-react/chains';
 import typhoonMain from '../../typhoon.json' assert { type: 'json' }
 import typhoonTestnet from '../../typhoon-testnet.json' assert { type: 'json' }
 import { getFullDenomination } from '../utils/depositUtils';
 import { tokenDecimals } from '../utils/SupportedDenominations';
-import NoteList from './NoteList'
+// Note list panel removed per design
 
 export default function ReadPanel({
   token,
@@ -16,7 +16,6 @@ export default function ReadPanel({
   todayDeposits,
   overallDeposits,
 }) {
-  const { address } = useAccount();
   const { provider } = useProvider();
   const { chain } = useNetwork();
 
@@ -137,12 +136,12 @@ export default function ReadPanel({
   );
 
   return (
-    <aside className="w-full">
-      <div className="bg-card border border-border rounded-xl p-4 sm:p-6 shadow-md">
+    <aside className="w-full h-full">
+      <div className="bg-card border border-border rounded-xl p-4 sm:p-6 shadow-md h-full flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
           <h3 className="text-card-foreground text-lg font-semibold tracking-tight">Statistics</h3>
-          <span className="inline-flex items-center rounded-full border border-border bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground">{denomination} {token}</span>
+          <span className="inline-flex items-center rounded-full bg-accent text-accent-foreground px-2.5 py-0.5 text-xs font-medium">{denomination} {token}</span>
         </div>
 
         {/* Summary line */}
@@ -158,35 +157,42 @@ export default function ReadPanel({
         </div>
 
         {/* Latest deposits list */}
-        <div className="mt-5">
+        <div className="mt-5 flex-1 flex flex-col">
           <h4 className="text-sm text-card-foreground font-medium">Latest deposits</h4>
           {loading ? (
-            <div className="mt-2 text-sm text-muted-foreground">Loading…</div>
+            <div className="mt-2 flex-1 grid place-content-center text-sm text-muted-foreground/90">Loading…</div>
           ) : error ? (
             <div className="mt-2 text-sm text-muted-foreground">{error}</div>
           ) : latest.length === 0 ? (
-            <div className="mt-2 text-sm text-muted-foreground">No recent activity available</div>
+            <div className="mt-2 flex-1 grid place-content-center text-sm text-muted-foreground/90">
+              No recent activity for this pool yet.
+            </div>
           ) : (
-            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {latest.map((row, i) => (
+            (() => {
+              const split = Math.ceil(latest.length / 2);
+              const left = latest.slice(0, split);
+              const right = latest.slice(split);
+              const Row = (row, i) => (
                 <div key={`${row.blockNumber}-${i}`} className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-card-foreground">
                   <span className="font-mono mr-2">{row.index}.</span>
                   <span className="text-accent">{row.timeAgo}</span>
                 </div>
-              ))}
-            </div>
+              );
+              return (
+                <div className="mt-2 flex-1 overflow-auto pr-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="flex flex-col gap-2">{left.map((r, i) => Row(r, i))}</div>
+                    <div className="flex flex-col gap-2">{right.map((r, i) => Row(r, i + split))}</div>
+                  </div>
+                </div>
+              );
+            })()
           )}
         </div>
-      </div>
-
-      {address ? (
-        <div className="mt-6">
-          <div className="bg-card border border-border rounded-xl p-4 sm:p-6 shadow-md">
-            <h3 className="text-card-foreground text-base font-semibold mb-3">Your Notes</h3>
-            <NoteList />
-          </div>
+        <div className="pt-3 text-xs text-muted-foreground">
+          Tip: Change token or amount to compare recent activity and anonymity set.
         </div>
-      ) : null}
+      </div>
     </aside>
   )
 }

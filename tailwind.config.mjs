@@ -17,6 +17,7 @@ export default {
         border: "var(--border)",
         accent: "var(--accent)",
         "accent-soft": "var(--accent-soft)",
+        "accent-foreground": "var(--accent-foreground)",
       },
     },
   },

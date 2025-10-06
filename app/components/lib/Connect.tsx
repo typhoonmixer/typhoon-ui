@@ -214,7 +214,7 @@ const ConnectButton = ({
       <button
         aria-haspopup="dialog"
         onClick={() => togglePopover({ targetId: "connect-modal" })}
-        className={`${className} bg-accent text-foreground ml-2`}
+        className={`${className} bg-accent text-accent-foreground ml-2`}
       >
         {text}
       </button>

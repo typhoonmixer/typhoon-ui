@@ -58,7 +58,7 @@ export default function Home() {
             onChange={handleInputChange}
             placeholder="Please enter your note"
           />
-          <button className="px-4 py-2 bg-accent text-foreground rounded-md" onClick={handleSubmit}>Generate</button>
+          <button className="px-4 py-2 bg-accent text-accent-foreground rounded-md" onClick={handleSubmit}>Generate</button>
         </div>
 
       </div>

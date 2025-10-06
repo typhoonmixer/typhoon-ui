@@ -645,10 +645,10 @@ const MainComponent = () => {
   }
 
   return (
-    <div className='grid w-full px-4 gap-6 grid-cols-1 lg:grid-cols-2'>
-      <div className='relative bg-card text-card-foreground w-full p-4 sm:p-6 rounded-xl min-h-[200px] mb-6 lg:mb-0 shadow-md border border-border flex flex-col'>
-        <div className='w-full flex justify-center overflow-x-auto mb-4' role="tablist" aria-label="Action tabs">
-          <div className='inline-flex items-center rounded-full border border-border bg-muted/20 px-1 py-1 gap-1 sm:gap-2'>
+    <div className='grid w-full px-4 gap-6 grid-cols-1 lg:grid-cols-2 items-stretch'>
+      <div className='relative bg-card text-card-foreground w-full px-4 sm:px-6 pt-1 sm:pt-2 pb-4 sm:pb-6 rounded-xl min-h-[200px] mb-6 lg:mb-0 shadow-md border border-border flex flex-col'>
+        <div className='w-full flex justify-center overflow-x-auto mt-2 mb-2' role="tablist" aria-label="Action tabs">
+          <div className='inline-flex items-center rounded-full border border-border bg-muted/20 px-1 py-0.5 gap-1 sm:gap-2'>
           <button type="button"
             role="tab"
             aria-selected={selectedNavItem===DEPOSIT}
@@ -745,9 +745,6 @@ const MainComponent = () => {
   function withdrawContent() {
     return (
       <div className='space-y-4'>
-        <div className='flex items-center justify-between py-2 px-1'>
-          <p className="sr-only">Withdraw</p>
-        </div>
         {/* Note */}
         <div>
           <label className="block text-sm text-muted-foreground mb-2">Note</label>
@@ -792,9 +789,6 @@ const MainComponent = () => {
     const progressPct = len > 1 ? (selIndex / (len - 1)) * 100 : 0;
     return (
       <div className='space-y-4'>
-        <div className='flex items-center justify-between py-2 px-1'>
-          <p className="sr-only">Deposit</p>
-        </div>
 
         {/* Token */}
         <div className='relative'>
@@ -828,9 +822,7 @@ const MainComponent = () => {
           </div>
         </div>
         <div className="flex flex-col gap-2 font-mono">
-          <div className="flex items-center gap-2">
-            <span className='text-card-foreground text-base'>Amount</span>
-          </div>
+          <label className='block text-sm text-muted-foreground'>Amount</label>
 
           {/* Discrete selector */}
           <div className="w-full" style={{ zIndex: 500 }}>
@@ -925,9 +917,7 @@ const MainComponent = () => {
 
     return (
       <div className='space-y-4'>
-        <div className='mb-1 mt-2 text-card-foreground'>
-          Private Transfer
-        </div>
+        {/* Removed redundant heading to reduce visual noise */}
         {/* Token */}
         <div>
           <label className="block text-sm text-muted-foreground mb-2">Token</label>
@@ -1337,12 +1327,12 @@ const MainComponent = () => {
                   setDownloaded(true)
                   setOpenDepositOp(false)
                 }}
-                className="rounded-[12px] bg-accent text-foreground ml-2 px-4 py-3 transition-all duration-300 hover:rounded-[30px] md:py-4"
+                className="rounded-[12px] bg-accent text-accent-foreground ml-2 px-4 py-3 transition-all duration-300 hover:rounded-[30px] md:py-4"
               >
                 Download Note
               </button>
 
-              <Popup trigger={<button className={"rounded-[12px] bg-accent text-foreground ml-2 px-4 py-3 transition-all duration-300 hover:rounded-[30px] md:py-4"}> Connect/Create Note Account</button>} modal contentStyle={{ borderRadius: '10px' }}>
+              <Popup trigger={<button className={"rounded-[12px] bg-accent text-accent-foreground ml-2 px-4 py-3 transition-all duration-300 hover:rounded-[30px] md:py-4"}> Connect/Create Note Account</button>} modal contentStyle={{ borderRadius: '10px' }}>
                 <div>
                   <div className="lg:border-outline-grey ml-5 basis-5/6 lg:col-span-2 lg:border-r-[1px] lg:border-solid lg:py-4 lg:pl-8">
                     <h2 className="my-4 text-center text-[1.125em] font-bold text-black lg:text-start">
@@ -1374,7 +1364,7 @@ const MainComponent = () => {
                         setOpenDepositOp(false)
                       }
                       }
-                      className="rounded-[12px]  ml-10 bg-accent text-foreground px-4 py-3 transition-all duration-300 hover:rounded-[30px] md:py-4"
+                      className="rounded-[12px]  ml-10 bg-accent text-accent-foreground px-4 py-3 transition-all duration-300 hover:rounded-[30px] md:py-4"
                     >
                       Connect
                     </button>
@@ -1392,7 +1382,7 @@ const MainComponent = () => {
                       setDownloaded(true)
                       setOpenDepositOp(false)
                     }}
-                    className="items-center rounded-[12px] ml-10 bg-accent text-foreground px-6 py-3 transition-all duration-300 hover:rounded-[30px] md:py-4"
+                    className="items-center rounded-[12px] ml-10 bg-accent text-accent-foreground px-6 py-3 transition-all duration-300 hover:rounded-[30px] md:py-4"
                   >
                     Create Note Account
                   </button>
@@ -1617,14 +1607,14 @@ const MainComponent = () => {
     className +=
       btnText === ENTER_AMOUNT || btnText === CONNECT_WALLET
         ? ' text-muted-foreground bg-muted pointer-events-none opacity-60'
-        : ' bg-accent text-foreground'
+        : ' bg-accent text-accent-foreground'
     return className
   }
 
 
 
   function getNavIconClassName(name) {
-    const base = 'px-4 sm:px-5 py-2 rounded-full text-sm sm:text-base font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-accent transition-colors whitespace-nowrap';
+    const base = 'px-4 sm:px-5 py-1.5 rounded-full text-sm sm:text-base font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-accent transition-colors whitespace-nowrap';
     return name === selectedNavItem
       ? `${base} bg-accent/10 text-accent`
       : `${base} text-foreground/80 hover:bg-muted`;

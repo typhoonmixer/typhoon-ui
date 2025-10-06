@@ -229,7 +229,7 @@ function NoteList() {
             {notesDenominations.map((note, index) =>
                 <li key={index} className="flex justify-between w-full" style={{ fontWeight: "bold", padding: "10px", backgroundColor: "var(--card)", color: "var(--card-foreground)", marginBottom: "10px", border: "2px solid var(--border)", borderRadius: "8px", alignItems: "center", display: "flex", justifyContent: "space-between" }}>
                     <span className='text' style={{ flex: "1" }}>{note}</span>
-                    <Popup trigger={<button className={`${className} bg-accent text-foreground`}> Withdraw</button>} modal contentStyle={{ borderRadius: '10px', width: "600px" }} open={finished} onClose={() => setFinished(false)}>
+                    <Popup trigger={<button className={`${className} bg-accent text-accent-foreground`}> Withdraw</button>} modal contentStyle={{ borderRadius: '10px', width: "600px" }} open={finished} onClose={() => setFinished(false)}>
                         <div>
                             <div className="lg:border-outline-grey ml-5 basis-5/6 lg:col-span-2 lg:border-r-[1px] lg:border-solid lg:py-4 lg:pl-8">
                                 <h2 className="my-4 text-center text-[1.125em] font-bold text-black lg:text-start">
@@ -258,7 +258,7 @@ function NoteList() {
                                 <button
                                     aria-haspopup="dialog"
                                     onClick={async () => await withdrawNote(index)}
-                                    className="rounded-[12px] ml-10 bg-accent text-foreground px-4 py-3 transition-all duration-300 hover:rounded-[30px] md:py-4"
+                                    className="rounded-[12px] ml-10 bg-accent text-accent-foreground px-4 py-3 transition-all duration-300 hover:rounded-[30px] md:py-4"
                                 >
                                     Withdraw
                                 </button>

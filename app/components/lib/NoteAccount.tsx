@@ -39,7 +39,7 @@ const NoteAccountModal = () => {
         <button
           aria-haspopup="dialog"
           onClick={() => console.log("Connect Note Account")}
-          className="rounded-[12px] bg-accent text-foreground ml-2 px-4 py-3 transition-all duration-300 hover:rounded-[30px] md:py-4"
+          className="rounded-[12px] bg-accent text-accent-foreground ml-2 px-4 py-3 transition-all duration-300 hover:rounded-[30px] md:py-4"
         >
           Connect
         </button>
@@ -52,7 +52,7 @@ const NoteAccountModal = () => {
       <button
           aria-haspopup="dialog"
           onClick={() => console.log("Create Note Account")}
-          className="items-center rounded-[12px] bg-accent text-foreground px-6 py-3 transition-all duration-300 hover:rounded-[30px] md:py-4"
+          className="items-center rounded-[12px] bg-accent text-accent-foreground px-6 py-3 transition-all duration-300 hover:rounded-[30px] md:py-4"
         >
           Create Note Account
         </button>
@@ -196,7 +196,7 @@ const NoteAccountButton = ({
       <button
         aria-haspopup="dialog"
         onClick={() => togglePopover({ targetId: "connect-modal" })}
-        className={`${className} bg-accent text-foreground`}
+        className={`${className} bg-accent text-accent-foreground`}
       >
         {text}
       </button>
