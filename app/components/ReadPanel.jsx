@@ -20,10 +20,14 @@ export default function ReadPanel({
   const { chain } = useNetwork();
 
   const resolvedTyphoonAddress = useMemo(() => {
-    const envAddr = process.env.NEXT_PUBLIC_TYPHOON_ADDR;
-    if (envAddr && envAddr.startsWith('0x')) return envAddr;
-    const isMainnet = chain?.id === mainnet.id;
-    return isMainnet ? typhoonMain?.typhoon : typhoonTestnet?.typhoon;
+    const envMain = process.env.NEXT_PUBLIC_TYPHOON_MAINNET_ADDR;
+    const envSep = process.env.NEXT_PUBLIC_TYPHOON_SEPOLIA_ADDR;
+    let hint = '';
+    if (typeof window !== 'undefined') {
+      try { hint = (localStorage.getItem('preferredChain') || '').toLowerCase(); } catch {}
+    }
+    const isMainnetPreferred = hint ? hint.includes('main') : (chain?.id === mainnet.id);
+    return isMainnetPreferred ? (envMain || typhoonMain?.typhoon) : (envSep || typhoonTestnet?.typhoon);
   }, [chain?.id]);
 
   // Token mapping (simple subset used in app)

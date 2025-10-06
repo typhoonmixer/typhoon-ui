@@ -2,9 +2,11 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { Tornado, Wallet2, Lock, SlidersHorizontal } from 'lucide-react';
+import { Toaster } from 'react-hot-toast';
 import { useAccount } from '@starknet-react/core';
 import NetworkSwitcher from './lib/NetworkSwitcher';
-import AddressBar from './lib/AddressBar';
+import { UserModalMount } from './lib/AddressBar';
 import ConnectButton from './lib/Connect';
 
 export default function Navbar() {
@@ -17,12 +19,13 @@ export default function Navbar() {
     }`;
 
   return (
-    <nav className="w-full bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
+    <>
+    <nav className="w-full bg-transparent">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
         <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center gap-2">
-            <img src="/Typhoon_logo.png" alt="Typhoon Logo" className="h-8 w-auto" />
-            <span className="text-foreground text-xl md:text-2xl font-bold">Typhoon</span>
+          <Link href="/" className={`mr-0 flex items-center gap-2 ${linkClass('/')}`}>
+            <Tornado className="h-5 w-5 text-accent" />
+            <span>Typhoon</span>
           </Link>
 
           <div className="hidden md:flex items-center gap-6">
@@ -33,11 +36,45 @@ export default function Navbar() {
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="hidden sm:inline text-sm text-muted-foreground"></span>
           <NetworkSwitcher />
-          {address ? <AddressBar /> : <ConnectButton />}
+          {/* Wallet icon: user modal if connected, otherwise open connect modal */}
+          <button
+            aria-label={address ? 'Account' : 'Connect'}
+            onClick={() => {
+              if (address) {
+                const pop = document.getElementById('user-popover');
+                // @ts-ignore
+                pop?.togglePopover?.();
+              } else {
+                const pop = document.getElementById('connect-modal');
+                // @ts-ignore
+                pop?.togglePopover?.();
+              }
+            }}
+            className="grid h-10 w-10 place-content-center rounded-lg border border-border bg-muted/30 hover:bg-muted/50"
+          >
+            <Wallet2 className="h-5 w-5 text-card-foreground" />
+          </button>
+          <button
+            aria-label="Lock"
+            className="grid h-10 w-10 place-content-center rounded-lg border border-border bg-muted/30 hover:bg-muted/50"
+          >
+            <Lock className="h-5 w-5 text-card-foreground" />
+          </button>
+          <button className="inline-flex items-center gap-2 rounded-lg border border-accent px-3 py-1.5 text-sm text-accent hover:bg-accent/10">
+            <SlidersHorizontal className="h-4 w-4" />
+            <span>Settings</span>
+          </button>
+          {/* Hidden modals mount */}
+          <ConnectButton className="hidden" text="" />
+          <UserModalMount />
         </div>
       </div>
     </nav>
+    <Toaster position="bottom-right" toastOptions={{
+      duration: 6000,
+      style: { background: 'var(--card)', color: 'var(--card-foreground)', border: '1px solid var(--border)' },
+    }} />
+    </>
   );
 }

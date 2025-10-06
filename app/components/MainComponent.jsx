@@ -14,7 +14,7 @@ import { useProvider, useNetwork } from '@starknet-react/core';
 import { mainnet } from '@starknet-react/chains';
 
 import WithdrawField from './WithdrawField'
-import toast, { Toaster } from 'react-hot-toast'
+import toast from 'react-hot-toast'
 import { DEFAULT_VALUE, ETH, STRK } from '../utils/SupportedCoins'
 import DepositField from './DepositField'
 import { denominationsList, one, tokenList, tokenDecimals } from '../utils/SupportedDenominations'
@@ -46,8 +46,12 @@ import { TyphoonSDK } from 'typhoon-sdk'
 import dotenv from 'dotenv'
 dotenv.config()
 
-const envTyphoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR;
-const noteAccountContract = process.env.NEXT_PUBLIC_NOTE_ACCOUNT_ADDR;
+const ENV_ADDRS = {
+  TYPHOON_SEPOLIA: process.env.NEXT_PUBLIC_TYPHOON_SEPOLIA_ADDR,
+  TYPHOON_MAINNET: process.env.NEXT_PUBLIC_TYPHOON_MAINNET_ADDR,
+  NOTE_SEPOLIA: process.env.NEXT_PUBLIC_NOTE_ACCOUNT_SEPOLIA_ADDR,
+  NOTE_MAINNET: process.env.NEXT_PUBLIC_NOTE_ACCOUNT_MAINNET_ADDR,
+};
 const maxUint256 = (1n << 256n) - 1n;
 const maxUint512 = (1n << 512n) - 1n;
 
@@ -92,10 +96,24 @@ const MainComponent = () => {
   const { provider } = useProvider();
   const { chain } = useNetwork();
 
+  // Decide addresses based on app preference first (read provider), then wallet chain
   const resolvedTyphoonAddress = React.useMemo(() => {
-    if (envTyphoonAddress && envTyphoonAddress.startsWith('0x')) return envTyphoonAddress;
-    const isMainnet = chain?.id === mainnet.id;
-    return isMainnet ? typhoonMain?.typhoon : typhoonTestnet?.typhoon;
+    let hint = '';
+    if (typeof window !== 'undefined') {
+      try { hint = (localStorage.getItem('preferredChain') || '').toLowerCase(); } catch {}
+    }
+    const isMainnetPreferred = hint ? hint.includes('main') : (chain?.id === mainnet.id);
+    if (isMainnetPreferred) return ENV_ADDRS.TYPHOON_MAINNET || typhoonMain?.typhoon;
+    return ENV_ADDRS.TYPHOON_SEPOLIA || typhoonTestnet?.typhoon;
+  }, [chain?.id]);
+
+  const noteAccountContract = React.useMemo(() => {
+    let hint = '';
+    if (typeof window !== 'undefined') {
+      try { hint = (localStorage.getItem('preferredChain') || '').toLowerCase(); } catch {}
+    }
+    const isMainnetPreferred = hint ? hint.includes('main') : (chain?.id === mainnet.id);
+    return isMainnetPreferred ? (ENV_ADDRS.NOTE_MAINNET) : (ENV_ADDRS.NOTE_SEPOLIA);
   }, [chain?.id]);
   const { address, account } = useAccount();
 
@@ -306,6 +324,15 @@ const MainComponent = () => {
   // </div>);
 
   const [btnText, setBtnText] = useState(CONNECT_WALLET)
+  useEffect(() => {
+    if (address) {
+      if (selectedNavItem === WITHDRAW) setBtnText(WITHDRAW)
+      else if (selectedNavItem === TRANSFER) setBtnText(PRIVATE_TRANSFER)
+      else setBtnText(DEPOSIT)
+    } else {
+      setBtnText(CONNECT_WALLET)
+    }
+  }, [address, selectedNavItem])
 
   const [content, setContent] = useState(depositContent)
 
@@ -713,7 +740,13 @@ const MainComponent = () => {
           className={getBtnClassName()}
           disabled={loading}
           onClick={async () => {
-            if (btnText === DEPOSIT) {
+            if (btnText === CONNECT_WALLET) {
+              try {
+                const pop = document.getElementById('connect-modal');
+                // @ts-ignore
+                pop?.togglePopover?.();
+              } catch {}
+            } else if (btnText === DEPOSIT) {
               if (selectedDepositType === "Defined denominations") {
 
                 await handleDeposit()
@@ -730,7 +763,7 @@ const MainComponent = () => {
 
 
 
-        <Toaster />
+        
       </div>
       <ReadPanel
         token={srcToken}
@@ -1605,7 +1638,7 @@ const MainComponent = () => {
   function getBtnClassName() {
     let className = 'w-full p-4 mt-6 rounded-xl hover:opacity-90 transition-colors'
     className +=
-      btnText === ENTER_AMOUNT || btnText === CONNECT_WALLET
+      btnText === ENTER_AMOUNT
         ? ' text-muted-foreground bg-muted pointer-events-none opacity-60'
         : ' bg-accent text-accent-foreground'
     return className

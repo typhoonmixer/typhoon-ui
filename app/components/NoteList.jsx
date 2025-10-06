@@ -23,18 +23,27 @@ import axios from "axios";
 
 const maxUint256 = (1n << 256n) - 1n;
 const maxUint512 = (1n << 512n) - 1n;
-const envTyphoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
 const resolvedTyphoonAddress = (() => {
-    if (envTyphoonAddress && typeof envTyphoonAddress === 'string' && envTyphoonAddress.startsWith('0x')) {
-        return envTyphoonAddress;
+    let hint = '';
+    if (typeof window !== 'undefined') {
+        try { hint = (localStorage.getItem('preferredChain') || '').toLowerCase(); } catch {}
     }
-    const chainHint = (process.env.NEXT_PUBLIC_CHAIN || '').toLowerCase();
-    if (chainHint.includes('main')) {
-        return typhoonMain?.typhoon || null;
-    }
-    return typhoonTestnet?.typhoon || null;
+    const isMain = hint ? hint.includes('main') : ((process.env.NEXT_PUBLIC_CHAIN || '').toLowerCase().includes('main'));
+    const envMain = process.env.NEXT_PUBLIC_TYPHOON_MAINNET_ADDR;
+    const envSep = process.env.NEXT_PUBLIC_TYPHOON_SEPOLIA_ADDR;
+    return isMain ? (envMain || typhoonMain?.typhoon) : (envSep || typhoonTestnet?.typhoon);
 })();
-const noteAccountContract = process.env.NEXT_PUBLIC_NOTE_ACCOUNT_ADDR
+
+const noteAccountContract = (() => {
+    let hint = '';
+    if (typeof window !== 'undefined') {
+        try { hint = (localStorage.getItem('preferredChain') || '').toLowerCase(); } catch {}
+    }
+    const isMain = hint ? hint.includes('main') : ((process.env.NEXT_PUBLIC_CHAIN || '').toLowerCase().includes('main'));
+    const envMain = process.env.NEXT_PUBLIC_NOTE_ACCOUNT_MAINNET_ADDR;
+    const envSep = process.env.NEXT_PUBLIC_NOTE_ACCOUNT_SEPOLIA_ADDR;
+    return isMain ? envMain : envSep;
+})();
 
 function NoteList() {
     const { provider } = useProvider();

@@ -7,7 +7,7 @@ import ConnectButton from "./lib/Connect";
 import NetworkSwitcher from "./lib/NetworkSwitcher";
 import { Wallet, Signature } from 'ethers';
 
-import toast, { Toaster } from 'react-hot-toast'
+import toast from 'react-hot-toast'
 import NoteAccountButton from './lib/NoteAccount';
 import CopyButton from "../utils/CopyButton";
 
@@ -156,7 +156,7 @@ const Header = () => {
         )}
       </div>
 
-      <Toaster />
+      
     </div>
   )
 

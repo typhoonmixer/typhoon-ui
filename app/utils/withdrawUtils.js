@@ -29,16 +29,15 @@ async function loadAbi(address) {
     }
     return abi;
 }
-const envTyphoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
 const resolvedTyphoonAddress = (() => {
-    if (envTyphoonAddress && typeof envTyphoonAddress === 'string' && envTyphoonAddress.startsWith('0x')) {
-        return envTyphoonAddress;
+    let hint = (process.env.NEXT_PUBLIC_CHAIN || '').toLowerCase();
+    if (typeof window !== 'undefined') {
+        try { const ls = (localStorage.getItem('preferredChain') || '').toLowerCase(); if (ls) hint = ls; } catch {}
     }
-    const chainHint = (process.env.NEXT_PUBLIC_CHAIN || '').toLowerCase();
-    if (chainHint.includes('main')) {
-        return typhoonMain?.typhoon || null;
-    }
-    return typhoonTestnet?.typhoon || null;
+    const envMain = process.env.NEXT_PUBLIC_TYPHOON_MAINNET_ADDR;
+    const envSep = process.env.NEXT_PUBLIC_TYPHOON_SEPOLIA_ADDR;
+    if (hint.includes('main')) return envMain || typhoonMain?.typhoon || null;
+    return envSep || typhoonTestnet?.typhoon || null;
 })();
 
 

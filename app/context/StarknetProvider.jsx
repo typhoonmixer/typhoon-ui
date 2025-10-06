@@ -38,9 +38,23 @@ export function StarknetProvider({ children }) {
   const apiKey = process.env.NEXT_PUBLIC_API_KEY
   const nodeProvider = process.env.NEXT_PUBLIC_PROVIDER
   const explicitRpcUrl = process.env.NEXT_PUBLIC_RPC_URL
+  const envSepolia = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL
+  const envMainnet = process.env.NEXT_PUBLIC_MAINNET_RPC_URL
 
   let provider;
-  if (explicitRpcUrl) {
+  // If per‑chain env URLs are provided, honor them and keep provider dynamic by chain
+  if (envSepolia || envMainnet) {
+    const fallbackMain = "https://starknet-mainnet.public.blastapi.io/rpc/v0_9";
+    const fallbackSep = "https://starknet-sepolia.public.blastapi.io/rpc/v0_9";
+    provider = jsonRpcProvider({
+      rpc: (chain) => {
+        const isMain = chain.id === mainnet.id;
+        const nodeUrl = isMain ? (envMainnet || fallbackMain) : (envSepolia || fallbackSep);
+        return { nodeUrl };
+      },
+    });
+  } else if (explicitRpcUrl) {
+    // Legacy single-URL override (not chain-aware)
     provider = jsonRpcProvider({ rpc: () => ({ nodeUrl: explicitRpcUrl }) });
   } else if (nodeProvider == "infura" && apiKey) {
     provider = infuraProvider({ apiKey });
@@ -67,7 +81,11 @@ export function StarknetProvider({ children }) {
     });
   }
 
-  const chainHint = (process.env.NEXT_PUBLIC_CHAIN || '').toLowerCase();
+  let lsHint = '';
+  if (typeof window !== 'undefined') {
+    try { lsHint = (localStorage.getItem('preferredChain') || '').toLowerCase(); } catch {}
+  }
+  const chainHint = (lsHint || process.env.NEXT_PUBLIC_CHAIN || '').toLowerCase();
   const defaultChainId = chainHint.includes('main') ? mainnet.id : sepolia.id;
   // const provider = new RpcProvider({ nodeUrl: 'https://free-rpc.nethermind.io/sepolia-juno/v0_7' });
   return (
@@ -76,7 +94,7 @@ export function StarknetProvider({ children }) {
       chains={[mainnet, sepolia]}
       provider={provider}
       explorer={starkscan}
-      autoConnect
+      autoConnect={false}
       defaultChainId={defaultChainId}
     >
       {children}

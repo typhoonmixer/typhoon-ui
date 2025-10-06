@@ -16,6 +16,8 @@ import { constants } from "starknet";
 
 const UserModal = () => {
   const { address } = useAccount();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const { chain } = useNetwork();
 
   const { disconnect } = useDisconnect();
@@ -46,7 +48,13 @@ const UserModal = () => {
               <h3 className="text-base font-semibold">Connected</h3>
               <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" aria-label="Wallet connected" />
               <span className="ml-2 inline-flex items-center rounded-full border border-border bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground">
-                {chain?.name || 'Unknown'}
+                {mounted ? ((() => {
+                  let hint = '';
+                  try { hint = (localStorage.getItem('preferredChain') || '').toLowerCase(); } catch {}
+                  if (hint.includes('main')) return 'Starknet';
+                  if (hint.includes('sepolia')) return 'Starknet Sepolia Testnet';
+                  return chain?.name || 'Network';
+                })()) : 'Network'}
               </span>
             </div>
             <button
@@ -167,3 +175,4 @@ const AddressBar = () => {
 };
 
 export default AddressBar;
+export const UserModalMount = UserModal;

@@ -1,7 +1,8 @@
 "use client";
 import Image from "next/image";
 import React, { useEffect, useState } from "react";
-import { Connector, useConnect } from "@starknet-react/core";
+import { Connector, useConnect, useSwitchChain } from "@starknet-react/core";
+import { constants } from 'starknet';
 import Close from "../../../public/svg/Close";
 import GenericModal from "../../utils/GenericModal";
 
@@ -24,6 +25,7 @@ const Wallet = ({
   if (src === undefined) return;
   
   const { connect } = useConnect();
+  const { switchChainAsync } = useSwitchChain({});
   
   
   const isSvg = src?.startsWith("<svg");
@@ -34,6 +36,17 @@ const Wallet = ({
     //@ts-ignore
     popover?.hidePopover();
     localStorage.setItem("lastUsedConnector", connector.name);
+    // Try to align wallet network with app's preferred chain (best‑effort)
+    try {
+      let hint = '';
+      if (typeof window !== 'undefined') {
+        hint = (localStorage.getItem('preferredChain') || '').toLowerCase();
+        if (!hint) hint = (process.env.NEXT_PUBLIC_CHAIN || '').toLowerCase();
+      }
+      const target = hint.includes('main') ? constants.StarknetChainId.SN_MAIN : constants.StarknetChainId.SN_SEPOLIA;
+      // Fire and forget; some wallets may not support it
+      switchChainAsync({ chainId: target }).catch(() => {});
+    } catch {}
   }
 
   return (
