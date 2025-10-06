@@ -56,13 +56,13 @@ const Header = () => {
   }
 
   return (
-    <div className='fixed left-0 top-0 w-full px-8 py-4 flex items-center justify-between z-1000' style={{zIndex:600, marginLeft: '1100px'}}>
+    <div className='w-full px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-end gap-3'>
         {/* <div className='flex items-center'>
           <img src='/Typhoon_logo.png' className='h-12' />
 
         </div> */}
 
-      <div className='flex items-center gap-2'>
+      <div className='flex items-center gap-3'>
         {/* <button style={{ backgroundColor: 'blue', color: 'white' , marginRight: '10px'}}
           aria-haspopup="dialog"
           onClick={() => openLink("https://starknet-faucet.vercel.app/")}

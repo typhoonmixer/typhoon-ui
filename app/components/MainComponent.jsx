@@ -644,9 +644,9 @@ const MainComponent = () => {
   }
 
   return (
-    <div className='flex' >
-      <div className='relative bg-zinc-900 w5-[35%] p-4 px-6 rounded-xl  min-h-[200px]' style={{ width: '600px', height: '500px', marginBottom:'100px'}}>
-        <div className='bg-zinc-900 h-fit flex items-center justify-around rounded-full mx-6'>
+    <div className='flex w-full justify-center px-4'>
+      <div className='relative bg-card text-card-foreground w-full max-w-md sm:max-w-lg md:max-w-xl p-4 sm:p-6 rounded-xl min-h-[200px] pb-20 mb-24 shadow-md border border-border'>
+        <div className='bg-card h-fit flex items-center justify-around rounded-full mx-2 sm:mx-6'>
           <p
             className={getNavIconClassName(DEPOSIT)}
             onClick={() => {
@@ -700,7 +700,7 @@ const MainComponent = () => {
         </div>
         {content}
         <button
-          style={{ position: 'absolute', bottom: '5px', right:'16px', left:'16px', width:'500'}}
+          style={{ position: 'absolute', bottom: 8, right: 16, left: 16 }}
           className={getBtnClassName()}
           disabled={loading}
           onClick={async () => {
@@ -734,15 +734,15 @@ const MainComponent = () => {
           <p>Withdraw</p>
 
         </div>
-        <div className="w-full mt-2 h-full p-4 bg-zinc-800 rounded-2xl shadow-md">
+        <div className="w-full mt-2 h-full p-4 bg-card rounded-2xl shadow-md border border-border">
 
-          <div className="flex justify-between text-sm text-gray-500 mb-2">
-            <span className="text-white text-base">Note</span>
+          <div className="flex justify-between text-sm text-muted-foreground mb-2">
+            <span className="text-card-foreground text-base">Note</span>
 
           </div>
 
           {/* Input row */}
-          <div className="flex items-center gap-3 border rounded-xl p-3 bg-zinc-900">
+          <div className="flex items-center gap-3 border border-border rounded-xl p-3 bg-muted">
             {/* Amount input */}
             <input
               ref={noteValueRef}
@@ -751,19 +751,19 @@ const MainComponent = () => {
               placeholder="{note}"
               value={noteValue}
               onChange={(e) => setNoteValue(e.target.value)}
-              className="flex-1 min-w-0 text-right text-2xl font-medium bg-zinc-900 outline-none placeholder:text-gray-400"
+              className="flex-1 min-w-0 text-right text-2xl font-medium bg-transparent outline-none placeholder:text-muted-foreground"
             />
           </div>
         </div>
-        <div className="w-full mt-2 h-full p-4 bg-zinc-800 rounded-2xl shadow-md">
+        <div className="w-full mt-2 h-full p-4 bg-card rounded-2xl shadow-md border border-border">
 
-          <div className="flex justify-between text-sm text-gray-500 mb-2">
-            <span className="text-white text-base">Receiver</span>
+          <div className="flex justify-between text-sm text-muted-foreground mb-2">
+            <span className="text-card-foreground text-base">Receiver</span>
 
           </div>
 
           {/* Input row */}
-          <div className="flex items-center gap-3 border rounded-xl p-3 bg-zinc-900">
+          <div className="flex items-center gap-3 border border-border rounded-xl p-3 bg-muted">
             {/* Amount input */}
             <input
               ref={receiverValueRef}
@@ -772,7 +772,7 @@ const MainComponent = () => {
               placeholder="0x0"
               value={receiverValue}
               onChange={(e) => setReceiverValue(e.target.value)}
-              className="flex-1 min-w-0 text-right text-2xl font-medium bg-zinc-900 outline-none placeholder:text-gray-400"
+              className="flex-1 min-w-0 text-right text-2xl font-medium bg-transparent outline-none placeholder:text-muted-foreground"
             />
           </div>
         </div>
@@ -795,23 +795,23 @@ const MainComponent = () => {
           {/* {depositTypeSelector()} */}
         </div>
 
-        <div className='relative bg-[#212429] p-4 py-6 rounded-xl mb-5 border-[2px] border-transparent hover:border-zinc-600'>
+        <div className='relative bg-card p-4 py-6 rounded-xl mb-5 border-[2px] border-transparent hover:border-border'>
           <div className='flex items-center gap-2' >
-          <span className='text-white text-base min-w-[50px]'>Token: </span> 
+          <span className='text-card-foreground text-base min-w-[50px]'>Token: </span> 
             {/* {CoinSelector("coin", false)} */}
             <div className="relative w-40" style={{ zIndex: 1000 }}> {/* Increased z-index */}
-              <button className="flex items-center gap-2 px-3 py-1 bg-zinc-900 rounded-lg shadow-sm" onClick={() => { setOpenDepositTokenDD(!openDepositTokenDD) }}>
+              <button className="flex items-center gap-2 px-3 py-1 bg-muted rounded-lg shadow-sm border border-border" onClick={() => { setOpenDepositTokenDD(!openDepositTokenDD) }}>
                 <img
                   src={tokenToSrc[srcToken]}
                   alt={srcToken}
                   className="w-5 h-5"
                 />
                 <span className="font-medium">{srcToken}</span>
-                <ChevronDown size={16} className="text-white" />
+                <ChevronDown size={16} className="text-foreground" />
               </button>
               {/* Dropdown */}
               {openDepositTokenDD ? (
-                <div className="absolute mt-1 w-full bg-[#1c1c1c] border border-gray-600 rounded-xl shadow-lg" style={{ zIndex: 1000 }}> {/* Removed z-5, set to 1000 */}
+                <div className="absolute mt-1 w-full bg-card border border-border rounded-xl shadow-lg" style={{ zIndex: 1000 }}> {/* Removed z-5, set to 1000 */}
                   {depositTokens.map((token) => (
                     <button
                       key={token.name}
@@ -820,7 +820,7 @@ const MainComponent = () => {
                         setOpenDepositTokenDD(false);
                         setDSelectedItem(denominationsList[tokenList[token.name]][0])
                       }}
-                      className="flex items-center gap-2 w-full px-3 py-2 text-left text-white hover:bg-gray-700 rounded-lg"
+                      className="flex items-center gap-2 w-full px-3 py-2 text-left text-card-foreground hover:bg-muted rounded-lg"
                     >
                       <img src={tokenToSrc[token.name]} alt={token.name} className="w-5 h-5 rounded-full" />
                       {token.name}
@@ -834,14 +834,13 @@ const MainComponent = () => {
         <div className="flex flex-col gap-3  font-mono">
           {/* Label with info icon */}
           <div className="flex items-center gap-1">
-            <span className='text-white text-base min-w-[50px]'>Amount</span>
+            <span className='text-card-foreground text-base min-w-[50px]'>Amount</span>
           </div>
 
           {/* Slider */}
           <div className="relative w-full flex items-center justify-between" style={{ zIndex: 500 }}> {/* Added z-index */}
             {/* Background line */}
-            <div className="pointer-events-none absolute left-0 right-0 top-1/2 h-[2px] 
-       bg-blue-300 -translate-y-1/2 z-0"></div>
+            <div className="pointer-events-none absolute left-0 right-0 top-1/2 h-[2px] bg-accent -translate-y-1/2 z-0"></div>
 
             {denominationsList[tokenList[srcToken]].map((amount) => (
               <label key={amount} className="relative z-10 flex flex-col items-center cursor-pointer">
@@ -853,10 +852,10 @@ const MainComponent = () => {
                   onChange={() => setDSelectedItem(amount)}
                   className="peer hidden"
                 />
-                <div className="w-5 h-5 border-2 border-blue-300 rounded-full flex items-center justify-center peer-checked:bg-black peer-checked:border-4" />
+                <div className="w-5 h-5 border-2 border-accent rounded-full flex items-center justify-center peer-checked:bg-background peer-checked:border-4" />
                 {/* Label text */}
                 <span
-                  className={`mt-2 ${dselectedItem === amount ? "text-blue-300 font-bold" : "text-blue-500 opacity-70"
+                  className={`mt-2 ${dselectedItem === amount ? "text-accent font-bold" : "text-accent/70"
                     }`}
                 >
                   {amount[0] == '0'?amount: summarizeNumber(Number(amount))} {srcToken}
@@ -865,7 +864,7 @@ const MainComponent = () => {
             ))}
           </div>
         </div>
-        <div className='bg-[#212429] p-4 py-6 rounded-xl mt-5 border-[2px] border-transparent hover:border-zinc-600'>
+        <div className='bg-card p-4 py-6 rounded-xl mt-5 border-[2px] border-transparent hover:border-border'>
           {`Number of equal deposits: ${poolCount}`}
         </div>
 
@@ -920,35 +919,35 @@ const MainComponent = () => {
 
     return (
       <div>
-        <div className='mb-5 mt-5 text-white'>
+        <div className='mb-5 mt-5 text-card-foreground'>
           Private Transfer
         </div>
 
-        <div className="w-full h-full p-4 bg-zinc-800 rounded-2xl shadow-md">
+        <div className="w-full h-full p-4 bg-card rounded-2xl shadow-md border border-border">
           {/* Header */}
-          <div className="flex justify-between text-sm text-gray-500 mb-2">
-            <span className="text-white text-base">Amount</span>
-            <span className="text-white text-base">
-              Balance: <span className="font-medium text-white">{`${balance} ${selectedTransferToken.name}`}</span>
+          <div className="flex justify-between text-sm text-muted-foreground mb-2">
+            <span className="text-card-foreground text-base">Amount</span>
+            <span className="text-card-foreground text-base">
+              Balance: <span className="font-medium text-card-foreground">{`${balance} ${selectedTransferToken.name}`}</span>
             </span>
           </div>
 
           {/* Input row */}
-          <div className="flex items-center gap-3 border rounded-xl p-3 bg-zinc-900">
+          <div className="flex items-center gap-3 border border-border rounded-xl p-3 bg-muted">
             {/* Token selector */}
             <div className="relative w-40">
-              <button className="flex items-center gap-2 px-3 py-1 bg-zinc-900 rounded-lg shadow-sm " onClick={() => { setOpenTransferTokenDD(!openTransferTokenDD) }}>
+              <button className="flex items-center gap-2 px-3 py-1 bg-muted rounded-lg shadow-sm border border-border " onClick={() => { setOpenTransferTokenDD(!openTransferTokenDD) }}>
                 <img
                   src={selectedTransferToken.src}
                   alt={selectedTransferToken.name}
                   className="w-5 h-5"
                 />
                 <span className="font-medium">{selectedTransferToken.name}</span>
-                <ChevronDown size={16} className="text-white" />
+                <ChevronDown size={16} className="text-foreground" />
               </button>
               {/* Dropdown */}
               {openTransferTokenDD ? (
-                <div className="absolute mt-1 w-full bg-[#1c1c1c] border border-gray-600 rounded-xl shadow-lg z-10">
+                <div className="absolute mt-1 w-full bg-card border border-border rounded-xl shadow-lg z-10">
                   {transferTokens.map((token) => (
                     <button
                       key={token.name}
@@ -956,7 +955,7 @@ const MainComponent = () => {
                         setSelectedTransferToken(token);
                         setOpenTransferTokenDD(false);
                       }}
-                      className="flex items-center gap-2 w-full px-3 py-2 text-left text-white hover:bg-gray-700 rounded-lg"
+                      className="flex items-center gap-2 w-full px-3 py-2 text-left text-card-foreground hover:bg-muted rounded-lg"
                     >
                       <img src={token.src} alt={token.name} className="w-5 h-5 rounded-full" />
                       {token.name}
@@ -974,24 +973,24 @@ const MainComponent = () => {
               placeholder="0"
               value={transferValue}
               onChange={(e) => setTransferValue(e.target.value)}
-              className="flex-1 min-w-0 text-right text-2xl font-medium bg-zinc-900 outline-none placeholder:text-gray-400 appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [moz-appearance:textfield]"
+              className="flex-1 min-w-0 text-right text-2xl font-medium bg-transparent outline-none placeholder:text-muted-foreground appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [moz-appearance:textfield]"
 
             />
           </div>
 
-          <div className="text-right text-white text-base mt-1">
+          <div className="text-right text-muted-foreground text-base mt-1">
             Minimum amount required: {summarizeNumber(Number(minimalRequired))} {selectedTransferToken.name}
           </div>
         </div>
-        <div className="w-full mt-2 h-full p-4 bg-zinc-800 rounded-2xl shadow-md">
+        <div className="w-full mt-2 h-full p-4 bg-card rounded-2xl shadow-md border border-border">
 
-          <div className="flex justify-between text-sm text-gray-500 mb-2">
-            <span className="text-white">Receiver</span>
+          <div className="flex justify-between text-sm text-muted-foreground mb-2">
+            <span className="text-card-foreground">Receiver</span>
 
           </div>
 
           {/* Input row */}
-          <div className="flex items-center gap-3 border rounded-xl p-3 bg-zinc-900">
+          <div className="flex items-center gap-3 border border-border rounded-xl p-3 bg-muted">
             {/* Amount input */}
             <input
               type="text"
@@ -999,7 +998,7 @@ const MainComponent = () => {
               placeholder="0x0"
               value={transferReceiverValue}
               onChange={(e) => setTransferReceiverValue(e.target.value)}
-              className="flex-1 min-w-0 text-right text-2xl font-medium bg-zinc-900 outline-none placeholder:text-gray-400"
+              className="flex-1 min-w-0 text-right text-2xl font-medium bg-transparent outline-none placeholder:text-muted-foreground"
 
             />
           </div>
@@ -1365,7 +1364,7 @@ const MainComponent = () => {
                     </h2>
                   </div>
                   <div className="flex">
-                    <div className="relative bg-[#212429] p-12 py-6 rounded-xl mb-5 ml-5 border-transparent hover:border-zinc-600">
+                    <div className="relative bg-card p-12 py-6 rounded-xl mb-5 ml-5 border-transparent hover:border-border">
                       <div className="flex items-center rounded-xl">
                         <input
                           className={getInputClassname()}
@@ -1596,11 +1595,11 @@ const MainComponent = () => {
 
   function depositTypeSelector() {
     return (
-      <Dropdown className='bg-black rounded-xl'>
+      <Dropdown className='bg-card rounded-xl'>
         <DropdownTrigger>
-          <Button variant="bordered" className='bg-black rounded-xl ml-2 mr-10'>{selectedDepositType}</Button>
+          <Button variant="bordered" className='bg-card rounded-xl ml-2 mr-10'>{selectedDepositType}</Button>
         </DropdownTrigger>
-        <DropdownMenu className='bg-black rounded-xl' aria-label="Static Actions" items={depositTypes} onAction={key => {
+        <DropdownMenu className='bg-card rounded-xl' aria-label="Static Actions" items={depositTypes} onAction={key => {
 
           setSelectedDepositType(key)
         }}>
@@ -1628,23 +1627,19 @@ const MainComponent = () => {
   }
 
   function getBtnClassName() {
-    let className = 'p-4  my-2 rounded-xl'
+    let className = 'p-4 my-2 rounded-xl'
     className +=
       btnText === ENTER_AMOUNT || btnText === CONNECT_WALLET
-        ? ' text-zinc-400 bg-zinc-800 pointer-events-none'
-        : ' bg-blue-700'
+        ? ' text-muted-foreground bg-muted pointer-events-none'
+        : ' bg-accent text-foreground'
     return className
   }
 
 
 
   function getNavIconClassName(name) {
-    let className =
-      'p-1 px-4 cursor-pointer border-[4px] border-transparent flex items-center'
-    className +=
-      name === selectedNavItem
-        ? ' bg-zinc-800 border-zinc-900 rounded-full'
-        : ''
+    let className = 'p-1 px-4 cursor-pointer border-[4px] border-transparent flex items-center'
+    className += name === selectedNavItem ? ' bg-muted border-border rounded-full' : ''
     return className
   }
 
@@ -1656,11 +1651,11 @@ const MainComponent = () => {
 
   function DenominationSelector(id, disabled) {
     return (
-      <Dropdown disableAnimation={disabled} className='bg-black rounded-xl'>
+      <Dropdown disableAnimation={disabled} className='bg-card rounded-xl'>
         <DropdownTrigger>
-          <Button disabled={disabled} variant="bordered" className='bg-black rounded-xl ml-2'>{dselectedItem}</Button>
+          <Button disabled={disabled} variant="bordered" className='bg-card rounded-xl ml-2'>{dselectedItem}</Button>
         </DropdownTrigger>
-        <DropdownMenu className='bg-black rounded-xl' key={cmenuItems.map(i => i.key).join('-')} aria-label="Static Actions" items={dmenuItems} onAction={key => {
+        <DropdownMenu className='bg-card rounded-xl' key={cmenuItems.map(i => i.key).join('-')} aria-label="Static Actions" items={dmenuItems} onAction={key => {
           const menu = [
             { key: denominationsList[tokenList[srcToken]][0], name: denominationsList[tokenList[srcToken]][0] },
             { key: denominationsList[tokenList[srcToken]][1], name: denominationsList[tokenList[srcToken]][1] },
@@ -1691,11 +1686,11 @@ const MainComponent = () => {
 
 
     return (
-      <Dropdown disableAnimation={disabled} className='bg-black rounded-xl mr-2'>
+      <Dropdown disableAnimation={disabled} className='bg-card rounded-xl mr-2'>
         <DropdownTrigger>
-          <Button disabled={disabled} variant="bordered" className='bg-black rounded-xl ml-2 mr-7'>{cselectedItem}</Button>
+          <Button disabled={disabled} variant="bordered" className='bg-card rounded-xl ml-2 mr-7'>{cselectedItem}</Button>
         </DropdownTrigger>
-        <DropdownMenu className='bg-black rounded-xl' key={cmenuItems.map(i => i.key).join('-')} aria-label="Static Actions" items={cmenuItems} onAction={key => {
+        <DropdownMenu className='bg-card rounded-xl' key={cmenuItems.map(i => i.key).join('-')} aria-label="Static Actions" items={cmenuItems} onAction={key => {
           const menu = [
             { key: ETH, name: ETH },
             { key: STRK, name: STRK },

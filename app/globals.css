@@ -3,14 +3,28 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Default to dark palette to preserve current look */
+  --background: #2D242F;
+  --foreground: #ededed;
+  /* Semantic color tokens for app surfaces */
+  --card: #212429;
+  --card-foreground: #ededed;
+  --muted: #1f2226;
+  --muted-foreground: #a3a3a3;
+  --border: #2f3238;
+  --accent: #60a5fa;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #2D242F;
     --foreground: #ededed;
+    --card: #212429; /* aligns with prior hardcoded surface */
+    --card-foreground: #ededed;
+    --muted: #1f2226;
+    --muted-foreground: #a3a3a3;
+    --border: #2f3238;
+    --accent: #60a5fa;
   }
 }
 
