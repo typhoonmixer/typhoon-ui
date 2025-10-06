@@ -1,7 +1,7 @@
 "use client"
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNetwork, useProvider } from "@starknet-react/core";
-import { Contract, hash } from 'starknet';
+import { Contract, hash, events as snEvents, CallData as SNCallData, createAbiParser } from 'starknet';
 import { mainnet } from '@starknet-react/chains';
 import typhoonMain from '../../typhoon.json' assert { type: 'json' }
 import typhoonTestnet from '../../typhoon-testnet.json' assert { type: 'json' }
@@ -86,44 +86,55 @@ export default function ReadPanel({
         const pool = await typhoon.getPool(tokenToAddress[token], denomFull);
         const poolAddr = '0x' + pool.toString(16);
 
-        // Get latest events near the tip; use bounded window
+        // Simple approach: scan last 20k blocks on Typhoon contract and parse Deposit events by pool
         const current = await provider.getBlockNumber();
-        const fromBlock = Math.max(0, Number(current) - 15000); // window
-        const res = await provider.getEvents({
-          address: poolAddr,
-          from_block: { block_number: fromBlock },
-          to_block: { block_number: Number(current) },
-          chunk_size: 100,
-        });
+        const fromBlock = Math.max(0, Number(current) - 20000);
+        let all = [];
+        let token = undefined;
+        do {
+          const page = await provider.getEvents({
+            address: resolvedTyphoonAddress,
+            from_block: { block_number: fromBlock },
+            to_block: { block_number: Number(current) },
+            chunk_size: 200,
+            continuation_token: token,
+          });
+          all = all.concat(page.events || []);
+          token = page.continuation_token;
+        } while (token);
 
-        // Prefer deposit-like events by selector, fallback to all
-        const selectors = [
-          hash.getSelectorFromName('Deposit')?.toLowerCase?.(),
-          hash.getSelectorFromName('Deposited')?.toLowerCase?.(),
-          hash.getSelectorFromName('NewDeposit')?.toLowerCase?.(),
-        ].filter(Boolean);
-        const all = res?.events || [];
-        const filtered = all.filter(e => selectors.includes(String(e?.keys?.[0] || '').toLowerCase()));
-        const evs = (filtered.length ? filtered : all).sort((a,b) => (b.block_number||0) - (a.block_number||0));
-        const top = evs.slice(0, 10);
+        const abiEvents = snEvents.getAbiEvents(typhoonAbi);
+        const abiStructs = SNCallData.getAbiStruct(typhoonAbi);
+        const abiEnums = SNCallData.getAbiEnum(typhoonAbi);
+        const parser = createAbiParser(typhoonAbi);
+        const parsed = snEvents.parseEvents(all, abiEvents, abiStructs, abiEnums, parser);
 
-        // Map to time ago using block timestamps
-        const out = [];
-        for (let i = 0; i < top.length; i++) {
-          const e = top[i];
-          let ts = undefined;
-          try {
-            const blk = await provider.getBlockWithTxHashes(e.block_number);
-            ts = blk?.timestamp;
-          } catch {}
-          out.push({
-            index: Math.max(0, Number(poolCount || 0) - i),
+        // Filter for Deposit events for this pool and dedupe by tx hash
+        const seen = new Set();
+        const matched = [];
+        for (let i = 0; i < parsed.length; i++) {
+          const p = parsed[i]?.["typhoon::Typhoon::Typhoon::Deposit"];
+          const raw = all[i];
+          if (!p || !raw) continue;
+          const isPool = ("0x" + p.pool.toString(16)).toLowerCase() === poolAddr.toLowerCase();
+          if (!isPool) continue;
+          if (seen.has(raw.transaction_hash)) continue;
+          seen.add(raw.transaction_hash);
+          matched.push(raw);
+        }
+        matched.sort((a, b) => (b.block_number || 0) - (a.block_number || 0));
+        const top = matched.slice(0, 10);
+        const rows = await Promise.all(top.map(async (e, idx) => {
+          let ts;
+          try { ts = (await provider.getBlockWithTxHashes(e.block_number))?.timestamp; } catch {}
+          return {
+            index: idx + 1,
             timeAgo: ts ? formatAgo(Number(ts)) : '—',
             blockNumber: e.block_number,
             txHash: e.transaction_hash,
-          });
-        }
-        setLatest(out);
+          };
+        }));
+        setLatest(rows);
       } catch (e) {
         setError('Unable to fetch recent deposits');
       } finally { setLoading(false); }

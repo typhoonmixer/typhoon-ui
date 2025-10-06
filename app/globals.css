@@ -4,15 +4,15 @@
 
 :root {
   /* Dark neutral grayscale palette */
-  --background: #0f1115;        /* near-black neutral */
+  --background: #0a0a0a;        /* neutral near-black */
   --foreground: #ffffff;        /* bright white for legibility */
   /* Semantic color tokens for app surfaces */
-  --card: #14171b;              /* neutral-900-ish */
+  --card: #111111;              /* neutral dark card */
   --card-foreground: #ffffff;
-  --muted: #1a1d22;             /* subdued surface */
-  --muted-foreground: #cbd5e1;  /* slate-300 for better legibility */
-  --border: #2a2f36;            /* neutral-700 */
-  /* Accent: soft mint with strong contrast on dark */
+  --muted: #141414;             /* neutral muted surface */
+  --muted-foreground: #d4d4d8;  /* zinc-300 for better legibility */
+  --border: #222222;            /* neutral border */
+  /* Accent */
   --accent: #D6B4F8;            /* lavender accent */
   --accent-soft: #D6B4F8;       /* same hue for consistency */
   --accent-foreground: #121317; /* dark text for contrast on accent */
@@ -21,13 +21,13 @@
 /* Keep the same grayscale palette regardless of system scheme */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0f1115;
+    --background: #0a0a0a;
     --foreground: #ffffff;
-    --card: #14171b;
+    --card: #111111;
     --card-foreground: #ffffff;
-    --muted: #1a1d22;
-    --muted-foreground: #cbd5e1;
-    --border: #2a2f36;
+    --muted: #141414;
+    --muted-foreground: #d4d4d8;
+    --border: #222222;
     --accent: #D6B4F8;
     --accent-soft: #D6B4F8;
     --accent-foreground: #121317;
