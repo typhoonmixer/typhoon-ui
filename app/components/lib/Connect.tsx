@@ -32,6 +32,7 @@ const Wallet = ({
     //@ts-ignore
     popover?.hidePopover();
     localStorage.setItem("lastUsedConnector", connector.name);
+    console.log("Connected to", connector.name);
   }
 
   return (

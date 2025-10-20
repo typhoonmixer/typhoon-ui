@@ -3,6 +3,7 @@ import {
   useAccount,
   useDisconnect,
   useStarkProfile,
+  useConnect,
   useSwitchChain,
   useNetwork,
 } from "@starknet-react/core";
@@ -16,6 +17,7 @@ import { constants } from "starknet";
 
 const UserModal = () => {
   const { address } = useAccount();
+  
 
   const { disconnect } = useDisconnect();
   const [imageError, setImageError] = useState(false);

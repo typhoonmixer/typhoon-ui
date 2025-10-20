@@ -13,7 +13,7 @@ export default function Navbar() {
                 <span className="text-white text-2xl font-bold">Typhoon</span>
             </Link>
             <Link href="/compliance" className="ml-4"><span className={` text-base font-semibold ${pathname === '/compliance' ? 'text-blue-500' : 'text-white'} hover:text-blue-500`}>Compliance</span></Link>
-            <Link href="/anonymousaccount" className="ml-8"><span className={` text-base font-semibold ${pathname === '/anonymousaccount' ? 'text-blue-500' : 'text-white'} hover:text-blue-500`}>Anonymous Account</span></Link>
+            <Link href="/anonymousAccount" className="ml-8"><span className={` text-base font-semibold ${pathname === '/anonymousAccount' ? 'text-blue-500' : 'text-white'} hover:text-blue-500`}>Anonymous Account</span></Link>
             <a target="_blank" rel="noopener noreferrer" href='https://typhoon-2.gitbook.io/typhoon-docs' className="ml-8"><span className='text-base font-semibold text-white hover:text-blue-500'>Docs</span></a>
         </nav>
     );

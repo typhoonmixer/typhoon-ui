@@ -31,6 +31,7 @@ import axios from "axios";
 import {
   useAccount,
   useContract,
+  useConnect,
   useSendTransaction
 } from "@starknet-react/core";
 import { ChevronDown, Info } from "lucide-react";
@@ -530,6 +531,7 @@ const MainComponent = () => {
       console.log(selectedTransferToken.name)
       let min = await sdk.get_token_minimal_amount(tokenList[selectedTransferToken.name])
       setMinimalRequired(getCompressedDenomination(min.toString(), tokenDecimals[selectedTransferToken.name]))
+
     }
     getMin()
   }, [selectedTransferToken])
@@ -908,7 +910,7 @@ const MainComponent = () => {
           </div>
 
           <div className="text-right text-white text-base mt-1">
-            Minimum amount required: {summarizeNumber(Number(minimalRequired))} {selectedTransferToken.name}
+            Minimum amount required: {minimalRequired[0] == '0'?minimalRequired: summarizeNumber(Number(minimalRequired))} {selectedTransferToken.name}
           </div>
         </div>
         <div className="w-full mt-2 h-full p-4 bg-zinc-800 rounded-2xl shadow-md">

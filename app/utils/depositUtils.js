@@ -4,7 +4,7 @@ import $u from './$u.js';
 const wc = require("./witness_calculator.js");
 import { RpcProvider, Contract, constants, types, hash, events, CallData, num } from 'starknet-v7';
 const typhoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
-const provider = new RpcProvider({ nodeUrl: "https://starknet-mainnet.public.blastapi.io/rpc/v0_8" });
+const provider = new RpcProvider({ nodeUrl: "https://rpc.starknet.lava.build:443" });
 
 
 export async function fetchDeposits(pool) {
