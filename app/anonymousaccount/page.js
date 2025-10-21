@@ -134,6 +134,9 @@ export default function Home() {
         <p>
           To deploy an Anonymous Account, you need to deposit an arbitrary amount into any Typhoon's pools first, then this amount is mixed and sended to your anonymous account, this ensure that there is no link between you and your anonymous account and at the same time you have total control over your anonymous account.
         </p>
+        <p>
+          IF YOU WANT TO USE YOUR ANONYMOUS ACCOUNT IN THE BROWSER EXTENSION, MAKE SURE TO DEPLOY IT USING A READY(ARGENT) ACCOUNT.
+        </p>
         <div className='flex' style={{ justifyContent: 'center', marginTop: '20px' }}>
           <div className='relative bg-zinc-900 w5-[35%] p-4 px-6 rounded-xl  min-h-[200px]' style={{ justifyContent: 'center', width: '600px', height: '350px', marginBottom: '100px' }}>
             {content}
