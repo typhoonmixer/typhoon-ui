@@ -102,8 +102,13 @@ export default function Home() {
   }, [openTransferTokenDD])
 
   useEffect(() => {
+    console.log(balance)
     setContent(transferContent())
   }, [balance])
+
+  useEffect(() => {
+    setContent(transferContent())
+  }, [address])
 
   useEffect(() => {
     setContent(transferContent())
@@ -315,7 +320,7 @@ export default function Home() {
   }
 
   function transferContent() {
-
+    console.log("address", address)
     if (address != undefined) {
       get_balance(address).then((b) => {
         let cd = getCompressedDenomination(b, tokenDecimals[selectedTransferToken.name])
