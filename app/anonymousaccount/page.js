@@ -35,11 +35,14 @@ export default function Home() {
   const transferTokens = [
     { name: "STRK", src: "starknetlogo.svg" },
     { name: "ETH", src: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png" },
-    { name: "SCHIZODIO", src: "schizodio_logo.jpg" },
     { name: "WBTC", src: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599/logo.png" },
     { name: "tBTC", src: "tbtclogo.png" },
+    { name: "SolvBTC", src: "https://assets.coingecko.com/coins/images/36800/standard/solvBTC.png"},
     { name: "USDC", src: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png" },
-    { name: "UNO", src: "unologo.png" }
+    { name: "USDT", src: "https://assets.coingecko.com/coins/images/325/small/Tether.png"},
+    { name: "SCHIZODIO", src: "schizodio_logo.jpg" },
+    { name: "UNO", src: "unologo.png" },
+    
   ]
   const [selectedTransferToken, setSelectedTransferToken] = useState(transferTokens[0]);
   const [openTransferTokenDD, setOpenTransferTokenDD] = useState(false);
@@ -97,6 +100,10 @@ export default function Home() {
   useEffect(() => {
     setContent(transferContent())
   }, [openTransferTokenDD])
+
+  useEffect(() => {
+    setContent(transferContent())
+  }, [balance])
 
   useEffect(() => {
     setContent(transferContent())
