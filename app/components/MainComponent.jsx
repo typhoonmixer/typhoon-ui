@@ -61,7 +61,7 @@ const MainComponent = () => {
 
   const tokenToSrc = {
     "STRK": "starknetlogo.svg",
-    "ETH": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png",
+    "ETH": "https://imagedelivery.net/0xPAQaDtnQhBs8IzYRIlNg/e07829b7-0382-4e03-7ecd-a478c5aa9f00/logo",
     "WBTC": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599/logo.png",
     "tBTC": "tbtclogo.png",
     "SolvBTC": "https://assets.coingecko.com/coins/images/36800/standard/solvBTC.png",
@@ -222,7 +222,7 @@ const MainComponent = () => {
 
   const transferTokens = [
     { name: "STRK", src: "starknetlogo.svg" },
-    { name: "ETH", src: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png" },
+    { name: "ETH", src: "https://imagedelivery.net/0xPAQaDtnQhBs8IzYRIlNg/e07829b7-0382-4e03-7ecd-a478c5aa9f00/logo" },
     { name: "SolvBTC", src: "https://assets.coingecko.com/coins/images/36800/standard/solvBTC.png" },
     { name: "WBTC", src: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599/logo.png" },
     { name: "tBTC", src: "tbtclogo.png" },
