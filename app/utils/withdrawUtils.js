@@ -42,12 +42,13 @@ export async function generateProofCalldata(note, recipient, paymaster) {
     const lastBlock = await provider.getBlock('latest');
     const keyFilter = [[num.toHex(hash.starknetKeccak('Add'))]];
     let parsedAddEvents = await getAddEvents(Number(receipt.block_number), lastBlock.block_number, note.pool, keyFilter)
-
+   
     let [C, RL, currentLevel, count] = await getCandRl(depositEvent.leafs, parsedAddEvents, note.pool, Number(receipt.block_number))
+    
     let filteredleafs = depositEvent.leafs.filter(val => val != 0n)
     let D = getD(parsedAddEvents, depositEvent.d, filteredleafs[filteredleafs.length - 1])
     
-
+   
     let dd = getDD(D, currentLevel)
   
     let relayerFee = 0n
@@ -90,7 +91,7 @@ export async function generateProofCalldata2(secret, nullifier, txHash, pool, re
     await garaga.init();
     const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
     const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
-    console.log("proof 2")
+    
     let receipt = await provider.waitForTransaction(txHash)
 
     let [commitment, nullifierHash] = await commitmentAndNullifierHash(secret, nullifier)
@@ -176,7 +177,7 @@ async function fetchLevel(block_number, level, lvFullIndex, pool) {
     let levelArr = []
     let ll = lvFullIndex % 4n
     for (let i = 0; i < Number(ll.toString()); i++) {
-        levelArr[i] = filteredEvents[(filteredEvents.length - 1) - i].value
+        levelArr[i] = filteredEvents[(filteredEvents.length - 2) - i].value
     }
     return levelArr
 }
@@ -245,7 +246,6 @@ async function getCandRl(leafs, addEvents, pool, block_number) {
     let currentLevel = 0n
     let currentLL = leafLevel.length
 
-    debugger;
     RL = [...leafs]
     C.push([leafs[0], leafs[1], leafs[2], leafs[3]])
     for (let i = 0; i < 125; i++) {
@@ -260,7 +260,6 @@ async function getCandRl(leafs, addEvents, pool, block_number) {
             break
         }
     }
-
     for (let i = leafIndex + 1; i < addEvents.length; i++) {
         if (addEvents[i].level == 0n) {
             count = addEvents[i].lvFullIndex
@@ -276,7 +275,7 @@ async function getCandRl(leafs, addEvents, pool, block_number) {
             }
             if (C[currentLevel][0] == 0n) {
                 let previousRoots = await fetchLevel(block_number, currentLevel, nonZeroIndex, pool)
-
+                
                 previousRoots.reverse()
                 for (let j = 0; j < previousRoots.length; j++) {
                     C[currentLevel][j] = previousRoots[j]
@@ -295,7 +294,7 @@ async function getCandRl(leafs, addEvents, pool, block_number) {
             } else if (C[currentLevel][0] == 0n) {
 
                 let previousRoots = await fetchLevel(block_number, addEvents[i].level, addEvents[i].lvFullIndex, pool)
-
+                
                 if (!previousRoots.includes(addEvents[i].value)) {
                     previousRoots[ll] = addEvents[i].value
 

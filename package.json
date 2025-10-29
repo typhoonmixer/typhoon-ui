@@ -52,7 +52,7 @@
     "starknet-v7": "npm:starknet@7.6.4",
     "starknetkit": "^1.1.9",
     "tweetnacl": "^1.0.3",
-    "typhoon-sdk": "^1.1.7",
+    "typhoon-sdk": "^1.1.8",
     "url": "^0.11.4"
   },
   "devDependencies": {
