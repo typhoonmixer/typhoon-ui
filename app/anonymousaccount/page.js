@@ -41,8 +41,9 @@ export default function Home() {
     { name: "USDC", src: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png" },
     { name: "USDT", src: "https://assets.coingecko.com/coins/images/325/small/Tether.png"},
     { name: "SCHIZODIO", src: "schizodio_logo.jpg" },
+    { name: "LORDS", src: "https://assets.coingecko.com/coins/images/22171/small/Frame_1.png" },
+    { name: "SURVIVOR", src: "https://lootsurvivor.io/images/survivor_token.png" },
     { name: "UNO", src: "unologo.png" },
-    
   ]
   const [selectedTransferToken, setSelectedTransferToken] = useState(transferTokens[0]);
   const [openTransferTokenDD, setOpenTransferTokenDD] = useState(false);

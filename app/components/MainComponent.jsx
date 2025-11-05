@@ -68,7 +68,10 @@ const MainComponent = () => {
     "USDC": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png",
     "USDT": "https://assets.coingecko.com/coins/images/325/small/Tether.png",
     "SCHIZODIO": "schizodio_logo.jpg",
+    "SURVIVOR": "https://lootsurvivor.io/images/survivor_token.png",
+    "LORDS": "https://assets.coingecko.com/coins/images/22171/small/Frame_1.png",
     "UNO": "unologo.png",
+
 
   }
   const [srcToken, setSrcToken] = useState(STRK)
@@ -89,7 +92,9 @@ const MainComponent = () => {
     "WBTC": "0x03fe2b97c1fd336e750087d68b9b867997fd64a2661ff3ca5a7c771641e8e7ac",
     "tBTC": "0x04daa17763b286d1e59b97c283c0b8c949994c361e426a28f743c67bdfe9a32f",
     "SolvBTC": "0x0593e034dda23eea82d2ba9a30960ed42cf4a01502cc2351dc9b9881f9931a68",
-    "SCHIZODIO": "0x00acc2fa3bb7f6a6726c14d9e142d51fe3984dbfa32b5907e1e76425177875e2"
+    "SCHIZODIO": "0x00acc2fa3bb7f6a6726c14d9e142d51fe3984dbfa32b5907e1e76425177875e2",
+    "LORDS": "0x0124aeb495b947201f5faC96fD1138E326AD86195B98df6DEc9009158A533B49",
+    "SURVIVOR": "0x042DD777885AD2C116be96d4D634abC90A26A790ffB5871E037Dd5Ae7d2Ec86B"
   }
 
   const [noteValue, setNoteValue] = useState("")
@@ -169,7 +174,7 @@ const MainComponent = () => {
     { key: denominationsList[tokenList["STRK"]][1], name: denominationsList[tokenList["STRK"]][1] },
     { key: denominationsList[tokenList["STRK"]][2], name: denominationsList[tokenList["STRK"]][2] },
     { key: denominationsList[tokenList["STRK"]][3], name: denominationsList[tokenList["STRK"]][3] },
-    { key: denominationsList[tokenList["STRK"]][3], name: denominationsList[tokenList["STRK"]][4] },
+    { key: denominationsList[tokenList["STRK"]][4], name: denominationsList[tokenList["STRK"]][4] },
   ]
 
   const [dselectedItem, setDSelectedItem] = useState(denominationsList[tokenList["STRK"]][0])
@@ -185,7 +190,9 @@ const MainComponent = () => {
     { key: 'tBTC', name: 'tBTC' },
     { key: 'SolvBTC', name: 'SolvBTC' },
     { key: 'SCHIZODIO', name: 'SCHIZODIO' },
-    { key: 'USDT', name: 'USDT' }
+    { key: 'USDT', name: 'USDT' },
+    { key: 'LORDS', name: 'LORDS' },
+    { key: 'SURVIVOR', name: 'SURVIVOR' },
   ]
   const [cselectedItem, setCSelectedItem] = useState("STRK")
   const [cignoreValue, setCIgnoreValue] = useState("STRK")
@@ -229,6 +236,8 @@ const MainComponent = () => {
     { name: "USDC", src: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png" },
     { name: "USDT", src: "https://assets.coingecko.com/coins/images/325/small/Tether.png" },
     { name: "SCHIZODIO", src: "schizodio_logo.jpg" },
+    { name: "LORDS", src: "https://assets.coingecko.com/coins/images/22171/small/Frame_1.png" },
+    { name: "SURVIVOR", src: "https://lootsurvivor.io/images/survivor_token.png" },
     { name: "UNO", src: "unologo.png" },
 
   ]
@@ -249,6 +258,8 @@ const MainComponent = () => {
     { name: "USDC" },
     { name: "USDT" },
     { name: "SCHIZODIO" },
+    { name: "LORDS" },
+    { name: "SURVIVOR" },
     { name: "UNO" }
   ]
   const [openDepositTokenDD, setOpenDepositTokenDD] = useState(false);
@@ -427,7 +438,9 @@ const MainComponent = () => {
       { key: 'tBTC', name: 'tBTC' },
       { key: 'SolvBTC', name: 'SolvBTC' },
       { key: 'SCHIZODIO', name: 'SCHIZODIO' },
-      { key: 'USDT', name: 'USDT' }
+      { key: 'USDT', name: 'USDT' },
+      { key: 'LORDS', name: 'LORDS' },
+      { key: 'SURVIVOR', name: 'SURVIVOR' },
     ]
     let newItems = getDepositFilteredItems(cignoreValue, menu)
     setCMenuItems([...newItems])
