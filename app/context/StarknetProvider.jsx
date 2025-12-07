@@ -9,7 +9,6 @@ import {
   infuraProvider,
   lavaProvider,
   blastProvider,
-  nethermindProvider,
   reddioProvider,
   StarknetConfig,
   starkscan,
@@ -18,7 +17,7 @@ import {
 import { ArgentMobileConnector } from "starknetkit/argentMobile";
 import { WebWalletConnector } from "starknetkit/webwallet";
 import dotenv from 'dotenv'
-import { RpcProvider} from 'starknet';
+import { RpcProvider } from 'starknet';
 dotenv.config()
 
 
@@ -62,8 +61,6 @@ export function StarknetProvider({ children }) {
     provider = alchemyProvider({ apiKey });
   } else if (nodeProvider == "lava" && apiKey) {
     provider = lavaProvider({ apiKey });
-  } else if (nodeProvider == "nethermind" && apiKey) {
-    provider = nethermindProvider({ apiKey });
   } else if (nodeProvider == "blast" && apiKey) {
     provider = blastProvider({ apiKey });
   } else if (nodeProvider == "reddio" && apiKey) {
@@ -83,7 +80,7 @@ export function StarknetProvider({ children }) {
 
   let lsHint = '';
   if (typeof window !== 'undefined') {
-    try { lsHint = (localStorage.getItem('preferredChain') || '').toLowerCase(); } catch {}
+    try { lsHint = (localStorage.getItem('preferredChain') || '').toLowerCase(); } catch { }
   }
   const chainHint = (lsHint || process.env.NEXT_PUBLIC_CHAIN || '').toLowerCase();
   const defaultChainId = chainHint.includes('main') ? mainnet.id : sepolia.id;
