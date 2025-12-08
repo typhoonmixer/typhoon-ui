@@ -28,7 +28,9 @@
     "app/app/page.js",
     "app/app/layout.js",
     "app/app/anonymousaccount/components/AccountCard.js",
-    "app/app/anonymousaccount/components/DeployCard.js"
+    "app/app/anonymousaccount/components/DeployCard.js",
+    "app/app/anonymousaccount/components/AccountsList.js",
+    "app/components/Logo.js"
   ],
   "exclude": ["node_modules"]
 }

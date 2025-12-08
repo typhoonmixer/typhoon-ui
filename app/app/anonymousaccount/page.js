@@ -45,11 +45,11 @@ export default function AnonymousAccountPage() {
     <div className="min-h-screen bg-background text-foreground py-4 px-4 md:px-8">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16 space-y-4">
-          <h1 className="text-2xl font-bold text-card-foreground">
+          <h1 className="text-lg lg:text-2xl font-bold text-card-foreground">
             Anonymous Accounts
           </h1>
 
-          <div className="max-w-3xl mx-auto space-y-4 text-muted-foreground leading-relaxed text-sm/7 text-justify">
+          <div className="max-w-3xl mx-auto space-y-4 text-muted-foreground leading-relaxed text-xs/5 lg:text-sm/7 text-justify">
             <p>
               Typhoon Anonymous accounts will empower you with a second layer of
               privacy. Create an Anonymous Account on Typhoon to transact freely
@@ -70,7 +70,7 @@ export default function AnonymousAccountPage() {
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           <DeployCard
             selectedToken={selectedToken}
             setSelectedToken={setSelectedToken}

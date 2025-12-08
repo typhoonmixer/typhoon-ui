@@ -4,7 +4,7 @@ import FooterInfo from "../components/FooterInfo";
 function layout({ children }) {
   return (
     <StarknetProvider>
-      <div className="min-h-[100dvh] flex flex-col overflow-auto">
+      <div className="min-h-[100dvh] flex flex-col overflow-auto relative">
         <Navbar />
         <main className="flex-1 pb-16">{children}</main>
         <footer className="fixed bottom-0 left-0 right-0">

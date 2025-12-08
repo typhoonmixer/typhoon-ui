@@ -5,6 +5,7 @@ import React, { useState } from "react";
 
 function SettingsDropDown({ theme, changeTheme, setIsSettingsOpen }) {
   const [rpc, setRpc] = useState("blockscoutRPC");
+  const [apiKey, setApiKey] = useState("");
   const { provider } = useProvider();
 
   return (
@@ -87,6 +88,18 @@ function SettingsDropDown({ theme, changeTheme, setIsSettingsOpen }) {
               <span className="text-[10px] text-green-500">OK</span>
             </div>
           )}
+        </div>
+        <div>
+          <label className="text-sm font-medium text-foreground mb-2 block">
+            RPC Key
+          </label>
+          <input
+            type="text"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder="Paste your RPC key"
+            className="w-full bg-muted/50 border border-border text-foreground text-sm rounded-lg px-3 py-2.5 focus:border-accent focus:outline-none placeholder:text-muted-foreground/50 transition-colors"
+          />
         </div>
 
         {/* Actions */}

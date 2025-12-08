@@ -85,10 +85,10 @@ const Navbar = () => {
               Compliance
             </Link>
             <Link
-              href="#developers"
+              href="#anonymous"
               className="hover:text-foreground transition-colors"
             >
-              Developers
+              Anonymous Accounts
             </Link>
           </div>
 
@@ -123,9 +123,7 @@ const Navbar = () => {
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-[60] bg-background/95 backdrop-blur-xl animate-in slide-in-from-right duration-300 md:hidden flex flex-col p-6">
           <div className="flex justify-between items-center mb-12">
-            <span className="font-bold text-xl flex items-center gap-2">
-              <Wind className="text-accent" /> Typhoon
-            </span>
+            <Logo />
             <button onClick={() => setMobileMenuOpen(false)} className="p-2">
               <X size={28} />
             </button>
@@ -135,11 +133,11 @@ const Navbar = () => {
             <Link href="#features" onClick={() => setMobileMenuOpen(false)}>
               Features
             </Link>
+            <Link href="#anonymous" onClick={() => setMobileMenuOpen(false)}>
+              Anonymous Accounts
+            </Link>
             <Link href="#compliance" onClick={() => setMobileMenuOpen(false)}>
               Compliance
-            </Link>
-            <Link href="#developers" onClick={() => setMobileMenuOpen(false)}>
-              Developers
             </Link>
           </div>
 
@@ -182,7 +180,7 @@ export default function LandingPage() {
       <Navbar />
 
       {/* --- HERO --- */}
-      <section className="relative pt-40 pb-20 md:pt-52 md:pb-32 px-6">
+      <section className="relative pt-40 pb-20 md:pt-40 md:pb-32 px-6">
         {/* Glow Effect */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[300px] md:w-[800px] h-[300px] md:h-[500px] bg-accent blur-[120px] rounded-full pointer-events-none opacity-20 dark:opacity-20 mix-blend-screen"></div>
 
@@ -284,7 +282,7 @@ export default function LandingPage() {
 
       {/* --- ANONYMOUS ACCOUNTS (NEW) --- */}
       <section
-        id="accounts"
+        id="anonymous"
         className="py-24 md:py-32 px-6 relative overflow-hidden"
       >
         <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-16 items-center">

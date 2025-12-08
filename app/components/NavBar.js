@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-
+import MobileMenuOverlay from "./MobileMenuOverlay";
 import Link from "next/link";
-import { Wallet2, Lock, SlidersHorizontal } from "lucide-react";
+import { Wallet2, Lock, SlidersHorizontal, Menu, X } from "lucide-react";
 import { Toaster } from "react-hot-toast";
 import { useAccount } from "@starknet-react/core";
 import NetworkSwitcher from "./lib/NetworkSwitcher";
@@ -17,8 +17,24 @@ export default function Navbar() {
   const pathname = usePathname();
   const { address } = useAccount();
   const [theme, setTheme] = useState("dark");
+
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileSettingsOpen, setIsMobileSettingsOpen] = useState(false);
+
   const settingsRef = useRef(null);
+
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isMobileMenuOpen]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -66,14 +82,23 @@ export default function Navbar() {
       pathname === path ? "text-accent" : "text-foreground"
     }`;
 
+  const handleWalletClick = () => {
+    if (address) {
+      document.getElementById("user-popover")?.togglePopover?.();
+    } else {
+      document.getElementById("connect-modal")?.togglePopover?.();
+    }
+    setIsMobileMenuOpen(false);
+  };
+
   return (
     <>
-      <nav className="w-full bg-transparent px-4 md:px-[120px] relative z-50">
+      <nav className="w-full bg-transparent px-4 md:px-8 lg:px-[120px] relative z-50">
         <div className="mx-auto py-4 flex items-center justify-between">
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-10">
             <Logo classname="text-foreground hover:text-accent" href="/app" />
 
-            <div className="hidden md:flex items-center gap-6">
+            <div className="hidden lg:flex items-center gap-4">
               <Link href="/app" className={linkClass("/app")}>
                 Dashboard
               </Link>
@@ -100,18 +125,12 @@ export default function Navbar() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-3">
             <NetworkSwitcher />
 
             <button
               aria-label={address ? "Account" : "Connect"}
-              onClick={() => {
-                if (address) {
-                  document.getElementById("user-popover")?.togglePopover?.();
-                } else {
-                  document.getElementById("connect-modal")?.togglePopover?.();
-                }
-              }}
+              onClick={handleWalletClick}
               className="grid h-10 w-10 place-content-center rounded-lg border border-border bg-muted/30 hover:bg-muted/50 transition-colors"
             >
               <Wallet2 className="h-5 w-5 text-card-foreground" />
@@ -138,19 +157,40 @@ export default function Navbar() {
               </button>
 
               {isSettingsOpen && (
-                <SettingsDropDown
-                  theme={theme}
-                  changeTheme={changeTheme}
-                  setIsSettingsOpen={setIsSettingsOpen}
-                />
+                <div className="absolute right-0 top-12 z-[100]">
+                  <SettingsDropDown
+                    theme={theme}
+                    changeTheme={changeTheme}
+                    setIsSettingsOpen={setIsSettingsOpen}
+                  />
+                </div>
               )}
             </div>
-
-            <ConnectButton className="hidden" text="" />
-            <UserModalMount />
           </div>
+
+          <button
+            className="lg:hidden p-2 text-foreground"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
         </div>
+
+        {isMobileMenuOpen && (
+          <MobileMenuOverlay
+            linkClass={linkClass}
+            handleWalletClick={handleWalletClick}
+            isMobileSettingsOpen={isMobileSettingsOpen}
+            setIsMobileSettingsOpen={setIsMobileSettingsOpen}
+            theme={theme}
+            changeTheme={changeTheme}
+          />
+        )}
+
+        <ConnectButton className="hidden" text="" />
+        <UserModalMount />
       </nav>
+
       <Toaster
         position="bottom-right"
         toastOptions={{

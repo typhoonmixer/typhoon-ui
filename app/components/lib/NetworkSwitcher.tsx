@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useId } from "react";
 import { useNetwork, useSwitchChain } from "@starknet-react/core";
 import { mainnet, sepolia } from "@starknet-react/chains";
 import GenericModal from "../../utils/GenericModal";
@@ -14,6 +14,11 @@ export default function NetworkSwitcher() {
   const { chain } = useNetwork();
   const { switchChain, switchChainAsync, isPending } = useSwitchChain({});
   const [mounted, setMounted] = React.useState(false);
+
+  // Generate a unique ID for this specific instance of the switcher
+  const uniqueId = useId();
+  const modalId = `network-modal-${uniqueId.replace(/:/g, "")}`;
+
   React.useEffect(() => setMounted(true), []);
 
   const current = React.useMemo(() => {
@@ -26,9 +31,8 @@ export default function NetworkSwitcher() {
     return networks.find((n) => n.id === chain?.id)?.name || "Unknown";
   }, [mounted, chain?.id]);
 
-  const togglePopover = (id: string) => {
-    const pop = document.getElementById(id);
-    // @ts-ignore
+  const togglePopover = () => {
+    const pop = document.getElementById(modalId);
     pop?.togglePopover?.();
   };
 
@@ -36,8 +40,8 @@ export default function NetworkSwitcher() {
     <>
       <button
         aria-haspopup="dialog"
-        onClick={() => togglePopover("network-modal")}
-        className="inline-flex items-center rounded-lg border border-accent bg-muted/20 hover:bg-muted/40"
+        onClick={togglePopover}
+        className="inline-flex items-center rounded-lg border border-accent bg-muted/20 hover:bg-muted/40 transition-colors"
       >
         <div className="grid h-8 w-8 place-content-center rounded-md bg-accent text-accent-foreground">
           <span className="text-xs font-semibold">
@@ -51,22 +55,26 @@ export default function NetworkSwitcher() {
 
       {mounted && (
         <GenericModal
-          popoverId="network-modal"
-          style="mx-auto mt-16 w-[90vw] max-w-[20rem] rounded-[12px] border border-border bg-card p-3"
+          popoverId={modalId}
+          // Responsive styles:
+          // - fixed/inset-0/m-auto: Centers native popover on mobile & desktop
+          // - z-[1000]: Ensures it sits above mobile menu (which is z-40)
+          // - w-[90vw]: Prevents overflow on small phones
+          style="fixed inset-0 m-auto z-[1000] w-[90vw] max-w-[20rem] h-fit rounded-xl border border-border bg-card p-4 shadow-2xl backdrop:bg-black/50"
         >
-          <div className="flex items-center justify-between px-1 pb-2">
-            <span className="text-sm text-muted-foreground">
+          <div className="flex items-center justify-between px-1 pb-3 mb-2 border-b border-border">
+            <span className="text-sm font-medium text-muted-foreground">
               Choose network
             </span>
             <button
-              // @ts-ignore
-              popoverTarget="network-modal"
+              popoverTarget={modalId}
               popoverTargetAction="hide"
-              className="grid h-7 w-7 place-content-center rounded-full hover:bg-muted"
+              className="grid h-7 w-7 place-content-center rounded-full hover:bg-muted text-muted-foreground transition-colors"
             >
               ×
             </button>
           </div>
+
           <div className="flex flex-col gap-2">
             {networks.map((n) => {
               const active = n.id === chain?.id;
@@ -75,48 +83,43 @@ export default function NetworkSwitcher() {
                   key={String(n.id)}
                   disabled={isPending}
                   onClick={async () => {
-                    let switched = false;
                     try {
                       const tId = toast.loading(`Switching to ${n.name}…`, {
                         position: "bottom-right",
-                        duration: 6000,
                       });
                       await switchChainAsync({ chainId: n.id.toString() });
                       toast.dismiss(tId);
                       toast.success(`Switched to ${n.name}`, {
                         position: "bottom-right",
-                        duration: 6000,
                       });
-                      switched = true;
                     } catch (e) {
-                      // Fallback for wallets that don't support programmatic switching (e.g., Braavos)
+                      // Fallback for wallets without programmatic switching
                       const pref = n.id === mainnet.id ? "mainnet" : "sepolia";
                       try {
                         localStorage.setItem("preferredChain", pref);
                       } catch {}
+
                       toast.success(
-                        `App set to ${n.name}. If your wallet didn't switch, please change it in the wallet to interact.`,
-                        { position: "bottom-right", duration: 6000 }
+                        `App set to ${n.name}. Please ensure your wallet matches.`,
+                        { position: "bottom-right" }
                       );
-                      // Reload so defaultChainId picks up preferredChain for read operations
                       window.location.reload();
                     } finally {
                       try {
-                        const pop = document.getElementById("network-modal");
-                        // @ts-ignore
+                        const pop = document.getElementById(modalId);
                         pop?.hidePopover?.();
                       } catch {}
                     }
                   }}
-                  className={`flex items-center justify-between rounded-md border px-3 py-2 text-sm ${
+                  className={`flex items-center justify-between rounded-lg border px-4 py-3 text-sm transition-all ${
                     active
-                      ? "border-accent text-accent"
+                      ? "border-accent text-accent bg-accent/5"
                       : "border-border text-card-foreground hover:bg-muted/40"
                   }`}
                 >
-                  <span>{n.name}</span>
+                  <span className="font-medium">{n.name}</span>
                   {active && (
-                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
                   )}
                 </button>
               );

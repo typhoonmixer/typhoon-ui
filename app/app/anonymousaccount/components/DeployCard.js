@@ -151,7 +151,9 @@ function DeployCard({ selectedToken, setSelectedToken, tokens }) {
 
   return (
     <div className="lg:col-span-6 bg-card border border-border rounded-2xl p-6 md:p-8 shadow-xl">
-      <h2 className="text-xl font-medium mb-8">Deploy Account</h2>
+      <h2 className="text-base lg:text-xl font-medium mb-5 lg:mb-8">
+        Deploy Account
+      </h2>
 
       <div className="space-y-6">
         <div className={`space-y-2 ${!account || loading ? "opacity-60" : ""}`}>
@@ -174,19 +176,19 @@ function DeployCard({ selectedToken, setSelectedToken, tokens }) {
 
           <div className="relative">
             <div
-              className={`flex items-center bg-muted/40 border border-border rounded-xl focus-within:border-accent transition-colors overflow-hidden ${
+              className={`flex items-center bg-muted/40 w-full border border-border rounded-xl focus-within:border-accent transition-colors overflow-hidden ${
                 !account || loading ? "cursor-not-allowed" : ""
               }`}
             >
               <button
                 onClick={() => account && setIsTokenOpen(!isTokenOpen)}
                 disabled={!account || loading}
-                className="flex items-center gap-2 px-4 py-4 border-r border-border hover:bg-muted/60 transition-colors min-w-[130px] disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                className="flex items-center gap-2 px-4 py-4 border-r border-border hover:bg-muted/60 transition-colors text-sm lg:text-lg lg:min-w-[130px] disabled:cursor-not-allowed disabled:hover:bg-transparent"
               >
                 <img
                   src={selectedToken.src}
                   alt={selectedToken.name}
-                  className="w-6 h-6 rounded-full"
+                  className="w-5 h-5 lg:w-6 lg:h-6 rounded-full"
                 />
                 <span className="font-bold">{selectedToken.name}</span>
                 <ChevronDown
@@ -203,7 +205,7 @@ function DeployCard({ selectedToken, setSelectedToken, tokens }) {
                 value={transferValue}
                 onChange={(e) => setTransferValue(e.target.value)}
                 disabled={!account || isLoadingBalance || minLoading || loading}
-                className="flex-1 bg-transparent border-none px-4 py-4 text-right text-xl font-mono focus:ring-0 outline-none placeholder:text-muted-foreground/30 disabled:cursor-not-allowed"
+                className="flex-1 bg-transparent border-none px-4 py-4 text-right text-base lg:text-xl font-mono focus:ring-0 outline-none placeholder:text-muted-foreground/30 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -273,7 +275,7 @@ function DeployCard({ selectedToken, setSelectedToken, tokens }) {
             }
           }}
           disabled={loading}
-          className="w-full py-4 bg-accent text-accent-foreground font-bold rounded-xl hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_-5px_var(--accent)] flex items-center justify-center gap-2"
+          className="w-full py-3 lg:py-4 bg-accent text-accent-foreground font-bold rounded-xl hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_-5px_var(--accent)] flex items-center justify-center gap-2"
         >
           {!account ? (
             "Connect Wallet"

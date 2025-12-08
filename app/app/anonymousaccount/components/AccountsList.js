@@ -72,7 +72,7 @@ function AccountsList() {
   return (
     <div className="lg:col-span-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium text-muted-foreground">
+        <h2 className="text-base lg:text-lg font-medium text-muted-foreground">
           Your Identities
         </h2>
         <button
