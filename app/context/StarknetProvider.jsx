@@ -4,23 +4,20 @@ import {
   alchemyProvider,
   argent,
   braavos,
-  publicProvider,
   jsonRpcProvider,
   infuraProvider,
   lavaProvider,
   blastProvider,
-  reddioProvider,
+  cartridgeProvider,
   StarknetConfig,
   starkscan,
   useInjectedConnectors,
 } from "@starknet-react/core";
 import { ArgentMobileConnector } from "starknetkit/argentMobile";
 import { WebWalletConnector } from "starknetkit/webwallet";
-import dotenv from 'dotenv'
-import { RpcProvider } from 'starknet';
-dotenv.config()
-
-
+import dotenv from "dotenv";
+import { RpcProvider } from "starknet";
+dotenv.config();
 
 export function StarknetProvider({ children }) {
   const { connectors: injected } = useInjectedConnectors({
@@ -34,11 +31,11 @@ export function StarknetProvider({ children }) {
     new ArgentMobileConnector(),
   ];
 
-  const apiKey = process.env.NEXT_PUBLIC_API_KEY
-  const nodeProvider = process.env.NEXT_PUBLIC_PROVIDER
-  const explicitRpcUrl = process.env.NEXT_PUBLIC_RPC_URL
-  const envSepolia = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL
-  const envMainnet = process.env.NEXT_PUBLIC_MAINNET_RPC_URL
+  const apiKey = process.env.NEXT_PUBLIC_API_KEY;
+  const nodeProvider = process.env.NEXT_PUBLIC_PROVIDER;
+  const explicitRpcUrl = process.env.NEXT_PUBLIC_RPC_URL;
+  const envSepolia = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL;
+  const envMainnet = process.env.NEXT_PUBLIC_MAINNET_RPC_URL;
 
   let provider;
   // If per‑chain env URLs are provided, honor them and keep provider dynamic by chain
@@ -48,7 +45,9 @@ export function StarknetProvider({ children }) {
     provider = jsonRpcProvider({
       rpc: (chain) => {
         const isMain = chain.id === mainnet.id;
-        const nodeUrl = isMain ? (envMainnet || fallbackMain) : (envSepolia || fallbackSep);
+        const nodeUrl = isMain
+          ? envMainnet || fallbackMain
+          : envSepolia || fallbackSep;
         return { nodeUrl };
       },
     });
@@ -64,7 +63,7 @@ export function StarknetProvider({ children }) {
   } else if (nodeProvider == "blast" && apiKey) {
     provider = blastProvider({ apiKey });
   } else if (nodeProvider == "reddio" && apiKey) {
-    provider = reddioProvider({ apiKey });
+    provider = cartridgeProvider({ apiKey });
   } else {
     // Default to Blast public RPC (non-random) per chain
     provider = jsonRpcProvider({
@@ -78,12 +77,18 @@ export function StarknetProvider({ children }) {
     });
   }
 
-  let lsHint = '';
-  if (typeof window !== 'undefined') {
-    try { lsHint = (localStorage.getItem('preferredChain') || '').toLowerCase(); } catch { }
+  let lsHint = "";
+  if (typeof window !== "undefined") {
+    try {
+      lsHint = (localStorage.getItem("preferredChain") || "").toLowerCase();
+    } catch {}
   }
-  const chainHint = (lsHint || process.env.NEXT_PUBLIC_CHAIN || '').toLowerCase();
-  const defaultChainId = chainHint.includes('main') ? mainnet.id : sepolia.id;
+  const chainHint = (
+    lsHint ||
+    process.env.NEXT_PUBLIC_CHAIN ||
+    ""
+  ).toLowerCase();
+  const defaultChainId = chainHint.includes("main") ? mainnet.id : sepolia.id;
   // const provider = new RpcProvider({ nodeUrl: 'https://free-rpc.nethermind.io/sepolia-juno/v0_7' });
   return (
     <StarknetConfig

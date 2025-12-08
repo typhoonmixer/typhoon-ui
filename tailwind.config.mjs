@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: "class", // Important for manual toggle
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -16,12 +17,12 @@ export default {
         "muted-foreground": "var(--muted-foreground)",
         border: "var(--border)",
         accent: "var(--accent)",
-        "accent-soft": "var(--accent-soft)",
         "accent-foreground": "var(--accent-foreground)",
+      },
+      animation: {
+        "spin-slow": "spin 20s linear infinite",
       },
     },
   },
-  plugins: [
-    require('node-uri')
-  ],
+  plugins: [require("node-uri")],
 };

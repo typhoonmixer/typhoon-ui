@@ -2,52 +2,45 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  /* Dark neutral grayscale palette */
-  --background: #0a0a0a;        /* neutral near-black */
-  --foreground: #ffffff;        /* bright white for legibility */
-  /* Semantic color tokens for app surfaces */
-  --card: #111111;              /* neutral dark card */
-  --card-foreground: #ffffff;
-  --muted: #141414;             /* neutral muted surface */
-  --muted-foreground: #d4d4d8;  /* zinc-300 for better legibility */
-  --border: #222222;            /* neutral border */
-  /* Accent */
-  --accent: #D6B4F8;            /* lavender accent */
-  --accent-soft: #D6B4F8;       /* same hue for consistency */
-  --accent-foreground: #121317; /* dark text for contrast on accent */
-}
-
-/* Keep the same grayscale palette regardless of system scheme */
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
+    /* --- LIGHT MODE DEFAULTS --- */
+    --background: #ffffff;
+    --foreground: #0a0a0a;
+
+    --card: #f4f4f5; /* zinc-100 */
+    --card-foreground: #0a0a0a;
+
+    --muted: #f4f4f5;
+    --muted-foreground: #71717a; /* zinc-500 */
+
+    --border: #e4e4e7; /* zinc-200 */
+
+    /* Brand Accent - Slightly darker in light mode for visibility, 
+       or keep it same if you want strict branding. 
+       I'm using a slightly deeper purple for better contrast on white. */
+    --accent: #a78bfa;
+    --accent-foreground: #ffffff;
+  }
+
+  .dark {
+    /* --- YOUR PROVIDED DARK THEME --- */
     --background: #0a0a0a;
     --foreground: #ffffff;
+
     --card: #111111;
     --card-foreground: #ffffff;
+
     --muted: #141414;
     --muted-foreground: #d4d4d8;
+
     --border: #222222;
-    --accent: #D6B4F8;
-    --accent-soft: #D6B4F8;
-    --accent-foreground: #121317;
+
+    --accent: #d6b4f8; /* Lavender */
+    --accent-foreground: #121317; /* Dark text on light accent */
   }
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-html, body {
-  overflow: hidden;
-  height: 100%;
-}
-
-.container {
-  color: #fff;
-  padding: 5px;
-  text-align: center;
-  min-height: 100vh;
+  @apply bg-background text-foreground;
 }
