@@ -45,7 +45,6 @@ function HeroSections() {
           </Link>
         </div>
 
-        {/* Stats Section */}
         <div className="mt-24 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 max-w-4xl mx-auto">
           {[
             { label: "Total Volume", value: "$4.2M+" },

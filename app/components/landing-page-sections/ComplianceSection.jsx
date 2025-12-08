@@ -1,6 +1,5 @@
 import { ArrowRight, ChevronRight, FileText, Lock } from "lucide-react";
 import Link from "next/link";
-import React from "react";
 
 function ComplianceSection() {
   return (
