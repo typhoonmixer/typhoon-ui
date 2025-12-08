@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useRef, use } from "react";
+import React, { useState } from "react";
 import { TyphoonSDK } from "typhoon-sdk";
 import { ArrowRight } from "lucide-react";
 import { RpcProvider, Contract } from "starknet";
@@ -154,7 +154,6 @@ export default function Home() {
     return (
       <div>
         <div className=" text-card-foreground p-6 rounded-2xl flex items-center justify-between ">
-          {/* Deposit */}
           <div className="flex-1 border-0 shadow-none rounded-2xl p-4 text-left">
             <div className="p-0">
               <div className="mb-12">
