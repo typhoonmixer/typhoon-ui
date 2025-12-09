@@ -210,7 +210,10 @@ function DeployCard({ selectedToken, setSelectedToken, tokens }) {
             </div>
 
             {isTokenOpen && (
-              <div className="absolute top-full left-0 w-64 mt-2 bg-card border border-border rounded-xl shadow-2xl z-50 max-h-64 overflow-y-auto p-1 custom-scrollbar">
+              <div
+                className="absolute mt-1 w-full bg-card border border-border rounded-xl shadow-lg"
+                style={{ zIndex: 10 }}
+              >
                 {tokens.map((token) => (
                   <button
                     key={token.name}
@@ -218,12 +221,12 @@ function DeployCard({ selectedToken, setSelectedToken, tokens }) {
                       setSelectedToken(token);
                       setIsTokenOpen(false);
                     }}
-                    className="w-full flex items-center gap-3 px-3 py-3 hover:bg-muted rounded-lg text-left transition-colors"
+                    className="flex items-center gap-2 w-full px-3 py-2 text-left text-card-foreground hover:bg-muted rounded-lg"
                   >
                     <img
                       src={token.src}
                       alt={token.name}
-                      className="w-6 h-6 rounded-full"
+                      className="w-5 h-5 rounded-full"
                     />
                     <span className="font-medium text-sm">{token.name}</span>
                     {selectedToken.name === token.name && (

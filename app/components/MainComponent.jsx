@@ -925,7 +925,7 @@ const MainComponent = () => {
           <label className="block text-sm text-muted-foreground mb-2">
             Token
           </label>
-          <div className="relative" style={{ zIndex: 10 }}>
+          <div className="relative" style={{ zIndex: 15 }}>
             <button
               className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-card rounded-lg border border-border"
               onClick={() => {
