@@ -1,14 +1,13 @@
-// app/layout.js
-import { GeistSans } from 'geist/font/sans';
-import { GeistMono } from 'geist/font/mono';
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
 import "./globals.css";
-import { StarknetProvider } from "./context/StarknetProvider";
-import Link from 'next/link';
-import Navbar from './components/NavBar'; 
 
 export const metadata = {
   title: "Typhoon",
   description: "Typhoon coin mixer",
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({ children }) {
@@ -17,8 +16,7 @@ export default function RootLayout({ children }) {
       <body
         className={`${GeistSans.className} ${GeistMono.className} antialiased`}
       >
-        <Navbar/>
-        <StarknetProvider>{children}</StarknetProvider>
+        {children}
       </body>
     </html>
   );

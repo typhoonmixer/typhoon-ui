@@ -1,5 +1,8 @@
+"use client";
 import Image from "next/image";
-import { Connector, useConnect } from "@starknet-react/core";
+import React, { useEffect, useState } from "react";
+import { Connector, useConnect, useSwitchChain } from "@starknet-react/core";
+import { constants } from 'starknet';
 import Close from "../../../public/svg/Close";
 import GenericModal from "../../utils/GenericModal";
 
@@ -22,6 +25,7 @@ const Wallet = ({
   if (src === undefined) return;
   
   const { connect } = useConnect();
+  const { switchChainAsync } = useSwitchChain({});
   
   
   const isSvg = src?.startsWith("<svg");
@@ -32,7 +36,17 @@ const Wallet = ({
     //@ts-ignore
     popover?.hidePopover();
     localStorage.setItem("lastUsedConnector", connector.name);
-    console.log("Connected to", connector.name);
+    // Try to align wallet network with app's preferred chain (best‑effort)
+    try {
+      let hint = '';
+      if (typeof window !== 'undefined') {
+        hint = (localStorage.getItem('preferredChain') || '').toLowerCase();
+        if (!hint) hint = (process.env.NEXT_PUBLIC_CHAIN || '').toLowerCase();
+      }
+      const target = hint.includes('main') ? constants.StarknetChainId.SN_MAIN : constants.StarknetChainId.SN_SEPOLIA;
+      // Fire and forget; some wallets may not support it
+      switchChainAsync({ chainId: target }).catch(() => {});
+    } catch {}
   }
 
   return (
@@ -67,15 +81,21 @@ const Wallet = ({
 
 const ConnectModal = () => {
   const { connectors } = useConnect();
+  const [mounted, setMounted] = useState(false);
+
+  // Render connector list only after mount to avoid SSR/client mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   return (
     <GenericModal
       popoverId="connect-modal"
-      style="text-white border-outline-grey mx-auto w-[90vw] rounded-[25px] border-[1px] border-solid bg-[#1c1b1f] md:h-[30rem] md:w-[45rem]"
+      style="text-card-foreground mx-auto w-[90vw] rounded-[16px] border border-border bg-card md:h-[30rem] md:w-[45rem]"
     >
       <div className="flex flex-col">
         <div className="flex w-full p-4 lg:grid lg:grid-cols-5 lg:p-0">
           <div className="lg:border-outline-grey basis-5/6 lg:col-span-2 lg:border-r-[1px] lg:border-solid lg:py-4 lg:pl-8">
-            <h2 className="my-4 text-center text-[1.125em] font-bold text-white lg:text-start">
+            <h2 className="my-4 text-center text-[1.125em] font-bold text-card-foreground lg:text-start">
               Connect a Wallet
             </h2>
           </div>
@@ -84,7 +104,7 @@ const ConnectModal = () => {
               //@ts-ignore
               popoverTarget="connect-modal"
               popoverTargetAction="hide"
-              className="bg-outline-grey grid h-8 w-8 place-content-center rounded-full"
+              className="grid h-8 w-8 place-content-center rounded-full border border-border"
             >
               <Close />
             </button>
@@ -92,18 +112,19 @@ const ConnectModal = () => {
         </div>
         <div className="flex flex-1 flex-col justify-between lg:grid lg:grid-cols-5">
           <div className="lg:border-outline-grey px-8 lg:col-span-2 lg:h-full lg:border-r-[1px] lg:border-solid">
-            <h4 className="text-text-grey mb-[1rem] font-semibold">Popular</h4>
+            <h4 className="text-muted-foreground mb-[1rem] font-semibold">Popular</h4>
 
             <div className="flex flex-col gap-4 py-8">
-              {connectors.map((connector, index) => (
-                <Wallet
-                  key={connector.id || index}
-                  src={getLightTheme(connector.icon)}
-                  name={connector.name}
-                  connector={connector}
-                  alt="alt"
-                />
-              ))}
+              {mounted &&
+                connectors.map((connector, index) => (
+                  <Wallet
+                    key={connector.id || index}
+                    src={getLightTheme(connector.icon)}
+                    name={connector.name}
+                    connector={connector}
+                    alt="alt"
+                  />
+                ))}
             </div>
           </div>
           <div className="border-red h-fit border-t-[.5px] border-solid p-4 lg:col-span-3 lg:flex lg:h-full lg:flex-col lg:border-none lg:px-8 lg:py-0">
@@ -204,10 +225,9 @@ const ConnectButton = ({
   return (
     <>
       <button
-        style={{ backgroundColor: "blue", color: "white", marginLeft: "10px" }}
         aria-haspopup="dialog"
         onClick={() => togglePopover({ targetId: "connect-modal" })}
-        className={className}
+        className={`${className} bg-accent text-accent-foreground ml-2`}
       >
         {text}
       </button>

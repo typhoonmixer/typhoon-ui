@@ -1,14 +1,18 @@
-"use client"
-import React, { useEffect, useState, useRef, use } from 'react'
-import { TyphoonSDK } from 'typhoon-sdk';
+"use client";
+import React, { useState } from "react";
+import { TyphoonSDK } from "typhoon-sdk";
 import { ArrowRight } from "lucide-react";
-import { RpcProvider, Contract } from 'starknet-v7';
-import { tokenDecimals, tokenToSymbol } from '../utils/SupportedDenominations';
-import { getCompressedDenomination } from '../utils/depositUtils';
+import { RpcProvider, Contract } from "starknet";
+import { getNodeUrl } from "../../utils/network";
+import {
+  tokenDecimals,
+  tokenToSymbol,
+} from "../../utils/SupportedDenominations";
+import { getCompressedDenomination } from "../../utils/depositUtils";
 
 export default function Home() {
-  const provider = new RpcProvider({ nodeUrl: "https://rpc.starknet.lava.build:443" });
-  const [note, setNote] = useState('');
+  const provider = new RpcProvider({ nodeUrl: getNodeUrl() });
+  const [note, setNote] = useState("");
   const [complianceContent, setComplianceContent] = useState(<div></div>);
 
   const handleInputChange = (e) => {
@@ -17,61 +21,96 @@ export default function Home() {
 
   function loadingContent() {
     return (
-      <div style={{ justifyContent: 'center', alignItems: 'center', display: 'flex' }}>
-        <img src='/Infinity.svg'></img>
-
+      <div
+        style={{
+          justifyContent: "center",
+          alignItems: "center",
+          display: "flex",
+        }}
+      >
+        <img src="/Infinity.svg"></img>
       </div>
-    )
+    );
   }
 
   const handleSubmit = async () => {
     setComplianceContent(loadingContent());
-    let sdk = new TyphoonSDK()
-    let jsonNote = JSON.parse(note)
-    let reportData = await sdk.get_compliance_data(jsonNote.secret.includes('0x') ? jsonNote.secret.slice(2) : jsonNote.secret, jsonNote.nullifier.includes('0x') ? jsonNote.nullifier.slice(2) : jsonNote.nullifier, jsonNote.txHash, jsonNote.pool)
-    const { abi: poolAbi } = await provider.getClassAt(jsonNote.pool);
-    const poolContract = new Contract(poolAbi, jsonNote.pool, provider);
+    let sdk = new TyphoonSDK();
+    let jsonNote = JSON.parse(note);
+    let reportData = await sdk.get_compliance_data(
+      jsonNote.secret.includes("0x")
+        ? jsonNote.secret.slice(2)
+        : jsonNote.secret,
+      jsonNote.nullifier.includes("0x")
+        ? jsonNote.nullifier.slice(2)
+        : jsonNote.nullifier,
+      jsonNote.txHash,
+      jsonNote.pool
+    );
+    const poolAbi = await loadAbi(provider, jsonNote.pool);
+    const poolContract = new Contract({abi: poolAbi, address: jsonNote.pool, providerOrAccount: provider});
     const token = await poolContract.token();
     const symbol = tokenToSymbol[token.toString()];
-    console.log(reportData)
-    setComplianceContent(complianceReport(reportData, symbol, jsonNote.secret.includes('0x') ? jsonNote.secret.slice(2) : jsonNote.secret, jsonNote.nullifier.includes('0x') ? jsonNote.nullifier.slice(2) : jsonNote.nullifier, jsonNote.pool));
-  }
+    console.log(reportData);
+    setComplianceContent(
+      complianceReport(
+        reportData,
+        symbol,
+        jsonNote.secret.includes("0x")
+          ? jsonNote.secret.slice(2)
+          : jsonNote.secret,
+        jsonNote.nullifier.includes("0x")
+          ? jsonNote.nullifier.slice(2)
+          : jsonNote.nullifier,
+        jsonNote.pool
+      )
+    );
+  };
   return (
-    <div className="container" style={{ justifyContent: 'center' }}>
-      <h1>
-        <span className="text-white text-xl font-bold">Typhoon</span> compliance tool
-      </h1>
-      <p>
-        Maintaining financial privacy is essential to preserving our freedoms. However, it should not come at the cost of non-compliance. With Typhoon, you can always provide cryptographically verified proof of transactional history using the "note.txt" that you download in the moment of the deposit. This might be necessary in cases where you need to show the origin of assets in your withdrawal address.
-      </p>
-      <p>
-        To generate a compliance report, please enter your Typhoon note below.
-      </p>
-      <div className="mt-5">
-        <label style={{ display: 'block', marginBottom: '5px', fontSize: '1.2em' }}>Note</label>
-        <div style={{ gap: '10px', justifyContent: 'center', display: 'flex' }}>
-          <input style={{ width: '100%', maxWidth: '600px', padding: '10px', fontSize: '1em', backgroundColor: '#222', color: '#fff', border: '1px solid #555', borderRadius: '5px' }}
-            type="text"
-            value={note}
-            onChange={handleInputChange}
-            placeholder="Please enter your note"
-          />
-          <button style={{
-            padding: '10px 20px',
-            fontSize: '1em',
-            backgroundColor: 'blue',
-            border: 'none',
-            color: '#fff',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }} onClick={handleSubmit}>Generate</button>
+    <div className="w-full">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
+        <h1 className="text-center text-2xl font-bold text-card-foreground">
+          Typhoon compliance tool
+        </h1>
+        <div className="mt-4 max-w-3xl mx-auto text-justify text-sm leading-7 text-muted-foreground">
+          <p>
+            Maintaining financial privacy is essential to preserving our
+            freedoms. However, it should not come at the cost of non-compliance.
+            With Typhoon, you can always provide cryptographically verified
+            proof of transactional history using the "note.txt" that you
+            download in the moment of the deposit. This might be necessary in
+            cases where you need to show the origin of assets in your withdrawal
+            address.
+          </p>
+          <p className="mt-3">
+            To generate a compliance report, please enter your Typhoon note
+            below.
+          </p>
         </div>
-
+        <div className="mt-5 max-w-3xl mx-auto">
+          <label className="block mb-1 text-lg text-card-foreground text-center">
+            Note
+          </label>
+          <div className="flex gap-2 justify-center">
+            <input
+              className="w-full max-w-[600px] px-3 py-2 bg-muted text-card-foreground border border-border rounded-md"
+              type="text"
+              value={note}
+              onChange={handleInputChange}
+              placeholder="Please enter your note"
+            />
+            <button
+              className="px-4 py-2 bg-accent text-accent-foreground rounded-md"
+              onClick={handleSubmit}
+            >
+              Generate
+            </button>
+          </div>
+        </div>
+        <div className="max-w-5xl mx-auto mt-6">{complianceContent}</div>
       </div>
-      {complianceContent}
-    </div >
+    </div>
   );
-
 
   function complianceReport(reportData, symbol, secret, nullifier, pool) {
     const depositDate = new Date(Number(reportData.depositDate) * 1000);
@@ -95,24 +134,35 @@ export default function Home() {
       minute: "2-digit",
       second: "2-digit",
     });
-    let compressedDepositAmount = getCompressedDenomination(reportData.depositAmount, tokenDecimals[symbol])
-    let compressedWithdrawAmount = getCompressedDenomination(reportData.withdrawAmount, tokenDecimals[symbol])
-    let compressedWithdrawFee = getCompressedDenomination(reportData.fee, tokenDecimals[symbol])
-    let compressedPaymasterFee = getCompressedDenomination(reportData.paymasterFee, tokenDecimals[symbol])
-
+    let compressedDepositAmount = getCompressedDenomination(
+      reportData.depositAmount,
+      tokenDecimals[symbol]
+    );
+    let compressedWithdrawAmount = getCompressedDenomination(
+      reportData.withdrawAmount,
+      tokenDecimals[symbol]
+    );
+    let compressedWithdrawFee = getCompressedDenomination(
+      reportData.fee,
+      tokenDecimals[symbol]
+    );
+    let compressedPaymasterFee = getCompressedDenomination(
+      reportData.paymasterFee,
+      tokenDecimals[symbol]
+    );
 
     return (
       <div>
-        <div className=" text-white p-6 rounded-2xl flex items-center justify-between ">
-          {/* Deposit */}
+        <div className=" text-card-foreground p-6 rounded-2xl flex items-center justify-between ">
           <div className="flex-1 border-0 shadow-none rounded-2xl p-4 text-left">
             <div className="p-0">
-              <div className='mb-12'>
+              <div className="mb-12">
                 <h2 className="text-xl font-bold">Deposit</h2>
                 <p className="text-blue-400">Verified</p>
-                <p className="mt-2 text-lg font-mono">{compressedDepositAmount} {symbol}</p>
+                <p className="mt-2 text-lg font-mono">
+                  {compressedDepositAmount} {symbol}
+                </p>
               </div>
-
 
               <div className="mt-4 space-y-2">
                 <Row label="Date" content={formattedDepositDate} />
@@ -125,8 +175,8 @@ export default function Home() {
 
           {/* Arrow */}
           <div className="flex items-center justify-center">
-            <div className="bg-gradient-to-r from-blue-400/30 to-blue-400/80 px-2 py-6 rounded-xl">
-              <ArrowRight className="text-white w-8 h-8" />
+            <div className="bg-gradient-to-r from-accent/30 to-accent/80 px-2 py-6 rounded-xl">
+              <ArrowRight className="text-card-foreground w-8 h-8" />
             </div>
           </div>
 
@@ -134,73 +184,122 @@ export default function Home() {
           <div className="flex-1 border-0 shadow-none text-right rounded-2xl p-4">
             <div className="p-0">
               <h2 className="text-xl font-bold">Withdrawal</h2>
-              <p className="text-blue-400">{reportData.to != ''? "Verified": "unspent"}</p>
+              <p className="text-blue-400">
+                {reportData.to != "" ? "Verified" : "unspent"}
+              </p>
               <p className="mt-2 text-lg font-mono">
-                {reportData.to != ''?compressedWithdrawAmount: "--"} {symbol}
-                <div className='flex text-right'>
+                {reportData.to != "" ? compressedWithdrawAmount : "--"} {symbol}
+                <div className="flex text-right">
                   <span className="block text-gray-400 text-sm">
-                    withdrawal fee {reportData.to != ''? compressedWithdrawFee: "--"} {symbol}
+                    withdrawal fee{" "}
+                    {reportData.to != "" ? compressedWithdrawFee : "--"}{" "}
+                    {symbol}
                   </span>
                   <span className="block text-gray-400 text-sm ml-6">
-                    Paymaster fee {reportData.to != ''? compressedPaymasterFee: "--"} {symbol}
+                    Paymaster fee{" "}
+                    {reportData.to != "" ? compressedPaymasterFee : "--"}{" "}
+                    {symbol}
                   </span>
                 </div>
-
               </p>
 
               <div className="mt-4 space-y-2">
-                <Row label="Date" right content={reportData.to != ''? formattedwithdrawDate : "--"} />
-                <Row label="Transaction" right content={reportData.to != ''? reportData.withdrawTxHash: "--"} />
-                <Row label="To" right content={reportData.to != ''? reportData.to: "--"} />
-                <Row label="NullifierHash" right content={reportData.to != ''? reportData.nullifierHash : "--"} />
+                <Row
+                  label="Date"
+                  right
+                  content={reportData.to != "" ? formattedwithdrawDate : "--"}
+                />
+                <Row
+                  label="Transaction"
+                  right
+                  content={
+                    reportData.to != "" ? reportData.withdrawTxHash : "--"
+                  }
+                />
+                <Row
+                  label="To"
+                  right
+                  content={reportData.to != "" ? reportData.to : "--"}
+                />
+                <Row
+                  label="NullifierHash"
+                  right
+                  content={
+                    reportData.to != "" ? reportData.nullifierHash : "--"
+                  }
+                />
               </div>
             </div>
           </div>
         </div>
         <div className="flex items-center justify-center">
-          {reportData.to != ''? <button className="bg-gradient-to-r from-blue-400/30 to-blue-400/80 px-2 py-3 rounded-xl" onClick={() => {
-            const htmlReport = generateComplianceReport({ secret, nullifier, pool, depositAmount: compressedDepositAmount, withdrawalAmount: compressedWithdrawAmount, withdrawFee: compressedWithdrawFee, relayerFee: compressedPaymasterFee, depositDate: formattedDepositDate, depositTx: reportData.depositTxHash, depositFrom: reportData.from, commitment: reportData.commitment, withdrawalDate: formattedwithdrawDate, withdrawalTx: reportData.withdrawTxHash, withdrawalTo: reportData.to, nullifierHash: reportData.nullifierHash, symbol });
-            // htmlStringToJpeg(htmlReport);
-            // createAndDownloadFile(htmlReport)
-            // convertToPdf(htmlReport);
-            if (typeof window !== "undefined") {
-              openReportAndPrint(htmlReport);
-            }
-            
-          }}>
-            Download PDF
-          </button>: <div></div>}
+          {reportData.to != "" ? (
+            <button
+              className="bg-gradient-to-r from-blue-400/30 to-blue-400/80 px-2 py-3 rounded-xl"
+              onClick={() => {
+                const htmlReport = generateComplianceReport({
+                  secret,
+                  nullifier,
+                  pool,
+                  depositAmount: compressedDepositAmount,
+                  withdrawalAmount: compressedWithdrawAmount,
+                  withdrawFee: compressedWithdrawFee,
+                  relayerFee: compressedPaymasterFee,
+                  depositDate: formattedDepositDate,
+                  depositTx: reportData.depositTxHash,
+                  depositFrom: reportData.from,
+                  commitment: reportData.commitment,
+                  withdrawalDate: formattedwithdrawDate,
+                  withdrawalTx: reportData.withdrawTxHash,
+                  withdrawalTo: reportData.to,
+                  nullifierHash: reportData.nullifierHash,
+                  symbol,
+                });
+                // htmlStringToJpeg(htmlReport);
+                // createAndDownloadFile(htmlReport)
+                // convertToPdf(htmlReport);
+                if (typeof window !== "undefined") {
+                  openReportAndPrint(htmlReport);
+                }
+              }}
+            >
+              Download PDF
+            </button>
+          ) : (
+            <div></div>
+          )}
         </div>
       </div>
-
     );
   }
 
   function openReportAndPrint(htmlString) {
-    if (typeof window === 'undefined') {
-      console.error('This function requires a browser environment.');
+    if (typeof window === "undefined") {
+      console.error("This function requires a browser environment.");
       return;
     }
-  
+
     const reportWindow = window.open("", "_blank");
     reportWindow.document.write(htmlString);
     reportWindow.document.close();
-  
+
     reportWindow.onload = () => {
       reportWindow.focus();
       reportWindow.print();
     };
   }
-  
+
   // Small row component for labels
   function Row({ label, right, content }) {
     return (
       <div
-        className={`flex ${right ? "justify-end" : "justify-start"} items-center`}
+        className={`flex ${
+          right ? "justify-end" : "justify-start"
+        } items-center`}
       >
         {!right && <span className="w-28 text-left">{label}</span>}
         <div className="flex-1 h-6 rounded-full flex items-center justify-center">
-          <span className="truncate text-center" style={{ fontSize: '13px' }}>
+          <span className="truncate text-center" style={{ fontSize: "13px" }}>
             {content ? content : "0x1234...abcd9u8y7t68r76t789ui98y90890789687"}
           </span>
         </div>
@@ -210,9 +309,9 @@ export default function Home() {
   }
 
   function generateComplianceReport({
-    secret = '',
-    nullifier = '',
-    pool = '',
+    secret = "",
+    nullifier = "",
+    pool = "",
     depositAmount = "",
     withdrawalAmount = "",
     withdrawFee = "",
@@ -225,7 +324,7 @@ export default function Home() {
     withdrawalTx = "",
     withdrawalTo = "",
     nullifierHash = "",
-    symbol = ""
+    symbol = "",
   } = {}) {
     return `
         <!DOCTYPE html>
@@ -398,12 +497,12 @@ export default function Home() {
 
   function createAndDownloadFile(content) {
     const fileContent = content;
-    const blob = new Blob([fileContent], { type: 'text/plain' });
+    const blob = new Blob([fileContent], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
 
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    link.download = 'report.html';
+    link.download = "report.html";
 
     document.body.appendChild(link);
 
@@ -413,6 +512,12 @@ export default function Home() {
 
     URL.revokeObjectURL(url);
   }
-
 }
 
+async function loadAbi(provider, address) {
+  const klass = await provider.getClassAt(address);
+  let abi = klass?.abi;
+  if (typeof abi === "string") abi = JSON.parse(abi);
+  if (!Array.isArray(abi)) throw new Error("ABI not array for " + address);
+  return abi;
+}

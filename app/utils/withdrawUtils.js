@@ -1,7 +1,10 @@
 
 import * as garaga from 'garaga';
 
-import { RpcProvider, Contract, constants, types, hash, events, CallData, num } from 'starknet-v7';
+import { RpcProvider, Contract, constants, types, hash, events, CallData, num, createAbiParser } from 'starknet';
+import { getNodeUrl } from './network';
+import typhoonMain from '../../typhoon.json' assert { type: 'json' }
+import typhoonTestnet from '../../typhoon-testnet.json' assert { type: 'json' }
 import Hasher from './mimc5.js';
 import { commitmentAndNullifierHash } from './depositUtils.js';
 import vk from './verification_key.json' assert { type: "json" }
@@ -13,17 +16,38 @@ import * as snarkjs from "snarkjs";
 const infuraKey = process.env.NEXT_PUBLIC_API_KEY
 const genBlockNumber = process.env.NEXT_PUBLIC_GEN_BLOCK_NUMBER
 
-const provider = new RpcProvider({ nodeUrl: "https://rpc.starknet.lava.build:443" });
-const typhoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
+const provider = new RpcProvider({ nodeUrl: getNodeUrl() });
+
+async function loadAbi(address) {
+    const klass = await provider.getClassAt(address);
+    let abi = klass?.abi;
+    if (typeof abi === 'string') {
+        abi = JSON.parse(abi);
+    }
+    if (!Array.isArray(abi)) {
+        throw new Error('ABI not array for ' + address);
+    }
+    return abi;
+}
+const resolvedTyphoonAddress = (() => {
+    let hint = (process.env.NEXT_PUBLIC_CHAIN || '').toLowerCase();
+    if (typeof window !== 'undefined') {
+        try { const ls = (localStorage.getItem('preferredChain') || '').toLowerCase(); if (ls) hint = ls; } catch {}
+    }
+    const envMain = process.env.NEXT_PUBLIC_TYPHOON_MAINNET_ADDR;
+    const envSep = process.env.NEXT_PUBLIC_TYPHOON_SEPOLIA_ADDR;
+    if (hint.includes('main')) return envMain || typhoonMain?.typhoon || null;
+    return envSep || typhoonTestnet?.typhoon || null;
+})();
 
 
 
 
 export async function generateProofCalldata(note, recipient, paymaster) {
     await garaga.init();
-    const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
-
-    const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
+    if (!resolvedTyphoonAddress) throw new Error('Typhoon address not configured');
+    const typhoonAbi = await loadAbi(resolvedTyphoonAddress);
+    const typhoon = new Contract({abi: typhoonAbi, address: resolvedTyphoonAddress, providerOrAccount: provider});
 
     let receipt = await provider.waitForTransaction(note.txHash)
 
@@ -87,9 +111,10 @@ export async function generateProofCalldata(note, recipient, paymaster) {
 
 export async function generateProofCalldata2(secret, nullifier, txHash, pool, recipient, paymaster) {
     await garaga.init();
-    const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
-    const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
-
+    if (!resolvedTyphoonAddress) throw new Error('Typhoon address not configured');
+    const typhoonAbi = await loadAbi(resolvedTyphoonAddress);
+    const typhoon = new Contract({abi: typhoonAbi, address: resolvedTyphoonAddress, providerOrAccount: provider});
+    console.log("proof 2")
     let receipt = await provider.waitForTransaction(txHash)
 
     let [commitment, nullifierHash] = await commitmentAndNullifierHash(secret, nullifier)
@@ -158,8 +183,8 @@ export async function generateProofCalldata2(secret, nullifier, txHash, pool, re
 }
 
 async function getPoolDenomination(poolAddress) {
-    const { abi: poolAbi } = await provider.getClassAt(poolAddress);
-    const poolContract = new Contract(poolAbi, poolAddress, provider);
+    const poolAbi = await loadAbi(poolAddress);
+    const poolContract = new Contract({abi: poolAbi, address: poolAddress, providerOrAccount: provider});
     const denomination = await poolContract.denomination();
     return denomination;
 }
@@ -198,11 +223,12 @@ async function getAddEvents(from_block_number, to_block_number, pool, filter) {
         allEvents = allEvents.concat(eventsList.events)
     }
 
-    const { abi: poolAbi } = await provider.getClassAt(pool);
+    const poolAbi = await loadAbi(pool);
     const abiEvents = events.getAbiEvents(poolAbi);
     const abiStructs = CallData.getAbiStruct(poolAbi);
     const abiEnums = CallData.getAbiEnum(poolAbi);
-    const parsed = events.parseEvents(allEvents, abiEvents, abiStructs, abiEnums);
+    const parser = createAbiParser(poolAbi);
+    const parsed = events.parseEvents(allEvents, abiEvents, abiStructs, abiEnums, parser);
 
     return parsed.map((e) => e["typhoon::Pool::Pool::Add"])
 }
@@ -311,17 +337,38 @@ async function getCandRl(leafs, addEvents, pool, block_number) {
 
 
 export function JSONInputStringToList(input) {
-    let inputList = input.split('}')
-    let newList = []
-    // add brackets back
-    let i = 0
-    for (i; i < inputList.length; i++) {
-        if (!inputList[i].includes('}')) {
-            inputList[i] = inputList[i] + "}"
-        }
+    if (!input || typeof input !== 'string') return []
 
+    // Case 1: It is a JSON array string
+    try {
+        const asJson = JSON.parse(input)
+        if (Array.isArray(asJson)) {
+            // return stringified objects for downstream JSON.parse consumption
+            return asJson.map((x) => JSON.stringify(x))
+        }
+    } catch (_) {
+        // ignore, fallback to line split
     }
-    return inputList.filter(i => i !== "}")
+
+    // Case 2: JSON Lines, one object per line
+    const lines = input.split(/\r?\n/)
+    const out = []
+    for (const raw of lines) {
+        const line = raw.trim()
+        if (!line) continue
+        if (line.startsWith('{') && line.endsWith('}')) {
+            out.push(line)
+        } else {
+            // try to recover if there are leading/trailing chars around a JSON object
+            const start = line.indexOf('{')
+            const end = line.lastIndexOf('}')
+            if (start !== -1 && end !== -1 && end > start) {
+                const candidate = line.slice(start, end + 1)
+                out.push(candidate)
+            }
+        }
+    }
+    return out
 }
 
 function getFullTower(tower) {

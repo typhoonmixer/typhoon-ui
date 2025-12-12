@@ -13,15 +13,15 @@ const NoteAccountModal = () => {
   return (
     <GenericModal
       popoverId="connect-modal"
-      style="text-white align-items:center; border-outline-grey mx-auto w-[90vw] rounded-[25px] border-[1px] border-solid bg-[#1c1b1f] md:h-[30rem] md:w-[45rem]"
+      style="text-card-foreground align-items:center mx-auto w-[90vw] rounded-[16px] border border-border bg-card md:h-[30rem] md:w-[45rem]"
     >
       <div className="lg:border-outline-grey basis-5/6 lg:col-span-2 lg:border-r-[1px] lg:border-solid lg:py-4 lg:pl-8">
-        <h2 className="my-4 text-center text-[1.125em] font-bold text-white lg:text-start">
+        <h2 className="my-4 text-center text-[1.125em] font-bold text-card-foreground lg:text-start">
           Connect a Note Account
         </h2>
       </div>
       <div className="flex">
-        <div className="relative bg-[#212429] p-12 py-6 rounded-xl mb-5 ml-10 border-transparent hover:border-zinc-600">
+        <div className="relative bg-card p-12 py-6 rounded-xl mb-5 ml-10 border-transparent hover:border-border">
           <div className="flex items-center rounded-xl">
             <input
               className={getInputClassname()}
@@ -36,23 +36,23 @@ const NoteAccountModal = () => {
           </div>
         </div>
 
-        <button style={{ backgroundColor: 'blue', color: 'white' , marginLeft: '10px'}}
+        <button
           aria-haspopup="dialog"
           onClick={() => console.log("Connect Note Account")}
-          className="rounded-[12px] bg-button-primary bg-blue px-4 py-3 text-background-primary-light transition-all duration-300 hover:rounded-[30px] md:py-4"
+          className="rounded-[12px] bg-accent text-accent-foreground ml-2 px-4 py-3 transition-all duration-300 hover:rounded-[30px] md:py-4"
         >
           Connect
         </button>
       </div>
       <div className="items-center lg:border-outline-grey ml-10 basis-5/6 lg:col-span-2 lg:border-r-[1px] lg:border-solid lg:py-4 lg:pl-8">
-        <h2 className="my-4 text-center text-[1.125em] font-bold text-white lg:text-start">
+        <h2 className="my-4 text-center text-[1.125em] font-bold text-card-foreground lg:text-start">
           Or
         </h2>
       </div>
-      <button style={{ backgroundColor: 'blue', color: 'white' , marginRight: '10px'}}
+      <button
           aria-haspopup="dialog"
           onClick={() => console.log("Create Note Account")}
-          className="items-center rounded-[12px] bg-button-primary bg-blue px-6 py-3 text-background-primary-light transition-all duration-300 hover:rounded-[30px] md:py-4"
+          className="items-center rounded-[12px] bg-accent text-accent-foreground px-6 py-3 transition-all duration-300 hover:rounded-[30px] md:py-4"
         >
           Create Note Account
         </button>
@@ -194,10 +194,9 @@ const NoteAccountButton = ({
   return (
     <>
       <button
-        style={{ backgroundColor: "blue", color: "white" }}
         aria-haspopup="dialog"
         onClick={() => togglePopover({ targetId: "connect-modal" })}
-        className={className}
+        className={`${className} bg-accent text-accent-foreground`}
       >
         {text}
       </button>

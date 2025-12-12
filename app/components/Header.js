@@ -4,9 +4,10 @@ import React, { useEffect, useState } from 'react'
 import { useAccount } from "@starknet-react/core";
 import AddressBar from "./lib/AddressBar";
 import ConnectButton from "./lib/Connect";
+import NetworkSwitcher from "./lib/NetworkSwitcher";
 import { Wallet, Signature } from 'ethers';
 
-import toast, { Toaster } from 'react-hot-toast'
+import toast from 'react-hot-toast'
 import NoteAccountButton from './lib/NoteAccount';
 import CopyButton from "../utils/CopyButton";
 
@@ -14,7 +15,7 @@ import Popup from 'reactjs-popup';
 import 'reactjs-popup/dist/index.css';
 import { Button } from 'react-bootstrap';
 
-const providerUrl = 'https://free-rpc.nethermind.io/sepolia-juno/v0_7';
+const providerUrl = 'https://starknet-sepolia.public.blastapi.io/rpc/v0_9';
 
 
 const Header = () => {
@@ -57,13 +58,13 @@ const Header = () => {
   }
 
   return (
-    <div className='fixed left-0 top-0 w-full px-8 py-4 flex items-center justify-between z-1000' style={{zIndex:600, marginLeft: '1100px'}}>
+    <div className='w-full px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-end gap-3'>
         {/* <div className='flex items-center'>
           <img src='/Typhoon_logo.png' className='h-12' />
 
         </div> */}
 
-      <div className='flex'>
+      <div className='flex items-center gap-3'>
         {/* <button style={{ backgroundColor: 'blue', color: 'white' , marginRight: '10px'}}
           aria-haspopup="dialog"
           onClick={() => openLink("https://starknet-faucet.vercel.app/")}
@@ -147,6 +148,7 @@ const Header = () => {
             </div>
           </div>
         </Popup>} */}
+        <NetworkSwitcher />
         {address ? (
           <div className="flex items-center gap-4">
             <AddressBar />
@@ -156,7 +158,7 @@ const Header = () => {
         )}
       </div>
 
-      <Toaster />
+      
     </div>
   )
 

@@ -1,28 +1,54 @@
-"use client"
-import React, { useEffect, useState, useRef, use } from 'react'
-import Popup from 'reactjs-popup';
-import { Wallet, Signature, verifyMessage, recoverAddress } from 'ethers';
+"use client";
+import React, { useEffect, useState, useRef, use } from "react";
+import Popup from "reactjs-popup";
+import { Wallet, Signature, verifyMessage, recoverAddress } from "ethers";
 
-import { bufferToHex } from 'ethereumjs-util';
+import { bufferToHex } from "ethereumjs-util";
 
-import FormGroup from '@mui/material/FormGroup';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Switch from '@mui/material/Switch';
-import { createHash, sign } from 'crypto-browserify';
-import { RpcProvider, Contract, WalletAccount, CallData, cairo, RPC, constants } from 'starknet';
+import FormGroup from "@mui/material/FormGroup";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Switch from "@mui/material/Switch";
+import { createHash, sign } from "crypto-browserify";
+import { Contract, CallData, cairo, constants } from "starknet";
+import { useProvider, useNetwork } from "@starknet-react/core";
+import { mainnet } from "@starknet-react/chains";
 
-import WithdrawField from './WithdrawField'
-import toast, { Toaster } from 'react-hot-toast'
-import { DEFAULT_VALUE, ETH, STRK } from '../utils/SupportedCoins'
-import DepositField from './DepositField'
-import { denominationsList, one, tokenList, tokenDecimals } from '../utils/SupportedDenominations'
+import WithdrawField from "./WithdrawField";
+import toast from "react-hot-toast";
+import { DEFAULT_VALUE, ETH, STRK } from "../utils/SupportedCoins";
+import DepositField from "./DepositField";
+import {
+  denominationsList,
+  one,
+  tokenList,
+  tokenDecimals,
+} from "../utils/SupportedDenominations";
 
 // import { CoinSelector, DenominationSelector } from './Selector';
-import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button } from '@nextui-org/react'
-import { allowancePerPool, commitmentAndNullifierHash, generateSecretAndNullifier, getCompressedDenomination, getFullDenomination, poolsToNumber } from '../utils/depositUtils';
-import { JSONInputStringToList, generateProofCalldata } from '../utils/withdrawUtils';
-import NoteList from './NoteList';
-import typhoonAbi from '../utils/typhoon_abi.json' assert { type: "json" }
+import {
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
+  Button,
+} from "@nextui-org/react";
+import {
+  allowancePerPool,
+  commitmentAndNullifierHash,
+  generateSecretAndNullifier,
+  getCompressedDenomination,
+  getFullDenomination,
+  poolsToNumber,
+} from "../utils/depositUtils";
+import {
+  JSONInputStringToList,
+  generateProofCalldata,
+} from "../utils/withdrawUtils";
+import NoteList from "./NoteList";
+import ReadPanel from "./ReadPanel";
+import typhoonAbi from "../utils/typhoon_abi.json" assert { type: "json" };
+import typhoonMain from "../../typhoon.json" assert { type: "json" };
+import typhoonTestnet from "../../typhoon-testnet.json" assert { type: "json" };
 
 import nacl from "tweetnacl";
 import naclUtil from "tweetnacl-util";
@@ -31,33 +57,109 @@ import axios from "axios";
 import {
   useAccount,
   useContract,
-  useConnect,
-  useSendTransaction
+  useSendTransaction,
 } from "@starknet-react/core";
 import { ChevronDown, Info } from "lucide-react";
-import { TyphoonSDK } from 'typhoon-sdk'
+import { TyphoonSDK } from "typhoon-sdk";
 
+import dotenv from "dotenv";
+dotenv.config();
 
-
-import dotenv from 'dotenv'
-dotenv.config()
-
-const provider = new RpcProvider({ nodeUrl: "https://rpc.starknet.lava.build:443" });
-const typhoonAddress = process.env.NEXT_PUBLIC_TYPHOON_ADDR
-const noteAccountContract = process.env.NEXT_PUBLIC_NOTE_ACCOUNT_ADDR
+const ENV_ADDRS = {
+  TYPHOON_SEPOLIA: process.env.NEXT_PUBLIC_TYPHOON_SEPOLIA_ADDR,
+  TYPHOON_MAINNET: process.env.NEXT_PUBLIC_TYPHOON_MAINNET_ADDR,
+  NOTE_SEPOLIA: process.env.NEXT_PUBLIC_NOTE_ACCOUNT_SEPOLIA_ADDR,
+  NOTE_MAINNET: process.env.NEXT_PUBLIC_NOTE_ACCOUNT_MAINNET_ADDR,
+};
 const maxUint256 = (1n << 256n) - 1n;
 const maxUint512 = (1n << 512n) - 1n;
 
+// Debug helpers for robust ABI/Contract creation and logs
+async function loadAbi(address, prov) {
+  try {
+    const klass = await prov.getClassAt(address);
+    let abi = klass?.abi;
+    if (typeof abi === "string") {
+      try {
+        abi = JSON.parse(abi);
+      } catch (e) {
+        console.error("[ABI] JSON.parse failed for", address, e);
+      }
+    }
+    if (!Array.isArray(abi)) {
+      console.error("[ABI] Not an array for", address, {
+        typeofAbi: typeof abi,
+      });
+      return null;
+    }
+    console.debug("[ABI] Loaded", address, { length: abi.length });
+    return abi;
+  } catch (e) {
+    console.error("[ABI] getClassAt failed for", address, e);
+    return null;
+  }
+}
+
+async function getContractAt(address, providerOrAccount) {
+  const abi = await loadAbi(address, providerOrAccount);
+  if (!abi) return null;
+  try {
+    const c = new Contract({
+      abi: abi,
+      address: address,
+      providerOrAccount: providerOrAccount,
+    });
+    return c;
+  } catch (e) {
+    console.error("[Contract] creation failed for", address, e);
+    return null;
+  }
+}
+
 const MainComponent = () => {
-  const { sendAsync, data, status, isSuccess } = useSendTransaction({ calls: [] });
+  const { sendAsync, data, status, isSuccess } = useSendTransaction({
+    calls: [],
+  });
+  const { provider } = useProvider();
+  const { chain } = useNetwork();
+
+  // Decide addresses based on app preference first (read provider), then wallet chain
+  const resolvedTyphoonAddress = React.useMemo(() => {
+    let hint = "";
+    if (typeof window !== "undefined") {
+      try {
+        hint = (localStorage.getItem("preferredChain") || "").toLowerCase();
+      } catch { }
+    }
+    const isMainnetPreferred = hint
+      ? hint.includes("main")
+      : chain?.id === mainnet.id;
+    if (isMainnetPreferred)
+      return ENV_ADDRS.TYPHOON_MAINNET || typhoonMain?.typhoon;
+    return ENV_ADDRS.TYPHOON_SEPOLIA || typhoonTestnet?.typhoon;
+  }, [chain?.id]);
+
+  const noteAccountContract = React.useMemo(() => {
+    let hint = "";
+    if (typeof window !== "undefined") {
+      try {
+        hint = (localStorage.getItem("preferredChain") || "").toLowerCase();
+      } catch { }
+    }
+    const isMainnetPreferred = hint
+      ? hint.includes("main")
+      : chain?.id === mainnet.id;
+    return isMainnetPreferred ? ENV_ADDRS.NOTE_MAINNET : ENV_ADDRS.NOTE_SEPOLIA;
+  }, [chain?.id]);
   const { address, account } = useAccount();
 
-
-  let d = [{
-    "id": "0",
-    "denomination": 1000,
-    "coin": "STRK"
-  }]
+  let d = [
+    {
+      id: "0",
+      denomination: 1000,
+      coin: "STRK",
+    },
+  ];
 
   const tokenToSrc = {
     "STRK": "starknetlogo.svg",
@@ -70,25 +172,20 @@ const MainComponent = () => {
     "SCHIZODIO": "schizodio_logo.jpg",
     "SURVIVOR": "https://lootsurvivor.io/images/survivor_token.png",
     "LORDS": "https://assets.coingecko.com/coins/images/22171/small/Frame_1.png",
-    "UNO": "unologo.png",
-
-
+    "CASH": "Coins.png",
   }
-  const [srcToken, setSrcToken] = useState(STRK)
-  const [loading, setLoading] = useState(false)
-  const [loadingText, setLoadingText] = useState('')
+  const [srcToken, setSrcToken] = useState(STRK);
+  const [loading, setLoading] = useState(false);
+  const [loadingText, setLoadingText] = useState("");
 
-  const [rewardMode, setRewardMode] = useState(true)
-
-
-
+  const [rewardMode, setRewardMode] = useState(true);
 
   const tokenToAddress = {
     "STRK": "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
     "ETH": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
     "USDT": "0x068F5c6a61780768455de69077E07e89787839bf8166dEcfBf92B645209c0fB8",
-    "USDC": "0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8",
-    "UNO": "0x0719b5092403233201aa822ce928bd4b551d0cdb071a724edd7dc5e5f57b7f34",
+    "USDC": "0x033068F6539f8e6e6b131e6B2B814e6c34A5224bC66947c47DaB9dFeE93b35fb",
+    "CASH": "0x0498EDFaF50CA5855666a700C25Dd629D577EB9aFcCDf3B5977aEC79AEE55ADA",
     "WBTC": "0x03fe2b97c1fd336e750087d68b9b867997fd64a2661ff3ca5a7c771641e8e7ac",
     "tBTC": "0x04daa17763b286d1e59b97c283c0b8c949994c361e426a28f743c67bdfe9a32f",
     "SolvBTC": "0x0593e034dda23eea82d2ba9a30960ed42cf4a01502cc2351dc9b9881f9931a68",
@@ -97,95 +194,122 @@ const MainComponent = () => {
     "SURVIVOR": "0x042DD777885AD2C116be96d4D634abC90A26A790ffB5871E037Dd5Ae7d2Ec86B"
   }
 
-  const [noteValue, setNoteValue] = useState("")
-  const [receiverValue, setReceiverValue] = useState("")
+  const [noteValue, setNoteValue] = useState("");
+  const [receiverValue, setReceiverValue] = useState("");
 
-  const [telegramValue, setTelegramValue] = useState("")
+  const [telegramValue, setTelegramValue] = useState("");
 
-  const noteValueRef = useRef()
-  const receiverValueRef = useRef(null)
+  const noteValueRef = useRef();
+  const receiverValueRef = useRef(null);
 
-  const telegramInputRef = useRef()
+  const telegramInputRef = useRef();
 
-  const depositRef = useRef()
-  const [paymaster, setPaymaster] = useState(true)
+  const depositRef = useRef();
+  const [paymaster, setPaymaster] = useState(true);
 
-  const specificRef = useRef()
+  const specificRef = useRef();
 
-  const ENTER_AMOUNT = 'Enter an amount'
-  const CONNECT_WALLET = 'Connect wallet'
-  const DEPOSIT = 'Deposit'
-  const PRIVATE_TRANSFER = "Transfer"
+  const ENTER_AMOUNT = "Enter an amount";
+  const CONNECT_WALLET = "Connect wallet";
+  const DEPOSIT = "Deposit";
+  const PRIVATE_TRANSFER = "Transfer";
 
-  const WITHDRAW = 'Withdraw'
-  const TRANSFER = 'Private Transfer'
+  const WITHDRAW = "Withdraw";
+  const TRANSFER = "Private Transfer";
 
-  const [selectedNavItem, setSelectedNavItem] = useState(DEPOSIT)
+  const [selectedNavItem, setSelectedNavItem] = useState(DEPOSIT);
 
   const [noteAcc, setNoteAcc] = useState("");
-  const [proofElement, setProofElement] = useState([])
-  const [downloaded, setDownloaded] = useState(false)
+  const [proofElement, setProofElement] = useState([]);
+  const [downloaded, setDownloaded] = useState(false);
 
   const nObj = {
     setValue: setNoteValue,
     holder: "note",
     disabled: false,
-    value: noteValue
-  }
+    value: noteValue,
+  };
 
   const rObj = {
     setValue: setReceiverValue,
     holder: "0x",
     disabled: false,
-    value: receiverValue
-  }
+    value: receiverValue,
+  };
 
-  const [receiverObj, setReceiverObj] = useState(rObj)
-  const [noteObj, setNoteObj] = useState(nObj)
+  const [receiverObj, setReceiverObj] = useState(rObj);
+  const [noteObj, setNoteObj] = useState(nObj);
 
-  const [noteComp, setNoteComp] = useState()
-  const [receiverComp, setReceiverComp] = useState()
+  const [noteComp, setNoteComp] = useState();
+  const [receiverComp, setReceiverComp] = useState();
 
-  const [denomination, setDenomination] = useState(denominationsList[tokenToAddress["STRK"]][0])
+  const [denomination, setDenomination] = useState(
+    denominationsList[tokenToAddress["STRK"]][0]
+  );
 
-  const [openDepositOp, setOpenDepositOp] = useState(false)
+  const [openDepositOp, setOpenDepositOp] = useState(false);
 
-  const [specificValue, setSpecificValue] = useState()
+  const [specificValue, setSpecificValue] = useState();
 
-  const [selectedDepositType, setSelectedDepositType] = useState("Defined denominations")
+  const [selectedDepositType, setSelectedDepositType] = useState(
+    "Defined denominations"
+  );
 
   const dTypes = [
     { key: "Defined denominations", name: "Defined denominations" },
     { key: "Specific Amount", name: "Specific Amount" },
-  ]
+  ];
 
-  const [depositTypes, setDepositTypes] = useState(getFilteredItems(selectedDepositType))
+  const [depositTypes, setDepositTypes] = useState(
+    getFilteredItems(selectedDepositType)
+  );
 
-  const [todayDeposits, setTodayDeposits] = useState(0)
+  const [todayDeposits, setTodayDeposits] = useState(0);
 
   const [overallDeposits, setOverallDeposits] = useState(0);
 
   function getDepositFilteredItems(ignoreValue, menu) {
-    return menu.filter(item => item['key'] !== ignoreValue)
+    return menu.filter((item) => item["key"] !== ignoreValue);
   }
 
   const dmenu = [
-    { key: denominationsList[tokenList["STRK"]][0], name: denominationsList[tokenList["STRK"]][0] },
-    { key: denominationsList[tokenList["STRK"]][1], name: denominationsList[tokenList["STRK"]][1] },
-    { key: denominationsList[tokenList["STRK"]][2], name: denominationsList[tokenList["STRK"]][2] },
-    { key: denominationsList[tokenList["STRK"]][3], name: denominationsList[tokenList["STRK"]][3] },
-    { key: denominationsList[tokenList["STRK"]][4], name: denominationsList[tokenList["STRK"]][4] },
-  ]
+    {
+      key: denominationsList[tokenList["STRK"]][0],
+      name: denominationsList[tokenList["STRK"]][0],
+    },
+    {
+      key: denominationsList[tokenList["STRK"]][1],
+      name: denominationsList[tokenList["STRK"]][1],
+    },
+    {
+      key: denominationsList[tokenList["STRK"]][2],
+      name: denominationsList[tokenList["STRK"]][2],
+    },
+    {
+      key: denominationsList[tokenList["STRK"]][3],
+      name: denominationsList[tokenList["STRK"]][3],
+    },
+    {
+      key: denominationsList[tokenList["STRK"]][4],
+      name: denominationsList[tokenList["STRK"]][4],
+    },
+  ];
 
-  const [dselectedItem, setDSelectedItem] = useState(denominationsList[tokenList["STRK"]][0])
-  const [dmenuItems, setDMenuItems] = useState(getDepositFilteredItems(denominationsList[tokenList["STRK"]][0], dmenu))
-  const [dignoreValue, setDIgnoreValue] = useState(denominationsList[tokenList["STRK"]][0])
+  const [dselectedItem, setDSelectedItem] = useState(
+    denominationsList[tokenList["STRK"]][0]
+  );
+  const [dmenuItems, setDMenuItems] = useState(
+    getDepositFilteredItems(denominationsList[tokenList["STRK"]][0], dmenu)
+  );
+  const [dignoreValue, setDIgnoreValue] = useState(
+    denominationsList[tokenList["STRK"]][0]
+  );
 
   const cmenu = [
     { key: ETH, name: ETH },
     { key: STRK, name: STRK },
     { key: 'USDC', name: 'USDC' },
-    { key: 'UNO', name: 'UNO' },
+    { key: 'CASH', name: 'CASH' },
     { key: 'WBTC', name: 'WBTC' },
     { key: 'tBTC', name: 'tBTC' },
     { key: 'SolvBTC', name: 'SolvBTC' },
@@ -194,9 +318,11 @@ const MainComponent = () => {
     { key: 'LORDS', name: 'LORDS' },
     { key: 'SURVIVOR', name: 'SURVIVOR' },
   ]
-  const [cselectedItem, setCSelectedItem] = useState("STRK")
-  const [cignoreValue, setCIgnoreValue] = useState("STRK")
-  const [cmenuItems, setCMenuItems] = useState(getDepositFilteredItems("STRK", cmenu))
+  const [cselectedItem, setCSelectedItem] = useState("STRK");
+  const [cignoreValue, setCIgnoreValue] = useState("STRK");
+  const [cmenuItems, setCMenuItems] = useState(
+    getDepositFilteredItems("STRK", cmenu)
+  );
 
   let depositObj = {
     denomination: denomination,
@@ -204,28 +330,32 @@ const MainComponent = () => {
     setToken: setSrcToken,
     setDenomination: setDenomination,
     disabled: false,
-    token: tokenToAddress["STRK"]
-  }
+    token: tokenToAddress["STRK"],
+  };
 
-  const [comp, setComp] = useState(<DepositField obj={depositObj} ref={depositRef} />)
+  const [comp, setComp] = useState(
+    <DepositField obj={depositObj} ref={depositRef} />
+  );
 
   let telegramObj = {
     denomination: denomination,
     defaultValue: STRK,
     setToken: setSrcToken,
     setDenomination: setDenomination,
-    disabled: true
-  }
+    disabled: true,
+  };
 
   let telegramInputObj = {
     holder: "@handle",
     setValue: setTelegramValue,
-    disabled: true
-  }
+    disabled: true,
+  };
 
-  const [poolCount, setPoolCount] = useState(0n)
+  const [poolCount, setPoolCount] = useState(0n);
 
-  const [compT, setCompT] = useState(<DepositField obj={telegramObj} ref={depositRef} />)
+  const [compT, setCompT] = useState(
+    <DepositField obj={telegramObj} ref={depositRef} />
+  );
 
   const transferTokens = [
     { name: "STRK", src: "starknetlogo.svg" },
@@ -233,34 +363,36 @@ const MainComponent = () => {
     { name: "SolvBTC", src: "https://assets.coingecko.com/coins/images/36800/standard/solvBTC.png" },
     { name: "WBTC", src: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599/logo.png" },
     { name: "tBTC", src: "tbtclogo.png" },
+    { name: "CASH", src: "Coins.png" },
     { name: "USDC", src: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png" },
     { name: "USDT", src: "https://assets.coingecko.com/coins/images/325/small/Tether.png" },
     { name: "SCHIZODIO", src: "schizodio_logo.jpg" },
     { name: "LORDS", src: "https://assets.coingecko.com/coins/images/22171/small/Frame_1.png" },
     { name: "SURVIVOR", src: "https://lootsurvivor.io/images/survivor_token.png" },
-    { name: "UNO", src: "unologo.png" },
-
+    
   ]
-  const [selectedTransferToken, setSelectedTransferToken] = useState(transferTokens[0]);
+  const [selectedTransferToken, setSelectedTransferToken] = useState(
+    transferTokens[0]
+  );
   const [openTransferTokenDD, setOpenTransferTokenDD] = useState(false);
-  const [transferValue, setTransferValue] = useState()
-  const [transferReceiverValue, setTransferReceiverValue] = useState('')
-  const [balance, setBalance] = useState('0')
-  const [minimalRequired, setMinimalRequired] = useState('10')
-
+  const [transferValue, setTransferValue] = useState("");
+  const [transferReceiverValue, setTransferReceiverValue] = useState("");
+  const [balance, setBalance] = useState("0");
+  const [minimalRequired, setMinimalRequired] = useState("10");
 
   const depositTokens = [
     { name: "STRK" },
     { name: "ETH" },
     { name: "SolvBTC" },
     { name: "WBTC" },
+    { name: "CASH" },
     { name: "tBTC" },
     { name: "USDC" },
     { name: "USDT" },
     { name: "SCHIZODIO" },
     { name: "LORDS" },
-    { name: "SURVIVOR" },
-    { name: "UNO" }
+    { name: "SURVIVOR" }
+    
   ]
   const [openDepositTokenDD, setOpenDepositTokenDD] = useState(false);
 
@@ -282,42 +414,61 @@ const MainComponent = () => {
   //   />
   // </div>);
 
-  const [btnText, setBtnText] = useState(CONNECT_WALLET)
+  const [btnText, setBtnText] = useState(CONNECT_WALLET);
+  useEffect(() => {
+    if (address) {
+      if (selectedNavItem === WITHDRAW) setBtnText(WITHDRAW);
+      else if (selectedNavItem === TRANSFER) setBtnText(PRIVATE_TRANSFER);
+      else setBtnText(DEPOSIT);
+    } else {
+      setBtnText(CONNECT_WALLET);
+    }
+  }, [address, selectedNavItem]);
 
-  const [content, setContent] = useState(depositContent)
+  const [content, setContent] = useState(depositContent);
 
-
-  const [accountExists, setAccountExists] = useState(false)
-
-
+  const [accountExists, setAccountExists] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      if (localStorage.getItem("noteAcc") != "null" && localStorage.getItem("noteAcc") != "undefined" && localStorage.getItem("noteAcc") != "" && localStorage.getItem("noteAcc") != null && localStorage.getItem("noteAcc") != undefined) {
-        setNoteAcc(localStorage.getItem("noteAcc"))
-        setAccountExists(true)
+    if (typeof window !== "undefined") {
+      if (
+        localStorage.getItem("noteAcc") != "null" &&
+        localStorage.getItem("noteAcc") != "undefined" &&
+        localStorage.getItem("noteAcc") != "" &&
+        localStorage.getItem("noteAcc") != null &&
+        localStorage.getItem("noteAcc") != undefined
+      ) {
+        setNoteAcc(localStorage.getItem("noteAcc"));
+        setAccountExists(true);
       }
     }
-  })
+  });
 
-
-  let noteAccount = ""
+  let noteAccount = "";
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem("curToken", "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d");
+    if (typeof window !== "undefined") {
+      localStorage.setItem(
+        "curToken",
+        "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d"
+      );
     }
     let noteAccount = "";
     if (typeof window !== "undefined") {
-      if (localStorage.getItem("noteAcc") != "null" && localStorage.getItem("noteAcc") != "undefined" && localStorage.getItem("noteAcc") != "" && localStorage.getItem("noteAcc") != null && localStorage.getItem("noteAcc") != undefined) {
-        setNoteAcc(localStorage.getItem("noteAcc"))
+      if (
+        localStorage.getItem("noteAcc") != "null" &&
+        localStorage.getItem("noteAcc") != "undefined" &&
+        localStorage.getItem("noteAcc") != "" &&
+        localStorage.getItem("noteAcc") != null &&
+        localStorage.getItem("noteAcc") != undefined
+      ) {
+        setNoteAcc(localStorage.getItem("noteAcc"));
       }
     }
 
     // if (noteAccount != "") {
     //   setNoteAcc(noteAccount)
     // }
-
-  }, [accountExists])
+  }, [accountExists]);
 
   // useEffect(() => {
   //   console.log("proofElement", proofElement)
@@ -326,65 +477,88 @@ const MainComponent = () => {
 
   useEffect(() => {
     async function getDeposits() {
-      let denominations = poolsToNumber()
-      const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
-
-      const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
-      let total = 0
-      for (let i = 0; i < denominationsList[tokenToAddress[srcToken]].length; i++) {
-        let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denominationsList[tokenToAddress[srcToken]][i], tokenDecimals[srcToken]))
-        let poolAddr = '0x' + pool.toString(16)
-        const { abi: poolAbi } = await provider.getClassAt(poolAddr)
-        const poolC = new Contract(poolAbi, poolAddr, provider);
-        let day = await poolC.currentDay()
-        let deposits = await poolC.liquidityProviders(day)
-        total = total + Number(deposits)
+      if (!provider) return;
+      try {
+        if (!resolvedTyphoonAddress) return; // guard missing config
+        let denominations = poolsToNumber();
+        const typhoon = await getContractAt(resolvedTyphoonAddress, provider);
+        if (!typhoon) throw new Error("Typhoon contract not available");
+        let total = 0;
+        for (
+          let i = 0;
+          i < denominationsList[tokenToAddress[srcToken]].length;
+          i++
+        ) {
+          let pool = await typhoon.getPool(
+            tokenToAddress[srcToken],
+            getFullDenomination(
+              denominationsList[tokenToAddress[srcToken]][i],
+              tokenDecimals[srcToken]
+            )
+          );
+          let poolAddr = "0x" + pool.toString(16);
+          const poolC = await getContractAt(poolAddr, provider);
+          if (!poolC) continue;
+          let day = await poolC.currentDay();
+          let deposits = await poolC.liquidityProviders(day);
+          total = total + Number(deposits);
+        }
+        setOverallDeposits(total);
+      } catch (e) {
+        console.warn("getDeposits (overall) failed:", e);
+        // avoid crashing UI on RPC/CORS errors
+        setOverallDeposits(0);
       }
-      setOverallDeposits(total)
     }
     if (account) {
-      getDeposits()
+      getDeposits();
     }
     if (!loading) {
       if (btnText == DEPOSIT) {
-        setContent(depositContent)
+        setContent(depositContent);
       } else if (btnText == WITHDRAW) {
-        setContent(withdrawContent)
+        setContent(withdrawContent);
       } else if (btnText == PRIVATE_TRANSFER) {
-        setContent(transferContent)
+        setContent(transferContent);
       }
     }
-  }, [overallDeposits, srcToken, account])
-
+  }, [overallDeposits, srcToken, account]);
 
   useEffect(() => {
     async function getDeposits() {
-      const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
-
-      const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
-      let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(dselectedItem, tokenDecimals[srcToken]))
-      let poolAddr = '0x' + pool.toString(16)
-      const { abi: poolAbi } = await provider.getClassAt(poolAddr)
-      const poolC = new Contract(poolAbi, poolAddr, provider);
-      let day = await poolC.currentDay()
-      let deposits = await poolC.liquidityProviders(day)
-      setTodayDeposits(deposits)
+      if (!provider) return;
+      try {
+        if (!resolvedTyphoonAddress) return; // guard missing config
+        const typhoon = await getContractAt(resolvedTyphoonAddress, provider);
+        if (!typhoon) throw new Error("Typhoon contract not available");
+        let pool = await typhoon.getPool(
+          tokenToAddress[srcToken],
+          getFullDenomination(dselectedItem, tokenDecimals[srcToken])
+        );
+        let poolAddr = "0x" + pool.toString(16);
+        const poolC = await getContractAt(poolAddr, provider);
+        if (!poolC) return;
+        let day = await poolC.currentDay();
+        let deposits = await poolC.liquidityProviders(day);
+        setTodayDeposits(deposits);
+      } catch (e) {
+        console.warn("getDeposits (today) failed:", e);
+        setTodayDeposits(0);
+      }
     }
     if (account) {
-      getDeposits()
+      getDeposits();
     }
     if (!loading) {
       if (btnText == DEPOSIT) {
-        setContent(depositContent)
+        setContent(depositContent);
       } else if (btnText == WITHDRAW) {
-        setContent(withdrawContent)
+        setContent(withdrawContent);
       } else if (btnText == PRIVATE_TRANSFER) {
-        setContent(transferContent)
+        setContent(transferContent);
       }
     }
-
-
-  }, [todayDeposits, denomination, srcToken, account])
+  }, [todayDeposits, denomination, srcToken, account]);
 
   // useEffect(() => {
   //   console.log("srcToken: ", srcToken)
@@ -401,15 +575,13 @@ const MainComponent = () => {
   // }, [srcToken])
 
   useEffect(() => {
-    setDepositTypes(getFilteredItems(selectedDepositType))
-    setContent(depositContent)
-  }, [selectedDepositType])
+    setDepositTypes(getFilteredItems(selectedDepositType));
+    setContent(depositContent);
+  }, [selectedDepositType]);
 
   useEffect(() => {
-    setContent(depositContent)
-  }, [depositTypes])
-
-
+    setContent(depositContent);
+  }, [depositTypes]);
 
   // useEffect(() => {
   //   const menu = [
@@ -424,16 +596,16 @@ const MainComponent = () => {
   // }, [dignoreValue])
 
   useEffect(() => {
-    setDIgnoreValue(dselectedItem)
-    setContent(depositContent())
-  }, [dselectedItem])
+    setDIgnoreValue(dselectedItem);
+    setContent(depositContent());
+  }, [dselectedItem]);
 
   useEffect(() => {
     const menu = [
       { key: ETH, name: ETH },
       { key: STRK, name: STRK },
       { key: 'USDC', name: 'USDC' },
-      { key: 'UNO', name: 'UNO' },
+      { key: 'CASH', name: 'CASH' },
       { key: 'WBTC', name: 'WBTC' },
       { key: 'tBTC', name: 'tBTC' },
       { key: 'SolvBTC', name: 'SolvBTC' },
@@ -442,18 +614,15 @@ const MainComponent = () => {
       { key: 'LORDS', name: 'LORDS' },
       { key: 'SURVIVOR', name: 'SURVIVOR' },
     ]
-    let newItems = getDepositFilteredItems(cignoreValue, menu)
-    setCMenuItems([...newItems])
-  }, [cignoreValue])
+    let newItems = getDepositFilteredItems(cignoreValue, menu);
+    setCMenuItems([...newItems]);
+  }, [cignoreValue]);
 
   useEffect(() => {
-    setCIgnoreValue(cselectedItem)
-    setContent(depositContent())
+    setCIgnoreValue(cselectedItem);
+    setContent(depositContent());
     // setDSelectedItem(denominationsList[tokenList[cselectedItem]][0])
-  }, [cselectedItem])
-
-
-
+  }, [cselectedItem]);
 
   // useEffect(() => {
   //   setDepositInputs(<div className='flex items-center' >
@@ -475,45 +644,39 @@ const MainComponent = () => {
   //   </div>)
   // }, [srcToken, denomination])
 
-
   useEffect(() => {
     if (loading == true) {
-      setContent(loadingContent)
+      setContent(loadingContent);
     } else {
       if (btnText == DEPOSIT) {
-        setContent(depositContent)
+        setContent(depositContent);
       } else if (btnText == WITHDRAW) {
-        setContent(withdrawContent)
+        setContent(withdrawContent);
       } else if (btnText == PRIVATE_TRANSFER) {
-        setContent(transferContent)
+        setContent(transferContent);
       }
     }
-
-  }, [loading])
+  }, [loading]);
 
   useEffect(() => {
-    setContent(loadingContent)
-  }, [loadingText])
+    setContent(loadingContent);
+  }, [loadingText]);
 
   function getFilteredItems(ignoreValue) {
-    return dTypes.filter(item => item['key'] !== ignoreValue)
+    return dTypes.filter((item) => item["key"] !== ignoreValue);
   }
-
-
-
 
   useEffect(() => {
     if (address) {
       if (selectedNavItem === DEPOSIT) {
-        setBtnText(DEPOSIT)
+        setBtnText(DEPOSIT);
       } else if (selectedNavItem === WITHDRAW) {
-        setBtnText(WITHDRAW)
+        setBtnText(WITHDRAW);
       } else if (selectedNavItem === TRANSFER) {
-        setBtnText(PRIVATE_TRANSFER)
+        setBtnText(PRIVATE_TRANSFER);
       }
-
     }
-  }, [address])
+  }, [address]);
 
   // useEffect(() => {
   //   if (btnText === DEPOSIT) {
@@ -525,472 +688,546 @@ const MainComponent = () => {
   //   }
   // }, [btnText])
 
-
-
   useEffect(() => {
-    setContent(withdrawContent)
+    setContent(withdrawContent);
   }, [noteValue]);
 
   useEffect(() => {
-    setContent(withdrawContent)
-
+    setContent(withdrawContent);
   }, [receiverValue]);
 
   useEffect(() => {
-    setContent(transferContent())
-  }, [transferValue])
+    setContent(transferContent());
+  }, [transferValue]);
 
   useEffect(() => {
-    setContent(transferContent())
-  }, [transferReceiverValue])
+    setContent(transferContent());
+  }, [transferReceiverValue]);
 
   useEffect(() => {
-    setContent(transferContent())
-  }, [openTransferTokenDD])
+    setContent(transferContent());
+  }, [openTransferTokenDD]);
 
   useEffect(() => {
-    setContent(depositContent())
-  }, [openDepositTokenDD])
-
+    setContent(depositContent());
+  }, [openDepositTokenDD]);
 
   useEffect(() => {
-    setContent(transferContent())
-    let sdk = new TyphoonSDK()
+    setContent(transferContent());
+    let sdk = new TyphoonSDK();
     async function getMin() {
-      console.log(selectedTransferToken.name)
-      let min = await sdk.get_token_minimal_amount(tokenList[selectedTransferToken.name])
-      setMinimalRequired(getCompressedDenomination(min.toString(), tokenDecimals[selectedTransferToken.name]))
-
+      console.log(selectedTransferToken.name);
+      let min = await sdk.get_token_minimal_amount(
+        tokenList[selectedTransferToken.name]
+      );
+      setMinimalRequired(
+        getCompressedDenomination(
+          min.toString(),
+          tokenDecimals[selectedTransferToken.name]
+        )
+      );
     }
-    getMin()
-  }, [selectedTransferToken])
+    getMin();
+  }, [selectedTransferToken]);
 
   useEffect(() => {
-    setContent(transferContent())
-  }, [balance])
+    setContent(transferContent());
+  }, [balance]);
 
   useEffect(() => {
-    setContent(transferContent())
-  }, [minimalRequired])
+    setContent(transferContent());
+  }, [minimalRequired]);
 
   useEffect(() => {
     if (selectedNavItem === WITHDRAW) {
-      setContent(withdrawContent())
+      setContent(withdrawContent());
     } else if (selectedNavItem === TRANSFER) {
-      setContent(transferContent())
+      setContent(transferContent());
     }
-  }, [paymaster])
+  }, [paymaster]);
 
   useEffect(() => {
     async function getDeposits() {
-      const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
-
-      const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
-      let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(dselectedItem, tokenDecimals[srcToken]))
-      let poolAddr = '0x' + pool.toString(16)
-      const { abi: poolAbi } = await provider.getClassAt(poolAddr)
-      const poolC = new Contract(poolAbi, poolAddr, provider);
-      let count = await poolC.getCount()
-      setPoolCount(count)
+      if (!provider) return;
+      try {
+        if (!resolvedTyphoonAddress) return; // guard missing config
+        const typhoon = await getContractAt(resolvedTyphoonAddress, provider);
+        if (!typhoon) throw new Error("Typhoon contract not available");
+        let pool = await typhoon.getPool(
+          tokenToAddress[srcToken],
+          getFullDenomination(dselectedItem, tokenDecimals[srcToken])
+        );
+        let poolAddr = "0x" + pool.toString(16);
+        const poolC = await getContractAt(poolAddr, provider);
+        if (!poolC) return;
+        let count = await poolC.getCount();
+        setPoolCount(count);
+      } catch (e) {
+        console.warn("getDeposits (count) failed:", e);
+        setPoolCount(0n);
+      }
     }
-    getDeposits()
-  }, [srcToken, dselectedItem])
+    getDeposits();
+  }, [srcToken, dselectedItem]);
 
   useEffect(() => {
-    setContent(depositContent())
+    setContent(depositContent());
   }, [poolCount]);
 
-
-
   let marginTopRelative = {
-    DEPOSIT: '50px',
-    WITHDRAW: '',
-    TRANSFER: ''
-  }
+    DEPOSIT: "50px",
+    WITHDRAW: "",
+    TRANSFER: "",
+  };
 
   return (
-    <div className='flex' >
-      <div className='relative bg-zinc-900 w5-[35%] p-4 px-6 rounded-xl  min-h-[200px]' style={{ width: '600px', height: '500px', marginBottom: '100px' }}>
-        <div className='bg-zinc-900 h-fit flex items-center justify-around rounded-full mx-6'>
-          <p
-            className={getNavIconClassName(DEPOSIT)}
-            onClick={() => {
-              setSelectedNavItem(DEPOSIT)
-              if (!loading) {
-                setContent(depositContent)
-              }
-              if (address) {
-                setBtnText(DEPOSIT)
-              } else {
-                setBtnText(CONNECT_WALLET)
-              }
-            }}
-          >
-            {DEPOSIT}
-          </p>
-          <p
-            className={getNavIconClassName(WITHDRAW)}
-            onClick={() => {
-              setSelectedNavItem(WITHDRAW)
-              if (!loading) {
-                setContent(withdrawContent)
-              }
-              if (address) {
-                setBtnText(WITHDRAW)
-              } else {
-                setBtnText(CONNECT_WALLET)
-              }
-            }}
-          >
-            {WITHDRAW}
-          </p>
-          <p
-            className={getNavIconClassName(TRANSFER)}
-            onClick={() => {
-              setSelectedNavItem(TRANSFER)
-              if (!loading) {
-                setContent(transferContent)
-              }
-              if (address) {
-                setBtnText(PRIVATE_TRANSFER)
-              } else {
-                setBtnText(CONNECT_WALLET)
-              }
-
-            }}
-          >
-            {TRANSFER}
-          </p>
-
+    <div className="grid w-full gap-6 grid-cols-1 lg:grid-cols-2 items-stretch">
+      <div className="relative bg-card text-card-foreground w-full px-4 sm:px-6 pt-1 sm:pt-2 pb-4 sm:pb-6 rounded-xl min-h-[200px] mb-2 lg:mb-0 shadow-md border border-accent flex flex-col">
+        <div
+          className="w-full flex justify-center overflow-x-auto mt-2 mb-2"
+          role="tablist"
+          aria-label="Action tabs"
+        >
+          <div className="inline-flex items-center rounded-full border border-border bg-muted/20 px-1 py-0.5 gap-1 sm:gap-2">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={selectedNavItem === DEPOSIT}
+              className={getNavIconClassName(DEPOSIT)}
+              onClick={() => {
+                setSelectedNavItem(DEPOSIT);
+                if (!loading) {
+                  setContent(depositContent);
+                }
+                if (address) {
+                  setBtnText(DEPOSIT);
+                } else {
+                  setBtnText(CONNECT_WALLET);
+                }
+              }}
+            >
+              {DEPOSIT}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={selectedNavItem === WITHDRAW}
+              className={getNavIconClassName(WITHDRAW)}
+              onClick={() => {
+                setSelectedNavItem(WITHDRAW);
+                if (!loading) {
+                  setContent(withdrawContent);
+                }
+                if (address) {
+                  setBtnText(WITHDRAW);
+                } else {
+                  setBtnText(CONNECT_WALLET);
+                }
+              }}
+            >
+              {WITHDRAW}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={selectedNavItem === TRANSFER}
+              className={getNavIconClassName(TRANSFER)}
+              onClick={() => {
+                setSelectedNavItem(TRANSFER);
+                if (!loading) {
+                  setContent(transferContent);
+                }
+                if (address) {
+                  setBtnText(PRIVATE_TRANSFER);
+                } else {
+                  setBtnText(CONNECT_WALLET);
+                }
+              }}
+            >
+              {TRANSFER}
+            </button>
+          </div>
         </div>
-        {content}
+        <div className="flex-1">{content}</div>
         <button
-          style={{ position: 'absolute', bottom: '5px', right: '16px', left: '16px', width: '500' }}
           className={getBtnClassName()}
           disabled={loading}
           onClick={async () => {
-            if (btnText === DEPOSIT) {
+            if (btnText === CONNECT_WALLET) {
+              try {
+                const pop = document.getElementById("connect-modal");
+                // @ts-ignore
+                pop?.togglePopover?.();
+              } catch { }
+            } else if (btnText === DEPOSIT) {
               if (selectedDepositType === "Defined denominations") {
-
-                await handleDeposit()
+                await handleDeposit();
               } else {
-                await handleSpecificAmountDeposit()
+                // await handleSpecificAmountDeposit();
               }
-            }
-            else if (btnText === WITHDRAW) await handleWithdraw()
-            else if (btnText === PRIVATE_TRANSFER) await handleTransfer()
+            } else if (btnText === WITHDRAW) await handleWithdraw();
+            else if (btnText === PRIVATE_TRANSFER) await handleTransfer();
           }}
         >
           {btnText}
         </button>
-
-
-
-        <Toaster />
       </div>
-      {/* {account != undefined ? <NoteList /> : <div></div>} */}
+      <ReadPanel
+        token={srcToken}
+        denomination={dselectedItem}
+        poolCount={poolCount}
+        todayDeposits={todayDeposits}
+        overallDeposits={overallDeposits}
+      />
     </div>
-  )
+  );
 
   function withdrawContent() {
     return (
-      <div>
-        <div className='flex items-center justify-between py-4 px-1'>
-          <p>Withdraw</p>
-
+      <div className="space-y-4">
+        {/* Note */}
+        <div>
+          <label className="block text-sm text-muted-foreground mb-2">
+            Note
+          </label>
+          <input
+            ref={noteValueRef}
+            type="text"
+            inputMode="text"
+            placeholder="{note}"
+            value={noteValue}
+            onChange={(e) => setNoteValue(e.target.value)}
+            className="w-full px-3 py-2 bg-card border border-border rounded-lg text-card-foreground placeholder:text-muted-foreground"
+          />
         </div>
-        <div className="w-full mt-2 h-full p-4 bg-zinc-800 rounded-2xl shadow-md">
-
-          <div className="flex justify-between text-sm text-gray-500 mb-2">
-            <span className="text-white text-base">Note</span>
-
-          </div>
-
-          {/* Input row */}
-          <div className="flex items-center gap-3 border rounded-xl p-3 bg-zinc-900">
-            {/* Amount input */}
-            <input
-              ref={noteValueRef}
-              type="text"
-              inputMode="text"
-              placeholder="{note}"
-              value={noteValue}
-              onChange={(e) => setNoteValue(e.target.value)}
-              className="flex-1 min-w-0 text-right text-2xl font-medium bg-zinc-900 outline-none placeholder:text-gray-400"
-            />
-          </div>
+        {/* Receiver */}
+        <div>
+          <label className="block text-sm text-muted-foreground mb-2">
+            Receiver
+          </label>
+          <input
+            ref={receiverValueRef}
+            type="text"
+            inputMode="text"
+            placeholder="0x0"
+            value={receiverValue}
+            onChange={(e) => setReceiverValue(e.target.value)}
+            className="w-full px-3 py-2 bg-card border border-border rounded-lg text-card-foreground placeholder:text-muted-foreground"
+          />
         </div>
-        <div className="w-full mt-2 h-full p-4 bg-zinc-800 rounded-2xl shadow-md">
-
-          <div className="flex justify-between text-sm text-gray-500 mb-2">
-            <span className="text-white text-base">Receiver</span>
-
-          </div>
-
-          {/* Input row */}
-          <div className="flex items-center gap-3 border rounded-xl p-3 bg-zinc-900">
-            {/* Amount input */}
-            <input
-              ref={receiverValueRef}
-              type="text"
-              inputMode="text"
-              placeholder="0x0"
-              value={receiverValue}
-              onChange={(e) => setReceiverValue(e.target.value)}
-              className="flex-1 min-w-0 text-right text-2xl font-medium bg-zinc-900 outline-none placeholder:text-gray-400"
-            />
-          </div>
-        </div>
-        <FormGroup className='' >
-
-          <FormControlLabel disableTypography={{ color: 'white' }} control={<Switch
-            checked={paymaster}
-            onChange={(_, checked) => setPaymaster(checked)}
-          />} label="Paymaster" />
+        <FormGroup className="mt-2">
+          <FormControlLabel
+            disableTypography={{ color: "white" }}
+            control={
+              <Switch
+                checked={paymaster}
+                onChange={(_, checked) => setPaymaster(checked)}
+              />
+            }
+            label="Paymaster"
+          />
         </FormGroup>
       </div>
-    )
+    );
   }
 
   function depositContent() {
+    const options = denominationsList[tokenList[srcToken]];
+    const selIndex = options.findIndex((a) => a === dselectedItem);
+    const len = options.length || 1;
+    const progressPct = len > 1 ? (selIndex / (len - 1)) * 100 : 0;
     return (
-      <div>
-        <div className='flex items-center justify-between py-4 px-1'>
-          Deposit
-          {/* {depositTypeSelector()} */}
-        </div>
-
-        <div className='relative bg-[#212429] p-4 py-6 rounded-xl mb-5 border-[2px] border-transparent hover:border-zinc-600'>
-          <div className='flex items-center gap-2' >
-            <span className='text-white text-base min-w-[50px]'>Token: </span>
-            {/* {CoinSelector("coin", false)} */}
-            <div className="relative w-40" style={{ zIndex: 1000 }}> {/* Increased z-index */}
-              <button className="flex items-center gap-2 px-3 py-1 bg-zinc-900 rounded-lg shadow-sm" onClick={() => { setOpenDepositTokenDD(!openDepositTokenDD) }}>
+      <div className="space-y-4">
+        {/* Token */}
+        <div className="relative">
+          <label className="block text-sm text-muted-foreground mb-2">
+            Token
+          </label>
+          <div className="relative" style={{ zIndex: 15 }}>
+            <button
+              className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-card rounded-lg border border-border"
+              onClick={() => {
+                setOpenDepositTokenDD(!openDepositTokenDD);
+              }}
+            >
+              <span className="flex items-center gap-2">
                 <img
                   src={tokenToSrc[srcToken]}
                   alt={srcToken}
                   className="w-5 h-5"
                 />
-                <span className="font-medium">{srcToken}</span>
-                <ChevronDown size={16} className="text-white" />
-              </button>
-              {/* Dropdown */}
-              {openDepositTokenDD ? (
-                <div className="absolute mt-1 w-full bg-[#1c1c1c] border border-gray-600 rounded-xl shadow-lg" style={{ zIndex: 1000 }}> {/* Removed z-5, set to 1000 */}
-                  {depositTokens.map((token) => (
-                    <button
-                      key={token.name}
-                      onClick={() => {
-                        setSrcToken(token.name);
-                        setOpenDepositTokenDD(false);
-                        setDSelectedItem(denominationsList[tokenList[token.name]][0])
-                      }}
-                      className="flex items-center gap-2 w-full px-3 py-2 text-left text-white hover:bg-gray-700 rounded-lg"
+                <span className="font-medium text-card-foreground">
+                  {srcToken}
+                </span>
+              </span>
+              <ChevronDown size={16} className="text-muted-foreground" />
+            </button>
+            {openDepositTokenDD ? (
+              <div
+                className="absolute mt-1 w-full bg-card border border-border rounded-xl shadow-lg"
+                style={{ zIndex: 10 }}
+              >
+                {depositTokens.map((token) => (
+                  <button
+                    key={token.name}
+                    onClick={() => {
+                      setSrcToken(token.name);
+                      setOpenDepositTokenDD(false);
+                      setDSelectedItem(
+                        denominationsList[tokenList[token.name]][0]
+                      );
+                    }}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-left text-card-foreground hover:bg-muted rounded-lg"
+                  >
+                    <img
+                      src={tokenToSrc[token.name]}
+                      alt={token.name}
+                      className="w-5 h-5 rounded-full"
+                    />
+                    {token.name}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 font-mono">
+          <label className="block text-sm text-muted-foreground">Amount</label>
+
+          {/* Discrete selector */}
+          <div className="w-full" style={{ zIndex: 10 }}>
+            {/* Continuous single-color track */}
+            <div className="relative h-8">
+              <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[2px] rounded-full bg-accent" />
+
+              {/* Dots */}
+              <div
+                role="radiogroup"
+                aria-label="Amount options"
+                className="grid h-8 place-items-center"
+                style={{ gridTemplateColumns: `repeat(${len}, 1fr)` }}
+              >
+                {options.map((amount, idx) => {
+                  const id = `amount-opt-${idx}`;
+                  const isSelected = dselectedItem === amount;
+                  return (
+                    <div
+                      key={id}
+                      className="relative flex flex-col items-center"
                     >
-                      <img src={tokenToSrc[token.name]} alt={token.name} className="w-5 h-5 rounded-full" />
-                      {token.name}
-                    </button>
-                  ))}
-                </div>
-              ) : <div></div>}
+                      <input
+                        id={id}
+                        type="radio"
+                        value={amount}
+                        checked={isSelected}
+                        onChange={() => setDSelectedItem(amount)}
+                        className="peer sr-only"
+                      />
+                      <label
+                        htmlFor={id}
+                        className={`block w-5 h-5 rounded-full border-2 transition-all duration-150 peer-focus-visible:ring-2 peer-focus-visible:ring-accent ${isSelected
+                          ? "bg-accent border-accent scale-110"
+                          : "bg-card border-accent-soft hover:bg-accent-soft/20"
+                          }`}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Label row */}
+            <div
+              className="grid place-items-center mt-2"
+              style={{ gridTemplateColumns: `repeat(${len}, 1fr)` }}
+            >
+              {options.map((amount, idx) => {
+                const id = `amount-opt-${idx}`;
+                const isSelected = dselectedItem === amount;
+                return (
+                  <label
+                    key={`lbl-${id}`}
+                    htmlFor={id}
+                    className={`text-sm tracking-wide cursor-pointer select-none ${isSelected
+                      ? "text-accent font-semibold"
+                      : "text-muted-foreground hover:text-card-foreground"
+                      }`}
+                  >
+                    {amount[0] == "0"
+                      ? amount
+                      : summarizeNumber(Number(amount))}{" "}
+                    {srcToken}
+                  </label>
+                );
+              })}
             </div>
           </div>
         </div>
-        <div className="flex flex-col gap-3  font-mono">
-          {/* Label with info icon */}
-          <div className="flex items-center gap-1">
-            <span className='text-white text-base min-w-[50px]'>Amount</span>
-          </div>
-
-          {/* Slider */}
-          <div className="relative w-full flex items-center justify-between" style={{ zIndex: 500 }}> {/* Added z-index */}
-            {/* Background line */}
-            <div className="pointer-events-none absolute left-0 right-0 top-1/2 h-[2px] 
-       bg-blue-300 -translate-y-1/2 z-0"></div>
-
-            {denominationsList[tokenList[srcToken]].map((amount) => (
-              <label key={amount} className="relative z-10 flex flex-col items-center cursor-pointer">
-                {/* Circle (radio) */}
-                <input
-                  type="radio"
-                  value={amount}
-                  checked={dselectedItem === amount}
-                  onChange={() => setDSelectedItem(amount)}
-                  className="peer hidden"
-                />
-                <div className="w-5 h-5 border-2 border-blue-300 rounded-full flex items-center justify-center peer-checked:bg-black peer-checked:border-4" />
-                {/* Label text */}
-                <span
-                  className={`mt-7 ${dselectedItem === amount ? "text-blue-300 font-bold" : "text-blue-500 opacity-70"
-                    }`}
-                >
-                  {amount[0] == '0' ? amount : summarizeNumber(Number(amount))} {srcToken}
-                </span>
-              </label>
-            ))}
-          </div>
-        </div>
-        <div className='bg-[#212429] p-4 py-6 rounded-xl mt-1 border-[2px] border-transparent hover:border-zinc-600'>
-          {`Number of equal deposits: ${poolCount}`}
-        </div>
-
       </div>
-    )
+    );
   }
 
   function summarizeNumber(num) {
-    if (typeof num !== 'number' || isNaN(num)) return 'Invalid input';
+    if (typeof num !== "number" || isNaN(num)) return "Invalid input";
 
     const suffixes = [
-      { threshold: 1e9, suffix: 'B' },
-      { threshold: 1e6, suffix: 'M' },
-      { threshold: 1e3, suffix: 'k' },
-      { threshold: 1, suffix: '' }
+      { threshold: 1e9, suffix: "B" },
+      { threshold: 1e6, suffix: "M" },
+      { threshold: 1e3, suffix: "k" },
+      { threshold: 1, suffix: "" },
     ];
 
     for (let { threshold, suffix } of suffixes) {
       if (Math.abs(num) >= threshold) {
-        const value = (num / threshold).toFixed(1).replace(/\.0$/, '');
+        const value = (num / threshold).toFixed(1).replace(/\.0$/, "");
         return `${value}${suffix}`;
       }
     }
   }
 
   async function get_balance(acc) {
-    const { abi: poolAbi } = await provider.getClassAt(tokenList[selectedTransferToken.name]);
-    const poolC = new Contract(poolAbi, tokenList[selectedTransferToken.name], provider);
-    let balance = await poolC.balanceOf(acc);
-    return balance.toString()
+    try {
+      const tokenAddr = tokenList[selectedTransferToken.name];
+      const tokenC = await getContractAt(tokenAddr, provider);
+      if (!tokenC) return "0";
+      const balance = await tokenC.balanceOf(acc);
+      return balance.toString();
+    } catch (e) {
+      console.warn("[balance] failed", e);
+      return "0";
+    }
   }
 
   function transferContent() {
-
     if (address != undefined) {
       get_balance(address).then((b) => {
-        let cd = getCompressedDenomination(b, tokenDecimals[selectedTransferToken.name])
-
-        setBalance(cd)
-
-
-      })
+        let cd = getCompressedDenomination(
+          b,
+          tokenDecimals[selectedTransferToken.name]
+        );
+        setBalance(cd);
+      });
     }
 
-
-
     return (
-      <div>
-        <div className='mb-5 mt-5 text-white'>
-          Private Transfer
-        </div>
-
-        <div className="w-full h-full p-4 bg-zinc-800 rounded-2xl shadow-md">
-          {/* Header */}
-          <div className="flex justify-between text-sm text-gray-500 mb-2">
-            <span className="text-white text-base">Amount</span>
-            <span className="text-white text-base">
-              Balance: <span className="font-medium text-white">{`${balance} ${selectedTransferToken.name}`}</span>
-            </span>
-          </div>
-
-          {/* Input row */}
-          <div className="flex items-center gap-3 border rounded-xl p-3 bg-zinc-900">
-            {/* Token selector */}
-            <div className="relative w-40">
-              <button className="flex items-center gap-2 px-3 py-1 bg-zinc-900 rounded-lg shadow-sm " onClick={() => { setOpenTransferTokenDD(!openTransferTokenDD) }}>
+      <div className="space-y-4">
+        {/* Removed redundant heading to reduce visual noise */}
+        {/* Token */}
+        <div>
+          <label className="block text-sm text-muted-foreground mb-2">
+            Token
+          </label>
+          <div className="relative" style={{ zIndex: 10 }}>
+            <button
+              className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-card rounded-lg border border-border"
+              onClick={() => {
+                setOpenTransferTokenDD(!openTransferTokenDD);
+              }}
+            >
+              <span className="flex items-center gap-2">
                 <img
                   src={selectedTransferToken.src}
                   alt={selectedTransferToken.name}
                   className="w-5 h-5"
                 />
-                <span className="font-medium">{selectedTransferToken.name}</span>
-                <ChevronDown size={16} className="text-white" />
-              </button>
-              {/* Dropdown */}
-              {openTransferTokenDD ? (
-                <div className="absolute mt-1 w-full bg-[#1c1c1c] border border-gray-600 rounded-xl shadow-lg z-10">
-                  {transferTokens.map((token) => (
-                    <button
-                      key={token.name}
-                      onClick={() => {
-                        setSelectedTransferToken(token);
-                        setOpenTransferTokenDD(false);
-                      }}
-                      className="flex items-center gap-2 w-full px-3 py-2 text-left text-white hover:bg-gray-700 rounded-lg"
-                    >
-                      <img src={token.src} alt={token.name} className="w-5 h-5 rounded-full" />
-                      {token.name}
-                    </button>
-                  ))}
-                </div>
-              ) : <div></div>}
-            </div>
-
-
-            {/* Amount input */}
-            <input
-              type='number'
-              inputMode="decimal"
-              placeholder="0"
-              value={transferValue}
-              onChange={(e) => setTransferValue(e.target.value)}
-              className="flex-1 min-w-0 text-right text-2xl font-medium bg-zinc-900 outline-none placeholder:text-gray-400 appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [moz-appearance:textfield]"
-
-            />
-          </div>
-
-          <div className="text-right text-white text-base mt-1">
-            Minimum amount required: {minimalRequired[0] == '0' ? minimalRequired : summarizeNumber(Number(minimalRequired))} {selectedTransferToken.name}
+                <span className="font-medium">
+                  {selectedTransferToken.name}
+                </span>
+              </span>
+              <ChevronDown size={16} className="text-muted-foreground" />
+            </button>
+            {openTransferTokenDD ? (
+              <div className="absolute mt-1 w-full bg-card border border-border rounded-xl shadow-lg z-10">
+                {transferTokens.map((token) => (
+                  <button
+                    key={token.name}
+                    onClick={() => {
+                      setSelectedTransferToken(token);
+                      setOpenTransferTokenDD(false);
+                    }}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-left text-card-foreground hover:bg-muted rounded-lg"
+                  >
+                    <img
+                      src={token.src}
+                      alt={token.name}
+                      className="w-5 h-5 rounded-full"
+                    />
+                    {token.name}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
         </div>
-        <div className="w-full mt-2 h-full p-4 bg-zinc-800 rounded-2xl shadow-md">
 
-          <div className="flex justify-between text-sm text-gray-500 mb-2">
-            <span className="text-white">Receiver</span>
-
+        {/* Amount */}
+        <div>
+          <div className="flex justify-between text-sm text-muted-foreground mb-2">
+            <span className="text-card-foreground">Amount</span>
+            <span className="text-card-foreground">
+              Balance:{" "}
+              <span className="font-medium">{`${balance} ${selectedTransferToken.name}`}</span>
+            </span>
           </div>
-
-          {/* Input row */}
-          <div className="flex items-center gap-3 border rounded-xl p-3 bg-zinc-900">
-            {/* Amount input */}
-            <input
-              type="text"
-              inputMode="text"
-              placeholder="0x0"
-              value={transferReceiverValue}
-              onChange={(e) => setTransferReceiverValue(e.target.value)}
-              className="flex-1 min-w-0 text-right text-2xl font-medium bg-zinc-900 outline-none placeholder:text-gray-400"
-
-            />
+          <input
+            type="number"
+            inputMode="decimal"
+            placeholder="0"
+            value={transferValue}
+            onChange={(e) => setTransferValue(e.target.value)}
+            className="w-full px-3 py-2 bg-card border border-border rounded-lg text-card-foreground placeholder:text-muted-foreground appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [moz-appearance:textfield]"
+          />
+          <div className="text-right text-muted-foreground text-sm mt-1">
+            Minimum amount required: {summarizeNumber(Number(minimalRequired))}{" "}
+            {selectedTransferToken.name}
           </div>
         </div>
-        <FormGroup className='' >
 
-          <FormControlLabel disableTypography={{ color: 'white' }} control={<Switch
-            checked={paymaster}
-            onChange={(_, checked) => setPaymaster(checked)}
-          />} label="Paymaster" />
+        {/* Receiver */}
+        <div>
+          <label className="block text-sm text-muted-foreground mb-2">
+            Receiver
+          </label>
+          <input
+            type="text"
+            inputMode="text"
+            placeholder="0x0"
+            value={transferReceiverValue}
+            onChange={(e) => setTransferReceiverValue(e.target.value)}
+            className="w-full px-3 py-2 bg-card border border-border rounded-lg text-card-foreground placeholder:text-muted-foreground"
+          />
+        </div>
+        <FormGroup className="mt-2">
+          <FormControlLabel
+            disableTypography={{ color: "white" }}
+            control={
+              <Switch
+                checked={paymaster}
+                onChange={(_, checked) => setPaymaster(checked)}
+              />
+            }
+            label="Paymaster"
+          />
         </FormGroup>
       </div>
-    )
+    );
   }
 
   function loadingContent() {
     return (
       <div style={{ marginLeft: "auto", marginRight: "auto", width: "50%" }}>
-        <img src='/Infinity.svg'></img>
-        <div>
-          {loadingText}
-        </div>
+        <img src="/Infinity.svg"></img>
+        <div>{loadingText}</div>
       </div>
-    )
+    );
   }
 
   function createAndDownloadFile(content, name = "note.txt") {
     const fileContent = content;
-    const blob = new Blob([fileContent], { type: 'text/plain' });
+    const blob = new Blob([fileContent], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
 
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
     link.download = name;
 
@@ -1004,276 +1241,287 @@ const MainComponent = () => {
   }
 
   async function handleDeposit() {
+    setLoading(true);
+    setLoadingText(
+      "Initiating deposit...(Do not close neither reload the screen.)"
+    );
+    if (!resolvedTyphoonAddress) {
+      setLoading(false);
+      return;
+    }
 
-    setLoading(true)
-    setLoadingText("Initiating deposit...(Do not close neither reload the screen.)")
+    const typhoon = await getContractAt(resolvedTyphoonAddress, provider);
+    if (!typhoon) {
+      setLoading(false);
+      return;
+    }
 
-    const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
+    let pool = await typhoon.getPool(
+      tokenToAddress[srcToken],
+      getFullDenomination(dselectedItem, tokenDecimals[srcToken])
+    );
+    let poolAddr = "0x" + pool.toString(16);
 
-    const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
-
-    let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(dselectedItem, tokenDecimals[srcToken]))
-    let poolAddr = '0x' + pool.toString(16)
-
-    setLoadingText("Depositing...(Do not close neither reload the screen.)")
-    const [secret, nullifier] = generateSecretAndNullifier()
-    const cn = await commitmentAndNullifierHash(secret, nullifier)
+    setLoadingText("Depositing...(Do not close neither reload the screen.)");
+    const [secret, nullifier] = generateSecretAndNullifier();
+    const cn = await commitmentAndNullifierHash(secret, nullifier);
     const multiCall = await account.execute([
       // Calling the first contract
       {
         contractAddress: tokenToAddress[srcToken],
-        entrypoint: 'approve',
+        entrypoint: "approve",
         calldata: CallData.compile({
           spender: poolAddr,
-          amount: cairo.uint256(getFullDenomination(dselectedItem, tokenDecimals[srcToken])),
+          amount: cairo.uint256(
+            getFullDenomination(dselectedItem, tokenDecimals[srcToken])
+          ),
         }),
       },
       // Calling the second contract
       {
-        contractAddress: typhoonAddress,
-        entrypoint: 'deposit',
+        contractAddress: resolvedTyphoonAddress,
+        entrypoint: "deposit",
         calldata: CallData.compile({
           _commitment: cairo.uint256(cn[0]),
           _pool: poolAddr,
-          _reward: rewardMode
+          _reward: rewardMode,
         }),
       },
     ]);
 
     await account.waitForTransaction(multiCall.transaction_hash);
 
-    const { abi: poolAbi } = await provider.getClassAt(poolAddr)
-    const poolC = new Contract(poolAbi, poolAddr, provider);
-
-    let day = await poolC.currentDay()
-
-
-    await setProofElement(["0x" + secret, "0x" + nullifier, multiCall.transaction_hash.toString(), poolAddr, rewardMode ? "0x" + day.toString() : '0x1'])
-
-
-    setLoadingText("Deposit Completed! (Do not close neither reload the screen.)")
-    console.log("noteAcc", noteAcc)
-    if (noteAcc == "" || noteAcc == null || noteAcc == undefined || noteAcc == "null" || noteAcc == "undefined") {
-      let proofElements = JSON.stringify({
-        "secret": "0x" + secret,
-        "nullifier": "0x" + nullifier,
-        "txHash": multiCall.transaction_hash.toString(),
-        "pool": poolAddr,
-        "day": rewardMode ? "0x" + day.toString() : '0x1'
-      })
-      createAndDownloadFile(proofElements)
-    } else {
-      setLoadingText("Saving in Note Account!(Do not close neither reload the screen.)")
-
-      try {
-        await saveInNoteAccount(["0x" + secret, "0x" + nullifier, multiCall.transaction_hash.toString(), poolAddr, rewardMode ? "0x" + day.toString() : '0x1'], noteAcc)
-        let proofElements = JSON.stringify({
-          "secret": "0x" + secret,
-          "nullifier": "0x" + nullifier,
-          "txHash": multiCall.transaction_hash.toString(),
-          "pool": poolAddr,
-          "day": rewardMode ? "0x" + day.toString() : '0x1'
-        })
-        createAndDownloadFile(proofElements)
-      } catch (e) {
-        console.log(e)
-        let proofElements = JSON.stringify({
-          "secret": "0x" + secret,
-          "nullifier": "0x" + nullifier,
-          "txHash": multiCall.transaction_hash.toString(),
-          "pool": poolAddr,
-          "day": rewardMode ? "0x" + day.toString() : '0x1'
-        })
-        createAndDownloadFile(proofElements)
-      }
-
+    const poolC = await getContractAt(poolAddr, provider);
+    if (!poolC) {
+      setLoading(false);
+      return;
     }
 
-    await new Promise(r => setTimeout(r, 2000));
-    setLoading(false)
+    let day = await poolC.currentDay();
+
+    await setProofElement([
+      "0x" + secret,
+      "0x" + nullifier,
+      multiCall.transaction_hash.toString(),
+      poolAddr,
+      rewardMode ? "0x" + day.toString() : "0x1",
+    ]);
+
+    setLoadingText(
+      "Deposit Completed! (Do not close neither reload the screen.)"
+    );
+    let proofElements = JSON.stringify({
+      secret: "0x" + secret,
+      nullifier: "0x" + nullifier,
+      txHash: multiCall.transaction_hash.toString(),
+      pool: poolAddr,
+      day: rewardMode ? "0x" + day.toString() : "0x1",
+    });
+    createAndDownloadFile(proofElements);
+    // console.log("noteAcc", noteAcc);
+    // if (
+    //   noteAcc == "" ||
+    //   noteAcc == null ||
+    //   noteAcc == undefined ||
+    //   noteAcc == "null" ||
+    //   noteAcc == "undefined"
+    // ) {
+    //   let proofElements = JSON.stringify({
+    //     secret: "0x" + secret,
+    //     nullifier: "0x" + nullifier,
+    //     txHash: multiCall.transaction_hash.toString(),
+    //     pool: poolAddr,
+    //     day: rewardMode ? "0x" + day.toString() : "0x1",
+    //   });
+    //   createAndDownloadFile(proofElements);
+    // } else {
+    //   setLoadingText(
+    //     "Saving in Note Account!(Do not close neither reload the screen.)"
+    //   );
+
+    //   try {
+    //     await saveInNoteAccount(
+    //       [
+    //         "0x" + secret,
+    //         "0x" + nullifier,
+    //         multiCall.transaction_hash.toString(),
+    //         poolAddr,
+    //         rewardMode ? "0x" + day.toString() : "0x1",
+    //       ],
+    //       noteAcc
+    //     );
+    //     let proofElements = JSON.stringify({
+    //       secret: "0x" + secret,
+    //       nullifier: "0x" + nullifier,
+    //       txHash: multiCall.transaction_hash.toString(),
+    //       pool: poolAddr,
+    //       day: rewardMode ? "0x" + day.toString() : "0x1",
+    //     });
+    //     createAndDownloadFile(proofElements);
+    //   } catch (e) {
+    //     console.log(e);
+    //     let proofElements = JSON.stringify({
+    //       secret: "0x" + secret,
+    //       nullifier: "0x" + nullifier,
+    //       txHash: multiCall.transaction_hash.toString(),
+    //       pool: poolAddr,
+    //       day: rewardMode ? "0x" + day.toString() : "0x1",
+    //     });
+    //     createAndDownloadFile(proofElements);
+    //   }
+    // }
+
+    await new Promise((r) => setTimeout(r, 2000));
+    setLoading(false);
   }
 
-  async function handleSpecificAmountDeposit() {
-    setLoading(true)
-    const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
-    const typhoon = new Contract(typhoonAbi, typhoonAddress, provider);
-
-
-    const { abi: tokenAbi } = await provider.getClassAt(tokenToAddress[srcToken])
-    const token = new Contract(tokenAbi, tokenToAddress[srcToken], provider);
-
-
-    let proofsElements = []
-
-    let secrets = []
-    let nullifiers = []
-    let pools = []
-    let commitments = []
-
-    let approvalsAndDeposit = []
-
-    let [poolsAllowance, depositCount] = allowancePerPool(specificValue)
-    let noteCounter = 0
-    for (let i = 0; i < poolsAllowance.length; i++) {
-      if (poolsAllowance[i] == 0) {
-        continue
-      }
-      let pool = await typhoon.getPool(tokenToAddress[srcToken], getFullDenomination(denominationsList[i], tokenDecimals[srcToken]))
-      approvalsAndDeposit.push({
-        contractAddress: tokenToAddress[srcToken],
-        entrypoint: 'approve',
-        calldata: CallData.compile({
-          spender: '0x' + pool.toString(16),
-          amount: cairo.uint256(poolsAllowance[i]),
-        }),
-      })
-      for (let j = 0; j < BigInt(poolsAllowance[i]) / getFullDenomination(denominationsList[i], tokenDecimals[srcToken]); j++) {
-        noteCounter++
-        setLoadingText(`Generating Deposit (${noteCounter}/${depositCount})...`)
-        const [secret, nullifier] = generateSecretAndNullifier()
-        secrets.push(secret)
-        nullifiers.push(nullifier)
-        pools.push('0x' + pool.toString(16))
-        const [commitment, _] = await commitmentAndNullifierHash(secret, nullifier)
-        commitments.push(commitment)
-      }
-    }
-
-    approvalsAndDeposit.push({
-      contractAddress: typhoonAddress,
-      entrypoint: 'deposit',
-      calldata: CallData.compile({
-        _commitment: cairo.tuple(commitments.map(x => cairo.uint256(x))),
-        _pool: cairo.tuple(pools),
-        _reward: rewardMode
-      }),
-    })
-    setLoadingText("Depositing...")
-    const multiCall = await account.execute(approvalsAndDeposit, { version: 2 });
-
-    await account.waitForTransaction(multiCall.transaction_hash);
-
-    const { abi: poolAbi } = await provider.getClassAt(pools[0])
-    const poolC = new Contract(poolAbi, pools[0], provider);
-
-    let day = await poolC.currentDay()
-
-    for (let i = 0; i < commitments.length; i++) {
-      proofsElements.push(
-        JSON.stringify({
-          "secret": secrets[i],
-          "nullifier": nullifiers[i],
-          "txHash": multiCall.transaction_hash,
-          "pool": pools[i],
-          "day": rewardMode ? day.toString() : '1'
-        })
-      )
-    }
-    setSpecificValue("")
-    createAndDownloadFile(proofsElements.join('\n'))
-    setLoadingText("Deposit Completed!")
-    await new Promise(r => setTimeout(r, 2000));
-    setLoading(false)
-  }
-
-
-
+ 
   async function handleWithdraw() {
-
     // let callData = await generateProofCalldata("", receiverValue)
-    setLoading(true)
-    setLoadingText("Initiating Withdraw...")
-    await new Promise(r => setTimeout(r, 1000));
+    setLoading(true);
+    setLoadingText("Initiating Withdraw...");
+    await new Promise((r) => setTimeout(r, 1000));
+    let sdk = new TyphoonSDK();
 
-
-    let proofsStringList = JSONInputStringToList(noteValue)
+    let proofsStringList = JSONInputStringToList(noteValue);
 
     for (let i = 0; i < proofsStringList.length; i++) {
-      setLoadingText(`Generating Proof... (This can take a few seconds)`)
-      let proofString = JSON.parse(proofsStringList[i])
-      let callData = await generateProofCalldata(proofString, receiverValue, paymaster)
-      if (paymaster) {
-        let cd = callData.map(x => x.toString())
-        try {
-          setLoadingText(`Withdrawing using paymaster... (This can take a few seconds)`)
-          const res = await axios.post("https://typhoon-paymaster.vercel.app/calldata", {
-            calldata: cd,
-            note_account_calldata: []
-          });
-          console.log("Response:", res.data);
-        } catch (err) {
-          console.error("Error:", err.response?.data || err.message);
-        }
-      } else {
-        setLoadingText(`Withdrawing... (This can take a few seconds)`)
-        const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
-        const typhoonContract = new Contract(typhoonAbi, typhoonAddress, account);
-        const call = typhoonContract.populate('withdraw', { full_proof_with_hints: callData });
-        const multiCall = await account.execute({
-          contractAddress: typhoonAddress,
-          entrypoint: 'withdraw',
-          calldata: call.calldata,
+      setLoadingText(`Generating Proof... (This can take a few seconds)`);
+      let parsed;
+      try {
+        parsed = JSON.parse(proofsStringList[i]);
+      } catch (e) {
+        console.error("[withdraw] invalid JSON line", {
+          index: i,
+          value: proofsStringList[i],
+          error: e,
         });
-        await account.waitForTransaction(multiCall.transaction_hash);
+        continue;
       }
+      
+      sdk.init([parsed.secret.includes('0x') ? parsed.secret.slice(2) : parsed.secret], [parsed.nullifier.includes('0x') ? parsed.nullifier.slice(2) : parsed.nullifier], [parsed.pool]);
+      
+      await sdk.withdraw(parsed.txHash, [receiverValue]);
+      // let callData = await generateProofCalldata(
+      //   parsed,
+      //   receiverValue,
+      //   paymaster
+      // );
+      // if (paymaster) {
+      //   let cd = callData.map((x) => x.toString());
+      //   try {
+      //     setLoadingText(
+      //       `Withdrawing using paymaster... (This can take a few seconds)`
+      //     );
+      //     const res = await axios.post(
+      //       "https://typhoon-paymaster.vercel.app/calldata",
+      //       {
+      //         calldata: cd,
+      //         note_account_calldata: [],
+      //       }
+      //     );
+      //     console.log("Response:", res.data);
+      //   } catch (err) {
+      //     console.error("Error:", err.response?.data || err.message);
+      //   }
+      // } else {
+      //   setLoadingText(`Withdrawing... (This can take a few seconds)`);
+      //   const typhoonAbi = await loadAbi(resolvedTyphoonAddress, provider);
+      //   if (!typhoonAbi) {
+      //     setLoading(false);
+      //     return;
+      //   }
+      //   const typhoonContract = new Contract({
+      //     abi: typhoonAbi,
+      //     address: resolvedTyphoonAddress,
+      //     providerOrAccount: account,
+      //   });
+      //   const call = typhoonContract.populate("withdraw", {
+      //     full_proof_with_hints: callData,
+      //   });
+      //   // TODO: Calculate fees
+      //   const resourceBounds = account.estimateInvokeFee({
+      //     contractAddress: resolvedTyphoonAddress,
+      //     entrypoint: "withdraw",
+      //     calldata: call.calldata,
+      //   });
+      //   const multiCall = await account.execute(
+      //     call,
+      //     undefined,
+      //     resourceBounds
+      //   );
+      //   await account.waitForTransaction(multiCall.transaction_hash);
+      // }
     }
 
-    setLoadingText("Withdraw Completed!")
-    await new Promise(r => setTimeout(r, 3000));
-    setNoteValue("")
-    setReceiverValue("")
-    setLoading(false)
+    setLoadingText("Withdraw Completed!");
+    await new Promise((r) => setTimeout(r, 3000));
+    setNoteValue("");
+    setReceiverValue("");
+    setLoading(false);
   }
 
   async function handleTransfer() {
-    setLoading(true)
-    setLoadingText("Generating deposit calls...")
-    let sdk = new TyphoonSDK()
-    let calls = await sdk.generate_approve_and_deposit_calls(BigInt(getFullDenomination(transferValue, tokenDecimals[srcToken])), tokenList[selectedTransferToken.name])
-    setLoadingText("Depositing...")
-    const multiCall = await account.execute(calls);
+    setLoading(true);
+    setLoadingText("Generating deposit calls...");
+    let sdk = new TyphoonSDK();
+    let calls = await sdk.generate_approve_and_deposit_calls(
+      BigInt(getFullDenomination(transferValue, tokenDecimals[srcToken])),
+      tokenList[selectedTransferToken.name]
+    );
+    setLoadingText("Depositing...");
+    const multiCall = await account.execute([...calls]);
     await account.waitForTransaction(multiCall.transaction_hash);
-    let secrets = sdk.get_secrets()
-    let nullifiers = sdk.get_nullifiers()
-    let pools = sdk.get_pools()
-    let proofsElements = []
+    let secrets = sdk.get_secrets();
+    let nullifiers = sdk.get_nullifiers();
+    let pools = sdk.get_pools();
+    let proofsElements = [];
     for (let i = 0; i < secrets.length; i++) {
       proofsElements.push(
         JSON.stringify({
-          "secret": secrets[i],
-          "nullifier": nullifiers[i],
-          "txHash": multiCall.transaction_hash,
-          "pool": pools[i],
-          "day": '1'
+          secret: secrets[i],
+          nullifier: nullifiers[i],
+          txHash: multiCall.transaction_hash,
+          pool: pools[i],
+          day: "1",
         })
-      )
+      );
     }
-    createAndDownloadFile(proofsElements.join('\n'))
-    setLoadingText("Withdrawing to destiny...")
-    await sdk.withdraw(multiCall.transaction_hash, [transferReceiverValue])
-    setTransferReceiverValue('')
-    setTransferValue(undefined)
-    setLoading(false)
+    createAndDownloadFile(proofsElements.join("\n"));
+    setLoadingText("Withdrawing to destiny...");
+    await sdk.withdraw(multiCall.transaction_hash, [transferReceiverValue]);
+    setTransferReceiverValue("");
+    setTransferValue("");
+    setLoading(false);
   }
 
   function depositOptionPopup() {
     return (
       <div>
-        <Popup open={openDepositOp} onClose={() => {
-
-          if (!downloaded) {
-            let proofElements = JSON.stringify({
-              "secret": proofElement[0],
-              "nullifier": proofElement[1],
-              "txHash": proofElement[2],
-              "pool": proofElement[3],
-              "day": proofElement[4]
-            })
-            createAndDownloadFile(proofElements)
-          }
-          setDownloaded(true)
-          setOpenDepositOp(false)
-        }} modal nested contentStyle={{ width: '500px', height: '200px', borderRadius: '20px' }}>
+        <Popup
+          open={openDepositOp}
+          onClose={() => {
+            if (!downloaded) {
+              let proofElements = JSON.stringify({
+                secret: proofElement[0],
+                nullifier: proofElement[1],
+                txHash: proofElement[2],
+                pool: proofElement[3],
+                day: proofElement[4],
+              });
+              createAndDownloadFile(proofElements);
+            }
+            setDownloaded(true);
+            setOpenDepositOp(false);
+          }}
+          modal
+          nested
+          contentStyle={{
+            width: "500px",
+            height: "200px",
+            borderRadius: "20px",
+          }}
+        >
           <div>
             <div className="lg:border-outline-grey ml-5 basis-5/6 lg:col-span-2 lg:border-r-[1px] lg:border-solid lg:py-4 lg:pl-8">
               <h2 className="my-4 text-center text-[1.125em] font-bold text-black lg:text-start">
@@ -1281,26 +1529,39 @@ const MainComponent = () => {
               </h2>
             </div>
             <div className="flex">
-              <button style={{ backgroundColor: 'blue', color: 'white', marginLeft: '10px' }}
+              <button
                 aria-haspopup="dialog"
                 onClick={() => {
                   let proofElements = JSON.stringify({
-                    "secret": proofElement[0],
-                    "nullifier": proofElement[1],
-                    "txHash": proofElement[2],
-                    "pool": proofElement[3],
-                    "day": proofElement[4]
-                  })
-                  createAndDownloadFile(proofElements)
-                  setDownloaded(true)
-                  setOpenDepositOp(false)
+                    secret: proofElement[0],
+                    nullifier: proofElement[1],
+                    txHash: proofElement[2],
+                    pool: proofElement[3],
+                    day: proofElement[4],
+                  });
+                  createAndDownloadFile(proofElements);
+                  setDownloaded(true);
+                  setOpenDepositOp(false);
                 }}
-                className="rounded-[12px] bg-button-primary bg-blue px-4 py-3 text-background-primary-light transition-all duration-300 hover:rounded-[30px] md:py-4"
+                className="rounded-[12px] bg-accent text-accent-foreground ml-2 px-4 py-3 transition-all duration-300 hover:rounded-[30px] md:py-4"
               >
                 Download Note
               </button>
 
-              <Popup trigger={<button style={{ backgroundColor: 'blue', color: 'white', marginRight: '5px', marginLeft: "10px" }} className={"rounded-[12px] bg-button-primary bg-blue px-4 py-3 text-background-primary-light transition-all duration-300 hover:rounded-[30px] md:py-4"}> Connect/Create Note Account</button>} modal contentStyle={{ borderRadius: '10px' }}>
+              <Popup
+                trigger={
+                  <button
+                    className={
+                      "rounded-[12px] bg-accent text-accent-foreground ml-2 px-4 py-3 transition-all duration-300 hover:rounded-[30px] md:py-4"
+                    }
+                  >
+                    {" "}
+                    Connect/Create Note Account
+                  </button>
+                }
+                modal
+                contentStyle={{ borderRadius: "10px" }}
+              >
                 <div>
                   <div className="lg:border-outline-grey ml-5 basis-5/6 lg:col-span-2 lg:border-r-[1px] lg:border-solid lg:py-4 lg:pl-8">
                     <h2 className="my-4 text-center text-[1.125em] font-bold text-black lg:text-start">
@@ -1308,7 +1569,7 @@ const MainComponent = () => {
                     </h2>
                   </div>
                   <div className="flex">
-                    <div className="relative bg-[#212429] p-12 py-6 rounded-xl mb-5 ml-5 border-transparent hover:border-zinc-600">
+                    <div className="relative bg-card p-12 py-6 rounded-xl mb-5 ml-5 border-transparent hover:border-border">
                       <div className="flex items-center rounded-xl">
                         <input
                           className={getInputClassname()}
@@ -1323,16 +1584,15 @@ const MainComponent = () => {
                       </div>
                     </div>
 
-                    <button style={{ backgroundColor: 'blue', color: 'white', marginLeft: '10px' }}
+                    <button
                       aria-haspopup="dialog"
                       onClick={async () => {
-                        connectNoteAccount(noteValue)
-                        await saveInNoteAccount(proofElement, noteValue)
-                        setDownloaded(true)
-                        setOpenDepositOp(false)
-                      }
-                      }
-                      className="rounded-[12px]  ml-10 bg-button-primary bg-blue px-4 py-3 text-background-primary-light transition-all duration-300 hover:rounded-[30px] md:py-4"
+                        connectNoteAccount(noteValue);
+                        await saveInNoteAccount(proofElement, noteValue);
+                        setDownloaded(true);
+                        setOpenDepositOp(false);
+                      }}
+                      className="rounded-[12px]  ml-10 bg-accent text-accent-foreground px-4 py-3 transition-all duration-300 hover:rounded-[30px] md:py-4"
                     >
                       Connect
                     </button>
@@ -1342,74 +1602,78 @@ const MainComponent = () => {
                       Or
                     </h2>
                   </div>
-                  <button style={{ backgroundColor: 'blue', color: 'white', marginLeft: '20px' }}
+                  <button
                     aria-haspopup="dialog"
                     onClick={async () => {
-                      let acc = createNoteAccount()
-                      await saveInNoteAccount(proofElement, acc)
-                      setDownloaded(true)
-                      setOpenDepositOp(false)
+                      let acc = createNoteAccount();
+                      await saveInNoteAccount(proofElement, acc);
+                      setDownloaded(true);
+                      setOpenDepositOp(false);
                     }}
-                    className="items-center rounded-[12px] ml-10 bg-button-primary bg-blue px-6 py-3 text-background-primary-light transition-all duration-300 hover:rounded-[30px] md:py-4"
+                    className="items-center rounded-[12px] ml-10 bg-accent text-accent-foreground px-6 py-3 transition-all duration-300 hover:rounded-[30px] md:py-4"
                   >
                     Create Note Account
                   </button>
                   <div className="col-span-8 flex flex-col gap-2">
-
                     <p className="text-black">
-                      Once you click on "Create Note Account", a new private key will be generated and will be downloaded to your computer in ".txt" format. Please keep it safe, as it is the only way to access your Note Account.
+                      Once you click on "Create Note Account", a new private key
+                      will be generated and will be downloaded to your computer
+                      in ".txt" format. Please keep it safe, as it is the only
+                      way to access your Note Account.
                     </p>
                   </div>
                 </div>
               </Popup>
             </div>
-
           </div>
         </Popup>
       </div>
-    )
+    );
   }
 
   function connectNoteAccount(noteAccount) {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem("noteAcc", noteAccount)
+    if (typeof window !== "undefined") {
+      localStorage.setItem("noteAcc", noteAccount);
     }
-    setNoteAcc(noteAccount)
-    setAccountExists(true)
+    setNoteAcc(noteAccount);
+    setAccountExists(true);
     // save note in contract
   }
 
   function createNoteAccount() {
     const acc = Wallet.createRandom();
-    const privKey = acc.privateKey.slice(2) // remove 0x prefix
-    if (typeof window !== 'undefined') {
-      localStorage.setItem("noteAcc", privKey)
+    const privKey = acc.privateKey.slice(2); // remove 0x prefix
+    if (typeof window !== "undefined") {
+      localStorage.setItem("noteAcc", privKey);
     }
-    console.log("localStorage noteAcc", localStorage.getItem("noteAcc"))
+    console.log("localStorage noteAcc", localStorage.getItem("noteAcc"));
     let na = JSON.stringify({
-      "privkey": privKey,
-    })
-    createAndDownloadFile(na, "priv-key.txt")
-    setAccountExists(true)
-    setNoteAcc(privKey)
+      privkey: privKey,
+    });
+    createAndDownloadFile(na, "priv-key.txt");
+    setAccountExists(true);
+    setNoteAcc(privKey);
     // save note in contract
-    return privKey
+    return privKey;
   }
 
   async function saveInNoteAccount(pe, acckey) {
-    console.log("noteAcc", noteAcc)
+    console.log("noteAcc", noteAcc);
     let acc = new Wallet("0x" + acckey);
 
-    const publicKeyBuffer = Buffer.from(acc.signingKey.publicKey.slice(2), 'hex');
-    const privKeyBuffer = Buffer.from(acckey, 'hex');
+    const publicKeyBuffer = Buffer.from(
+      acc.signingKey.publicKey.slice(2),
+      "hex"
+    );
+    const privKeyBuffer = Buffer.from(acckey, "hex");
     const nonce = nacl.randomBytes(nacl.box.nonceLength);
-    let keyPair = nacl.box.keyPair.fromSecretKey(privKeyBuffer)
-    let compressedData = []
-    console.log("tx hash save ", pe)
+    let keyPair = nacl.box.keyPair.fromSecretKey(privKeyBuffer);
+    let compressedData = [];
+    console.log("tx hash save ", pe);
     for (let i = 0; i < pe.length; i++) {
-      let data = pe[i].slice(2) // remove 0x prefix
+      let data = pe[i].slice(2); // remove 0x prefix
       if (data.length % 2 != 0) {
-        data = "150dd" + data
+        data = "150dd" + data;
       }
 
       const encrypted = nacl.box(
@@ -1433,15 +1697,23 @@ const MainComponent = () => {
 
       // let enData = await ecies.encrypt(publicKeyBuffer, Buffer.from(data, "hex"))
       // let encrypted = bufferToHex(enData)
-      let en = BigInt(bufferToHex(encrypted))
-      let times = en / (maxUint512 * maxUint512)
+      let en = BigInt(bufferToHex(encrypted));
+      let times = en / (maxUint512 * maxUint512);
 
-      let remainder = en % (maxUint512 * maxUint512)
-      let timesR = remainder / (maxUint512 * maxUint256)
-      let timesRemainderR = (remainder % (maxUint512 * maxUint256)) / maxUint512
-      let remainderRemainderR = ((remainder % (maxUint512 * maxUint256)) % maxUint512) / maxUint256
-      let remainderRemainderR2 = ((remainder % (maxUint512 * maxUint256)) % maxUint512) % maxUint256
-      let recover = (maxUint512 * maxUint512) * times + (timesR * (maxUint512 * maxUint256)) + (timesRemainderR * maxUint512) + (remainderRemainderR * maxUint256) + remainderRemainderR2
+      let remainder = en % (maxUint512 * maxUint512);
+      let timesR = remainder / (maxUint512 * maxUint256);
+      let timesRemainderR =
+        (remainder % (maxUint512 * maxUint256)) / maxUint512;
+      let remainderRemainderR =
+        ((remainder % (maxUint512 * maxUint256)) % maxUint512) / maxUint256;
+      let remainderRemainderR2 =
+        ((remainder % (maxUint512 * maxUint256)) % maxUint512) % maxUint256;
+      let recover =
+        maxUint512 * maxUint512 * times +
+        timesR * (maxUint512 * maxUint256) +
+        timesRemainderR * maxUint512 +
+        remainderRemainderR * maxUint256 +
+        remainderRemainderR2;
       // console.log("remainderRemainderR gt ", remainderRemainderR > maxUint256)
       // console.log("remainderRemainderR2 gt ", remainderRemainderR2 > maxUint256)
       // console.log("times", times, "timesR", timesR, "timesRemainderR", timesRemainderR, "remainderRemainderR", remainderRemainderR, "remainderRemainderR2", remainderRemainderR2)
@@ -1453,11 +1725,11 @@ const MainComponent = () => {
       // console.log("encrypted", encrypted)
       // // console.log("0x0" + recover.toString(16))
       // console.log("0x0" + recover.toString(16) == encrypted)
-      compressedData.push(times.toString())
-      compressedData.push(timesR.toString())
-      compressedData.push(timesRemainderR.toString())
-      compressedData.push(remainderRemainderR.toString())
-      compressedData.push(remainderRemainderR2.toString())
+      compressedData.push(times.toString());
+      compressedData.push(timesR.toString());
+      compressedData.push(timesRemainderR.toString());
+      compressedData.push(remainderRemainderR.toString());
+      compressedData.push(remainderRemainderR2.toString());
       // compressedData.push(BigInt(bufferToHex(nonce)).toString())
       // const privateKeyBuffer = Buffer.from(noteAcc, 'hex');
       // const decrypted = bufferToHex(await ecies.decrypt(privateKeyBuffer, Buffer.from("0" + recover.toString(16), 'hex')));
@@ -1465,20 +1737,21 @@ const MainComponent = () => {
     }
 
     const msg = nacl.box(
-      naclUtil.decodeUTF8(compressedData.join('')),
+      naclUtil.decodeUTF8(compressedData.join("")),
       nonce,
       keyPair.publicKey,
       keyPair.secretKey
     );
-    let msg_hash_str = createHash('sha256').update(bufferToHex(msg)).digest('hex')
+    let msg_hash_str = createHash("sha256")
+      .update(bufferToHex(msg))
+      .digest("hex");
 
     // let signature = await acc.signMessage(BigInt("0x"+msg_hash_str).toString())
-    let signature = acc.signingKey.sign("0x" + msg_hash_str)
+    let signature = acc.signingKey.sign("0x" + msg_hash_str);
 
     // let sig = Signature.from(signature);
     // console.log(verifyMessage(BigInt("0x"+msg_hash_str).toString(), sig) == acc.address)
     try {
-
       // console.log("maxUint256", maxUint256)
       // console.log("address", acc.address)
       // console.log("compressedData", compressedData)
@@ -1488,30 +1761,59 @@ const MainComponent = () => {
       // console.log("v", sig.v)
       // fn addNote(ref self: TContractState, pubKey: EthAddress, encryptedNote: Span<u256>, msg_hash: u256, r: u256, s: u256, v: u32);
 
-      const multiCall = await account.execute({
-        contractAddress: noteAccountContract,
-        entrypoint: 'addNote',
-        calldata: CallData.compile({
-          pubKey: acc.address,
-          encryptedNote: cairo.tuple([cairo.uint256(compressedData[0]), cairo.uint256(compressedData[1]), cairo.uint256(compressedData[2]), cairo.uint256(compressedData[3]), cairo.uint256(compressedData[4]), cairo.uint256(compressedData[5]), cairo.uint256(compressedData[6]), cairo.uint256(compressedData[7]), cairo.uint256(compressedData[8]), cairo.uint256(compressedData[9]), cairo.uint256(compressedData[10]), cairo.uint256(compressedData[11]), cairo.uint256(compressedData[12]), cairo.uint256(compressedData[13]), cairo.uint256(compressedData[14]), cairo.uint256(compressedData[15]), cairo.uint256(compressedData[16]), cairo.uint256(compressedData[17]), cairo.uint256(compressedData[18]), cairo.uint256(compressedData[19]), cairo.uint256(compressedData[20]), cairo.uint256(compressedData[21]), cairo.uint256(compressedData[22]), cairo.uint256(compressedData[23]), cairo.uint256(compressedData[24]), cairo.uint256(BigInt(bufferToHex(nonce)).toString())]),
-          msgHash: cairo.uint256(BigInt("0x" + msg_hash_str).toString()),
-          r: cairo.uint256(BigInt(signature.r).toString()),
-          s: cairo.uint256(BigInt(signature.s).toString()),
-          v: signature.v
-        }),
-      }, { version: 2 });
+      const multiCall = await account.execute(
+        {
+          contractAddress: noteAccountContract,
+          entrypoint: "addNote",
+          calldata: CallData.compile({
+            pubKey: acc.address,
+            encryptedNote: cairo.tuple([
+              cairo.uint256(compressedData[0]),
+              cairo.uint256(compressedData[1]),
+              cairo.uint256(compressedData[2]),
+              cairo.uint256(compressedData[3]),
+              cairo.uint256(compressedData[4]),
+              cairo.uint256(compressedData[5]),
+              cairo.uint256(compressedData[6]),
+              cairo.uint256(compressedData[7]),
+              cairo.uint256(compressedData[8]),
+              cairo.uint256(compressedData[9]),
+              cairo.uint256(compressedData[10]),
+              cairo.uint256(compressedData[11]),
+              cairo.uint256(compressedData[12]),
+              cairo.uint256(compressedData[13]),
+              cairo.uint256(compressedData[14]),
+              cairo.uint256(compressedData[15]),
+              cairo.uint256(compressedData[16]),
+              cairo.uint256(compressedData[17]),
+              cairo.uint256(compressedData[18]),
+              cairo.uint256(compressedData[19]),
+              cairo.uint256(compressedData[20]),
+              cairo.uint256(compressedData[21]),
+              cairo.uint256(compressedData[22]),
+              cairo.uint256(compressedData[23]),
+              cairo.uint256(compressedData[24]),
+              cairo.uint256(BigInt(bufferToHex(nonce)).toString()),
+            ]),
+            msgHash: cairo.uint256(BigInt("0x" + msg_hash_str).toString()),
+            r: cairo.uint256(BigInt(signature.r).toString()),
+            s: cairo.uint256(BigInt(signature.s).toString()),
+            v: signature.v,
+          }),
+        },
+        { version: 2 }
+      );
       await account.waitForTransaction(multiCall.transaction_hash);
     } catch (error) {
       let proofElements = JSON.stringify({
-        "secret": proofElement[0],
-        "nullifier": proofElement[1],
-        "txHash": proofElement[2],
-        "pool": proofElement[3],
-        "day": proofElement[4]
-      })
-      createAndDownloadFile(proofElements)
+        secret: proofElement[0],
+        nullifier: proofElement[1],
+        txHash: proofElement[2],
+        pool: proofElement[3],
+        day: proofElement[4],
+      });
+      createAndDownloadFile(proofElements);
     }
-
   }
   // function specificAmountField() {
   //   return (
@@ -1539,147 +1841,203 @@ const MainComponent = () => {
 
   function depositTypeSelector() {
     return (
-      <Dropdown className='bg-black rounded-xl'>
+      <Dropdown className="bg-card rounded-xl">
         <DropdownTrigger>
-          <Button variant="bordered" className='bg-black rounded-xl ml-2 mr-10'>{selectedDepositType}</Button>
+          <Button variant="bordered" className="bg-card rounded-xl ml-2 mr-10">
+            {selectedDepositType}
+          </Button>
         </DropdownTrigger>
-        <DropdownMenu className='bg-black rounded-xl' aria-label="Static Actions" items={depositTypes} onAction={key => {
-
-          setSelectedDepositType(key)
-        }}>
-          {item => (
+        <DropdownMenu
+          className="bg-card rounded-xl"
+          aria-label="Static Actions"
+          items={depositTypes}
+          onAction={(key) => {
+            setSelectedDepositType(key);
+          }}
+        >
+          {(item) => (
             <DropdownItem
               aria-label={"depositType"}
               key={item.key}
-              color={item.key === 'delete' ? 'error' : 'default'}
+              color={item.key === "delete" ? "error" : "default"}
             >
               {item.name}
             </DropdownItem>
           )}
         </DropdownMenu>
       </Dropdown>
-    )
+    );
   }
 
   async function estimateGasFee(entry, calldata) {
-    const { suggestedMaxFee: estimatedFee1, gas_price: gasPrice } = await account.estimateInvokeFee({
-      contractAddress: typhoonAddress,
-      entrypoint: entry,
-      calldata: calldata,
-    });
-    return [estimatedFee1, gasPrice]
+    const { suggestedMaxFee: estimatedFee1, gas_price: gasPrice } =
+      await account.estimateInvokeFee({
+        contractAddress: resolvedTyphoonAddress,
+        entrypoint: entry,
+        calldata: calldata,
+      });
+    return [estimatedFee1, gasPrice];
   }
 
   function getBtnClassName() {
-    let className = 'p-4  my-2 rounded-xl'
+    let className =
+      "w-full p-4 mt-6 rounded-xl hover:opacity-90 transition-colors";
     className +=
-      btnText === ENTER_AMOUNT || btnText === CONNECT_WALLET
-        ? ' text-zinc-400 bg-zinc-800 pointer-events-none'
-        : ' bg-blue-700'
-    return className
+      btnText === ENTER_AMOUNT
+        ? " text-muted-foreground bg-muted pointer-events-none opacity-60"
+        : " bg-accent text-accent-foreground";
+    return className;
   }
 
-
-
   function getNavIconClassName(name) {
-    let className =
-      'p-1 px-4 cursor-pointer border-[4px] border-transparent flex items-center'
-    className +=
-      name === selectedNavItem
-        ? ' bg-zinc-800 border-zinc-900 rounded-full'
-        : ''
-    return className
+    const base =
+      "px-4 sm:px-5 py-1.5 rounded-full text-sm sm:text-base font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-accent transition-colors whitespace-nowrap";
+    return name === selectedNavItem
+      ? `${base} bg-accent/10 text-accent`
+      : `${base} text-foreground/80 hover:bg-muted`;
   }
 
   function getInputClassname() {
     let className =
-      ' w-full outline-none h-8 px-2 appearance-none text-3xl bg-transparent'
-    return className
+      " w-full outline-none h-8 px-2 appearance-none text-3xl bg-transparent";
+    return className;
   }
 
   function DenominationSelector(id, disabled) {
     return (
-      <Dropdown disableAnimation={disabled} className='bg-black rounded-xl'>
+      <Dropdown disableAnimation={disabled} className="bg-card rounded-xl">
         <DropdownTrigger>
-          <Button disabled={disabled} variant="bordered" className='bg-black rounded-xl ml-2'>{dselectedItem}</Button>
+          <Button
+            disabled={disabled}
+            variant="bordered"
+            className="bg-card rounded-xl ml-2"
+          >
+            {dselectedItem}
+          </Button>
         </DropdownTrigger>
-        <DropdownMenu className='bg-black rounded-xl' key={cmenuItems.map(i => i.key).join('-')} aria-label="Static Actions" items={dmenuItems} onAction={key => {
-          const menu = [
-            { key: denominationsList[tokenList[srcToken]][0], name: denominationsList[tokenList[srcToken]][0] },
-            { key: denominationsList[tokenList[srcToken]][1], name: denominationsList[tokenList[srcToken]][1] },
-            { key: denominationsList[tokenList[srcToken]][2], name: denominationsList[tokenList[srcToken]][2] },
-            { key: denominationsList[tokenList[srcToken]][3], name: denominationsList[tokenList[srcToken]][3] },
-            { key: denominationsList[tokenList[srcToken]][4], name: denominationsList[tokenList[srcToken]][4] },
-          ]
-          let newItems = getDepositFilteredItems(key, menu)
-          setDMenuItems([...newItems])
-          setDSelectedItem(key)
-          setDenomination(key)
-        }}>
-          {item => (
+        <DropdownMenu
+          className="bg-card rounded-xl"
+          key={cmenuItems.map((i) => i.key).join("-")}
+          aria-label="Static Actions"
+          items={dmenuItems}
+          onAction={(key) => {
+            const menu = [
+              {
+                key: denominationsList[tokenList[srcToken]][0],
+                name: denominationsList[tokenList[srcToken]][0],
+              },
+              {
+                key: denominationsList[tokenList[srcToken]][1],
+                name: denominationsList[tokenList[srcToken]][1],
+              },
+              {
+                key: denominationsList[tokenList[srcToken]][2],
+                name: denominationsList[tokenList[srcToken]][2],
+              },
+              {
+                key: denominationsList[tokenList[srcToken]][3],
+                name: denominationsList[tokenList[srcToken]][3],
+              },
+              {
+                key: denominationsList[tokenList[srcToken]][4],
+                name: denominationsList[tokenList[srcToken]][4],
+              },
+            ];
+            let newItems = getDepositFilteredItems(key, menu);
+            setDMenuItems([...newItems]);
+            setDSelectedItem(key);
+            setDenomination(key);
+          }}
+        >
+          {(item) => (
             <DropdownItem
               aria-label={id}
               key={item.key}
-              color={item.key === 'delete' ? 'error' : 'default'}
+              color={item.key === "delete" ? "error" : "default"}
             >
               {item.name}
             </DropdownItem>
           )}
         </DropdownMenu>
       </Dropdown>
-    )
+    );
   }
 
   function CoinSelector(id, disabled) {
-
-
     return (
-      <Dropdown disableAnimation={disabled} className='bg-black rounded-xl mr-2'>
+      <Dropdown disableAnimation={disabled} className="bg-card rounded-xl mr-2">
         <DropdownTrigger>
-          <Button disabled={disabled} variant="bordered" className='bg-black rounded-xl ml-2 mr-7'>{cselectedItem}</Button>
+          <Button
+            disabled={disabled}
+            variant="bordered"
+            className="bg-card rounded-xl ml-2 mr-7"
+          >
+            {cselectedItem}
+          </Button>
         </DropdownTrigger>
-        <DropdownMenu className='bg-black rounded-xl' key={cmenuItems.map(i => i.key).join('-')} aria-label="Static Actions" items={cmenuItems} onAction={key => {
-          const menu = [
-            { key: ETH, name: ETH },
-            { key: STRK, name: STRK },
-            { key: 'USDC', name: 'USDC' },
-            { key: 'UNO', name: 'UNO' },
-            { key: 'WBTC', name: 'WBTC' },
-            { key: 'tBTC', name: 'tBTC' }
-          ]
-          let newItems = getDepositFilteredItems(key, menu)
-          setCMenuItems([...newItems])
-          setCSelectedItem(key)
-          console.log("token ", key)
-          setSrcToken(key)
-          const dmenu = [
-            { key: denominationsList[tokenList[key]][0], name: denominationsList[tokenList[key]][0] },
-            { key: denominationsList[tokenList[key]][1], name: denominationsList[tokenList[key]][1] },
-            { key: denominationsList[tokenList[key]][2], name: denominationsList[tokenList[key]][2] },
-            { key: denominationsList[tokenList[key]][3], name: denominationsList[tokenList[key]][3] },
-            { key: denominationsList[tokenList[key]][4], name: denominationsList[tokenList[key]][4] },
-          ]
-          let newdItems = getDepositFilteredItems(denominationsList[tokenList[key]][0], dmenu)
-          setDMenuItems([...newdItems])
-          setDSelectedItem(denominationsList[tokenList[key]][0])
-          setDenomination(denominationsList[tokenList[key]][0])
-        }}>
-          {item => (
+        <DropdownMenu
+          className="bg-card rounded-xl"
+          key={cmenuItems.map((i) => i.key).join("-")}
+          aria-label="Static Actions"
+          items={cmenuItems}
+          onAction={(key) => {
+            const menu = [
+              { key: ETH, name: ETH },
+              { key: STRK, name: STRK },
+              { key: "USDC", name: "USDC" },
+              { key: "UNO", name: "UNO" },
+              { key: "WBTC", name: "WBTC" },
+              { key: "tBTC", name: "tBTC" },
+            ];
+            let newItems = getDepositFilteredItems(key, menu);
+            setCMenuItems([...newItems]);
+            setCSelectedItem(key);
+            console.log("token ", key);
+            setSrcToken(key);
+            const dmenu = [
+              {
+                key: denominationsList[tokenList[key]][0],
+                name: denominationsList[tokenList[key]][0],
+              },
+              {
+                key: denominationsList[tokenList[key]][1],
+                name: denominationsList[tokenList[key]][1],
+              },
+              {
+                key: denominationsList[tokenList[key]][2],
+                name: denominationsList[tokenList[key]][2],
+              },
+              {
+                key: denominationsList[tokenList[key]][3],
+                name: denominationsList[tokenList[key]][3],
+              },
+              {
+                key: denominationsList[tokenList[key]][4],
+                name: denominationsList[tokenList[key]][4],
+              },
+            ];
+            let newdItems = getDepositFilteredItems(
+              denominationsList[tokenList[key]][0],
+              dmenu
+            );
+            setDMenuItems([...newdItems]);
+            setDSelectedItem(denominationsList[tokenList[key]][0]);
+            setDenomination(denominationsList[tokenList[key]][0]);
+          }}
+        >
+          {(item) => (
             <DropdownItem
               aria-label={id}
               key={item.key}
-              color={item.key === 'delete' ? 'error' : 'default'}
+              color={item.key === "delete" ? "error" : "default"}
             >
               {item.name}
             </DropdownItem>
           )}
         </DropdownMenu>
       </Dropdown>
-    )
+    );
   }
+};
 
-}
-
-
-
-export default MainComponent
+export default MainComponent;
