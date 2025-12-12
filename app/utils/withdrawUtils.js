@@ -50,14 +50,14 @@ export async function generateProofCalldata(note, recipient, paymaster) {
     const typhoon = new Contract({abi: typhoonAbi, address: resolvedTyphoonAddress, providerOrAccount: provider});
 
     let receipt = await provider.waitForTransaction(note.txHash)
-    
-    let [commitment, nullifierHash] = await commitmentAndNullifierHash(note.secret.includes('0x')? note.secret.slice(2): note.secret, note.nullifier.includes('0x')? note.nullifier.slice(2): note.nullifier)
-    
+
+    let [commitment, nullifierHash] = await commitmentAndNullifierHash(note.secret.includes('0x') ? note.secret.slice(2) : note.secret, note.nullifier.includes('0x') ? note.nullifier.slice(2) : note.nullifier)
+
     let depositEvent = {}
     for (let i = 0; i < typhoon.parseEvents(receipt).length; i++) {
         let event = typhoon.parseEvents(receipt)[i]["typhoon::Typhoon::Typhoon::Deposit"]
         if (event.commitments == commitment) {
-            
+
             depositEvent = event
             break
         }
@@ -66,30 +66,29 @@ export async function generateProofCalldata(note, recipient, paymaster) {
     const lastBlock = await provider.getBlock('latest');
     const keyFilter = [[num.toHex(hash.starknetKeccak('Add'))]];
     let parsedAddEvents = await getAddEvents(Number(receipt.block_number), lastBlock.block_number, note.pool, keyFilter)
-
     let [C, RL, currentLevel, count] = await getCandRl(depositEvent.leafs, parsedAddEvents, note.pool, Number(receipt.block_number))
     let filteredleafs = depositEvent.leafs.filter(val => val != 0n)
     let D = getD(parsedAddEvents, depositEvent.d, filteredleafs[filteredleafs.length - 1])
-    
+
 
     let dd = getDD(D, currentLevel)
-  
+
     let relayerFee = 0n
     let relayer = 0n
-    if(paymaster){
+    if (paymaster) {
         let denomination = await getPoolDenomination(note.pool)
         relayerFee = (denomination / 100n) * 2n
         relayer = BigInt(process.env.NEXT_PUBLIC_PAYMASTER_ADDR)
     }
-    
+
     let proofInput = {
         "nullifierHash": nullifierHash,
         "day": BigInt(1),
         "recipient": BigInt(recipient),
         "relayer": relayer,
         "relayerFee": relayerFee,
-        "secret": BigInt(note.secret.includes('0x')? note.secret.slice(2): note.secret),
-        "nullifier": BigInt(note.nullifier.includes('0x')? note.nullifier.slice(2): note.nullifier),
+        "secret": BigInt(note.secret.includes('0x') ? note.secret.slice(2) : note.secret),
+        "nullifier": BigInt(note.nullifier.includes('0x') ? note.nullifier.slice(2) : note.nullifier),
         "count": count + 1n,
         "dd": dd,
         "D": D,
@@ -128,21 +127,21 @@ export async function generateProofCalldata2(secret, nullifier, txHash, pool, re
             break
         }
     }
-    
+
     const lastBlock = await provider.getBlock('latest');
     const keyFilter = [[num.toHex(hash.starknetKeccak('Add'))]];
     let parsedAddEvents = await getAddEvents(Number(receipt.block_number), lastBlock.block_number, pool, keyFilter)
-    
+
     let [C, RL, currentLevel, count] = await getCandRl(depositEvent.leafs, parsedAddEvents, pool, Number(receipt.block_number))
     let filteredleafs = depositEvent.leafs.filter(val => val != 0n)
     let D = getD(parsedAddEvents, depositEvent.d, filteredleafs[filteredleafs.length - 1])
-    
+
 
     let dd = getDD(D, currentLevel)
 
     let relayerFee = 0n
     let relayer = 0n
-    if(paymaster){
+    if (paymaster) {
         let denomination = await getPoolDenomination(pool)
         relayerFee = (denomination / 100n) * 2n
         relayer = BigInt(process.env.NEXT_PUBLIC_PAYMASTER_ADDR)
@@ -191,17 +190,17 @@ async function getPoolDenomination(poolAddress) {
 }
 // if lvFullIndex % 4 is higher than 0 this function is called
 async function fetchLevel(block_number, level, lvFullIndex, pool) {
-    
+
     const keyFilter = [[num.toHex(hash.starknetKeccak('Add'))]];
     // 1309463 is the block where typhoon got deployed
     let events = await getAddEvents(1671756, block_number, pool, keyFilter)
-    
+
     let filteredEvents = events.filter(val => val.level == level)
-    
+
     let levelArr = []
     let ll = lvFullIndex % 4n
     for (let i = 0; i < Number(ll.toString()); i++) {
-        levelArr[i] = filteredEvents[(filteredEvents.length - 1) - i].value
+        levelArr[i] = filteredEvents[(filteredEvents.length - 2) - i].value
     }
     return levelArr
 }
@@ -284,7 +283,6 @@ async function getCandRl(leafs, addEvents, pool, block_number) {
             break
         }
     }
-
     for (let i = leafIndex + 1; i < addEvents.length; i++) {
         if (addEvents[i].level == 0n) {
             count = addEvents[i].lvFullIndex
@@ -294,9 +292,10 @@ async function getCandRl(leafs, addEvents, pool, block_number) {
             C[currentLevel][addEvents[i].lvFullIndex % 4n] = addEvents[i].value
             let filteredEvents = addEvents.filter(val => val.level == currentLevel && val.lvFullIndex < addEvents[i].lvFullIndex)
             let nonZeroIndex = addEvents[i].lvFullIndex
-            for (let j = filteredEvents.length - 1; j > 0; j--) {
+            for (let j = 0; j < filteredEvents.length; j++) {
                 C[currentLevel][filteredEvents[j].lvFullIndex % 4n] = filteredEvents[j].value
                 nonZeroIndex = filteredEvents[j].lvFullIndex
+                
             }
             if (C[currentLevel][0] == 0n) {
                 let previousRoots = await fetchLevel(block_number, currentLevel, nonZeroIndex, pool)

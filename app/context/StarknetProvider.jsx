@@ -25,6 +25,9 @@ export function StarknetProvider({ children }) {
     includeRecommended: "always",
   });
 
+  console.log("argent id ", injected[0].id)
+  console.log("braavos id ", injected[1].id)
+  
   const connectors = [
     ...injected,
     new WebWalletConnector({ url: "https://web.argent.xyz" }),

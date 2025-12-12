@@ -3,6 +3,7 @@ import {
   useAccount,
   useDisconnect,
   useStarkProfile,
+  useConnect,
   useSwitchChain,
   useNetwork,
 } from "@starknet-react/core";

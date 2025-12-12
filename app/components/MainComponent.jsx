@@ -290,7 +290,7 @@ const MainComponent = () => {
       name: denominationsList[tokenList["STRK"]][3],
     },
     {
-      key: denominationsList[tokenList["STRK"]][3],
+      key: denominationsList[tokenList["STRK"]][4],
       name: denominationsList[tokenList["STRK"]][4],
     },
   ];
