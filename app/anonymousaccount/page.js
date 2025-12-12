@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useRef, use } from 'react'
 import { TyphoonSDK } from 'typhoon-sdk';
 import { ArrowRight } from "lucide-react";
-import { RpcProvider, Contract, hash } from 'starknet-v7';
+import { RpcProvider, Contract, hash } from 'starknet';
 import { tokenDecimals, tokenToSymbol, tokenList } from '../utils/SupportedDenominations';
 import { getCompressedDenomination, getFullDenomination } from '../utils/depositUtils';
 import Header from '../components/Header'
