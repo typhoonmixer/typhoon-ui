@@ -7,6 +7,26 @@ import { useAccount, useConnect } from "@starknet-react/core";
 import { TyphoonSDK } from "typhoon-sdk";
 import { Ghost, Loader2, Search, AlertCircle } from "lucide-react";
 
+const typedMessage = {
+    types: {
+        StarkNetDomain: [
+            { name: 'name', type: 'felt' },
+            { name: 'chainId', type: 'felt' },
+            { name: 'version', type: 'felt' },
+        ],
+        Message: [{ name: 'content', type: 'felt' }],
+    },
+    primaryType: 'Message',
+    domain: {
+        name: 'Typhoon',
+        chainId: 'SN_MAIN', // or 'SN_SEPOLIA' for testnet
+        version: '1',
+    },
+    message: {
+        content: 'Genesis Stealth Account 1',
+    },
+};
+
 function AccountsList() {
   const { account, address } = useAccount();
   const { connector } = useConnect();
@@ -41,7 +61,8 @@ function AccountsList() {
 
     try {
       const sdk = new TyphoonSDK();
-      const tm = sdk.get_typedMessage();
+      
+      let tm = sdk.get_typedMessage();
 
       const sig = await account.signMessage(tm);
 
@@ -54,11 +75,13 @@ function AccountsList() {
         BigInt("0x" + privText)
       );
 
+      console.log("Generated Private Key:", genPrivKey.toString(16));
       const accs = await sdk.get_valid_anonymous_accounts(
         genPrivKey,
         address,
         connector?.id || "argentX"
       );
+      console.log("Valid Accounts:", accs);
 
       setValidAccounts(accs);
     } catch (err) {

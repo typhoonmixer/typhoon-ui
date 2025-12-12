@@ -51,7 +51,7 @@
     "starknet": "^8.1.2",
     "starknetkit": "^1.1.9",
     "tweetnacl": "^1.0.3",
-    "typhoon-sdk": "^1.1.9",
+    "typhoon-sdk": "^1.1.11",
     "url": "^0.11.4"
   },
   "devDependencies": {

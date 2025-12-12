@@ -34,13 +34,13 @@ function Footer() {
               Resources
             </span>
             <Link
-              href="https://typhoon-2.gitbook.io/typhoon-docs"
+              href="https://github.com/typhoonmixer/typhoon_sdk_docs"
               className="hover:text-accent transition-colors"
             >
               Documentation
             </Link>
             <Link
-              href="https://github.com/typhoonmixer/typhoon_sdk_docs"
+              href="https://www.npmjs.com/package/typhoon-sdk"
               className="hover:text-accent transition-colors"
             >
               Typhoon SDK
@@ -55,6 +55,12 @@ function Footer() {
               className="hover:text-accent transition-colors"
             >
               Twitter
+            </Link>
+            <Link
+              href="https://t.me/+ba_QAS6Sp245ZWQ5"
+              className="hover:text-accent transition-colors"
+            >
+              Telegram
             </Link>
           </div>
         </div>

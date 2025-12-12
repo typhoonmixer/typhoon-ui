@@ -1,12 +1,13 @@
 "use client"
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNetwork, useProvider } from "@starknet-react/core";
-import { Contract, hash, events as snEvents, CallData as SNCallData, createAbiParser } from 'starknet';
+import { Contract, hash, events as snEvents, CallData as SNCallData, createAbiParser, RpcProvider } from 'starknet';
 import { mainnet } from '@starknet-react/chains';
 import typhoonMain from '../../typhoon.json' assert { type: 'json' }
 import typhoonTestnet from '../../typhoon-testnet.json' assert { type: 'json' }
 import { getFullDenomination } from '../utils/depositUtils';
 import { tokenDecimals } from '../utils/SupportedDenominations';
+import { getNodeUrl } from '../utils/network';
 // Note list panel removed per design
 
 export default function ReadPanel({
@@ -16,6 +17,7 @@ export default function ReadPanel({
   todayDeposits,
   overallDeposits,
 }) {
+
   const { provider } = useProvider();
   const { chain } = useNetwork();
 
@@ -24,7 +26,7 @@ export default function ReadPanel({
     const envSep = process.env.NEXT_PUBLIC_TYPHOON_SEPOLIA_ADDR;
     let hint = '';
     if (typeof window !== 'undefined') {
-      try { hint = (localStorage.getItem('preferredChain') || '').toLowerCase(); } catch {}
+      try { hint = (localStorage.getItem('preferredChain') || '').toLowerCase(); } catch { }
     }
     const isMainnetPreferred = hint ? hint.includes('main') : (chain?.id === mainnet.id);
     return isMainnetPreferred ? (envMain || typhoonMain?.typhoon) : (envSep || typhoonTestnet?.typhoon);
@@ -33,9 +35,9 @@ export default function ReadPanel({
   // Token mapping (simple subset used in app)
   const tokenToAddress = {
     STRK: "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
-    ETH:  "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+    ETH: "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
     USDC: "0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8",
-    UNO:  "0x0719b5092403233201aa822ce928bd4b551d0cdb071a724edd7dc5e5f57b7f34",
+    UNO: "0x0719b5092403233201aa822ce928bd4b551d0cdb071a724edd7dc5e5f57b7f34",
     WBTC: "0x03fe2b97c1fd336e750087d68b9b867997fd64a2661ff3ca5a7c771641e8e7ac",
     tBTC: "0x04daa17763b286d1e59b97c283c0b8c949994c361e426a28f743c67bdfe9a32f",
   };
@@ -64,11 +66,11 @@ export default function ReadPanel({
     const diffMs = Math.max(0, now - tsSec * 1000);
     const minutes = Math.floor(diffMs / 60000);
     if (minutes < 1) return 'just now';
-    if (minutes < 60) return `${minutes} minute${minutes!==1?'s':''} ago`;
+    if (minutes < 60) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours} hour${hours!==1?'s':''} ago`;
+    if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
     const days = Math.floor(hours / 24);
-    return `${days} day${days!==1?'s':''} ago`;
+    return `${days} day${days !== 1 ? 's' : ''} ago`;
   }
 
   useEffect(() => {
@@ -80,35 +82,60 @@ export default function ReadPanel({
         setLoading(true);
         // Resolve pool address
         const typhoonAbi = await loadAbi(resolvedTyphoonAddress);
+        // const { abi: typhoonAbi } = await provider.getClassAt(typhoonAddress);
         if (!typhoonAbi) throw new Error('Typhoon ABI unavailable');
-        const typhoon = new Contract({ abi: typhoonAbi, address: resolvedTyphoonAddress, providerOrAccount: provider });
+        let typhoon;
+        try {
+          typhoon = new Contract({ abi: typhoonAbi, address: resolvedTyphoonAddress, providerOrAccount: provider });
+          
+        } catch (e) {
+          console.error("Contract construction failed:", e);
+          setError("Contract instantiation failed");
+          setLoading(false);
+          return;
+        }
         const denomFull = getFullDenomination(denomination, tokenDecimals[token]);
+
         const pool = await typhoon.getPool(tokenToAddress[token], denomFull);
+
         const poolAddr = '0x' + pool.toString(16);
 
         // Simple approach: scan last 20k blocks on Typhoon contract and parse Deposit events by pool
         const current = await provider.getBlockNumber();
-        const fromBlock = Math.max(0, Number(current) - 20000);
+        const fromBlock = Math.max(0, Number(current) - 60000);
         let all = [];
-        let token = undefined;
-        do {
-          const page = await provider.getEvents({
+        // let token_aux = "0";
+        // do {
+        //   const page = await provider.getEvents({
+        //     address: resolvedTyphoonAddress,
+        //     from_block: { block_number: fromBlock },
+        //     to_block: { block_number: Number(current) },
+        //     chunk_size: 1000,
+        //     continuation_token: token_aux === '0' ? undefined : continuationToken,
+        //   });
+        //   all = all.concat(page.events || []);
+        //   token_aux = page.continuation_token;
+        // } while (token_aux != undefined);
+
+        let continuationToken = '0';
+        while (continuationToken != undefined) {
+          const eventsList = await provider.getEvents({
             address: resolvedTyphoonAddress,
             from_block: { block_number: fromBlock },
             to_block: { block_number: Number(current) },
-            chunk_size: 200,
-            continuation_token: token,
+            chunk_size: 1000,
+            continuation_token: continuationToken === '0' ? undefined : continuationToken,
           });
-          all = all.concat(page.events || []);
-          token = page.continuation_token;
-        } while (token);
+          continuationToken = eventsList.continuation_token;
+          all = all.concat(eventsList.events)
+        }
 
         const abiEvents = snEvents.getAbiEvents(typhoonAbi);
         const abiStructs = SNCallData.getAbiStruct(typhoonAbi);
         const abiEnums = SNCallData.getAbiEnum(typhoonAbi);
         const parser = createAbiParser(typhoonAbi);
         const parsed = snEvents.parseEvents(all, abiEvents, abiStructs, abiEnums, parser);
-
+     
         // Filter for Deposit events for this pool and dedupe by tx hash
         const seen = new Set();
         const matched = [];
@@ -117,8 +144,9 @@ export default function ReadPanel({
           const raw = all[i];
           if (!p || !raw) continue;
           const isPool = ("0x" + p.pool.toString(16)).toLowerCase() === poolAddr.toLowerCase();
+        
           if (!isPool) continue;
-          if (seen.has(raw.transaction_hash)) continue;
+          // if (seen.has(raw.transaction_hash)) continue;
           seen.add(raw.transaction_hash);
           matched.push(raw);
         }
@@ -126,7 +154,7 @@ export default function ReadPanel({
         const top = matched.slice(0, 10);
         const rows = await Promise.all(top.map(async (e, idx) => {
           let ts;
-          try { ts = (await provider.getBlockWithTxHashes(e.block_number))?.timestamp; } catch {}
+          try { ts = (await provider.getBlockWithTxHashes(e.block_number))?.timestamp; } catch { }
           return {
             index: idx + 1,
             timeAgo: ts ? formatAgo(Number(ts)) : '—',

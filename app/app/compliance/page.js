@@ -48,7 +48,7 @@ export default function Home() {
       jsonNote.pool
     );
     const poolAbi = await loadAbi(provider, jsonNote.pool);
-    const poolContract = new Contract(poolAbi, jsonNote.pool, provider);
+    const poolContract = new Contract({abi: poolAbi, address: jsonNote.pool, providerOrAccount: provider});
     const token = await poolContract.token();
     const symbol = tokenToSymbol[token.toString()];
     console.log(reportData);

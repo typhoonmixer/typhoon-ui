@@ -26,7 +26,7 @@ function FeaturesSection() {
           <FeatureCard
             icon={<Zap size={28} strokeWidth={2} />}
             title="Gasless Withdrawals"
-            desc="Integrated Paymaster support allows you to withdraw funds to a completely empty wallet without needing ETH for gas. No paper trail."
+            desc="Integrated Paymaster support allows you to withdraw funds to a completely empty wallet without needing STRK/ETH for gas. No paper trail."
           />
           <FeatureCard
             icon={<ShieldCheck size={28} strokeWidth={2} />}

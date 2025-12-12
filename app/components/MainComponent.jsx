@@ -129,7 +129,7 @@ const MainComponent = () => {
     if (typeof window !== "undefined") {
       try {
         hint = (localStorage.getItem("preferredChain") || "").toLowerCase();
-      } catch {}
+      } catch { }
     }
     const isMainnetPreferred = hint
       ? hint.includes("main")
@@ -144,7 +144,7 @@ const MainComponent = () => {
     if (typeof window !== "undefined") {
       try {
         hint = (localStorage.getItem("preferredChain") || "").toLowerCase();
-      } catch {}
+      } catch { }
     }
     const isMainnetPreferred = hint
       ? hint.includes("main")
@@ -162,14 +162,18 @@ const MainComponent = () => {
   ];
 
   const tokenToSrc = {
-    STRK: "starknetlogo.svg",
-    ETH: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png",
-    SCHIZODIO: "schizodio_logo.jpg",
-    WBTC: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599/logo.png",
-    tBTC: "tbtclogo.png",
-    USDC: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png",
-    UNO: "unologo.png",
-  };
+    "STRK": "starknetlogo.svg",
+    "ETH": "https://imagedelivery.net/0xPAQaDtnQhBs8IzYRIlNg/e07829b7-0382-4e03-7ecd-a478c5aa9f00/logo",
+    "WBTC": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599/logo.png",
+    "tBTC": "tbtclogo.png",
+    "SolvBTC": "https://assets.coingecko.com/coins/images/36800/standard/solvBTC.png",
+    "USDC": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png",
+    "USDT": "https://assets.coingecko.com/coins/images/325/small/Tether.png",
+    "SCHIZODIO": "schizodio_logo.jpg",
+    "SURVIVOR": "https://lootsurvivor.io/images/survivor_token.png",
+    "LORDS": "https://assets.coingecko.com/coins/images/22171/small/Frame_1.png",
+    "CASH": "Coins.png",
+  }
   const [srcToken, setSrcToken] = useState(STRK);
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("");
@@ -177,15 +181,18 @@ const MainComponent = () => {
   const [rewardMode, setRewardMode] = useState(true);
 
   const tokenToAddress = {
-    STRK: "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
-    ETH: "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
-    USDC: "0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8",
-    UNO: "0x0719b5092403233201aa822ce928bd4b551d0cdb071a724edd7dc5e5f57b7f34",
-    WBTC: "0x03fe2b97c1fd336e750087d68b9b867997fd64a2661ff3ca5a7c771641e8e7ac",
-    tBTC: "0x04daa17763b286d1e59b97c283c0b8c949994c361e426a28f743c67bdfe9a32f",
-    SCHIZODIO:
-      "0x00acc2fa3bb7f6a6726c14d9e142d51fe3984dbfa32b5907e1e76425177875e2",
-  };
+    "STRK": "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+    "ETH": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+    "USDT": "0x068F5c6a61780768455de69077E07e89787839bf8166dEcfBf92B645209c0fB8",
+    "USDC": "0x033068F6539f8e6e6b131e6B2B814e6c34A5224bC66947c47DaB9dFeE93b35fb",
+    "CASH": "0x0498EDFaF50CA5855666a700C25Dd629D577EB9aFcCDf3B5977aEC79AEE55ADA",
+    "WBTC": "0x03fe2b97c1fd336e750087d68b9b867997fd64a2661ff3ca5a7c771641e8e7ac",
+    "tBTC": "0x04daa17763b286d1e59b97c283c0b8c949994c361e426a28f743c67bdfe9a32f",
+    "SolvBTC": "0x0593e034dda23eea82d2ba9a30960ed42cf4a01502cc2351dc9b9881f9931a68",
+    "SCHIZODIO": "0x00acc2fa3bb7f6a6726c14d9e142d51fe3984dbfa32b5907e1e76425177875e2",
+    "LORDS": "0x0124aeb495b947201f5faC96fD1138E326AD86195B98df6DEc9009158A533B49",
+    "SURVIVOR": "0x042DD777885AD2C116be96d4D634abC90A26A790ffB5871E037Dd5Ae7d2Ec86B"
+  }
 
   const [noteValue, setNoteValue] = useState("");
   const [receiverValue, setReceiverValue] = useState("");
@@ -301,11 +308,16 @@ const MainComponent = () => {
   const cmenu = [
     { key: ETH, name: ETH },
     { key: STRK, name: STRK },
-    { key: "USDC", name: "USDC" },
-    { key: "UNO", name: "UNO" },
-    { key: "WBTC", name: "WBTC" },
-    { key: "tBTC", name: "tBTC" },
-  ];
+    { key: 'USDC', name: 'USDC' },
+    { key: 'CASH', name: 'CASH' },
+    { key: 'WBTC', name: 'WBTC' },
+    { key: 'tBTC', name: 'tBTC' },
+    { key: 'SolvBTC', name: 'SolvBTC' },
+    { key: 'SCHIZODIO', name: 'SCHIZODIO' },
+    { key: 'USDT', name: 'USDT' },
+    { key: 'LORDS', name: 'LORDS' },
+    { key: 'SURVIVOR', name: 'SURVIVOR' },
+  ]
   const [cselectedItem, setCSelectedItem] = useState("STRK");
   const [cignoreValue, setCIgnoreValue] = useState("STRK");
   const [cmenuItems, setCMenuItems] = useState(
@@ -347,22 +359,18 @@ const MainComponent = () => {
 
   const transferTokens = [
     { name: "STRK", src: "starknetlogo.svg" },
-    {
-      name: "ETH",
-      src: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png",
-    },
-    { name: "SCHIZODIO", src: "schizodio_logo.jpg" },
-    {
-      name: "WBTC",
-      src: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599/logo.png",
-    },
+    { name: "ETH", src: "https://imagedelivery.net/0xPAQaDtnQhBs8IzYRIlNg/e07829b7-0382-4e03-7ecd-a478c5aa9f00/logo" },
+    { name: "SolvBTC", src: "https://assets.coingecko.com/coins/images/36800/standard/solvBTC.png" },
+    { name: "WBTC", src: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599/logo.png" },
     { name: "tBTC", src: "tbtclogo.png" },
-    {
-      name: "USDC",
-      src: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png",
-    },
-    { name: "UNO", src: "unologo.png" },
-  ];
+    { name: "CASH", src: "Coins.png" },
+    { name: "USDC", src: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png" },
+    { name: "USDT", src: "https://assets.coingecko.com/coins/images/325/small/Tether.png" },
+    { name: "SCHIZODIO", src: "schizodio_logo.jpg" },
+    { name: "LORDS", src: "https://assets.coingecko.com/coins/images/22171/small/Frame_1.png" },
+    { name: "SURVIVOR", src: "https://lootsurvivor.io/images/survivor_token.png" },
+    
+  ]
   const [selectedTransferToken, setSelectedTransferToken] = useState(
     transferTokens[0]
   );
@@ -375,12 +383,17 @@ const MainComponent = () => {
   const depositTokens = [
     { name: "STRK" },
     { name: "ETH" },
-    { name: "SCHIZODIO" },
+    { name: "SolvBTC" },
     { name: "WBTC" },
+    { name: "CASH" },
     { name: "tBTC" },
     { name: "USDC" },
-    { name: "UNO" },
-  ];
+    { name: "USDT" },
+    { name: "SCHIZODIO" },
+    { name: "LORDS" },
+    { name: "SURVIVOR" }
+    
+  ]
   const [openDepositTokenDD, setOpenDepositTokenDD] = useState(false);
 
   // const [depositInputs, setDepositInputs] = useState(<div className='flex items-center' >
@@ -591,11 +604,16 @@ const MainComponent = () => {
     const menu = [
       { key: ETH, name: ETH },
       { key: STRK, name: STRK },
-      { key: "USDC", name: "USDC" },
-      { key: "UNO", name: "UNO" },
-      { key: "WBTC", name: "WBTC" },
-      { key: "tBTC", name: "tBTC" },
-    ];
+      { key: 'USDC', name: 'USDC' },
+      { key: 'CASH', name: 'CASH' },
+      { key: 'WBTC', name: 'WBTC' },
+      { key: 'tBTC', name: 'tBTC' },
+      { key: 'SolvBTC', name: 'SolvBTC' },
+      { key: 'SCHIZODIO', name: 'SCHIZODIO' },
+      { key: 'USDT', name: 'USDT' },
+      { key: 'LORDS', name: 'LORDS' },
+      { key: 'SURVIVOR', name: 'SURVIVOR' },
+    ]
     let newItems = getDepositFilteredItems(cignoreValue, menu);
     setCMenuItems([...newItems]);
   }, [cignoreValue]);
@@ -840,12 +858,12 @@ const MainComponent = () => {
                 const pop = document.getElementById("connect-modal");
                 // @ts-ignore
                 pop?.togglePopover?.();
-              } catch {}
+              } catch { }
             } else if (btnText === DEPOSIT) {
               if (selectedDepositType === "Defined denominations") {
                 await handleDeposit();
               } else {
-                await handleSpecificAmountDeposit();
+                // await handleSpecificAmountDeposit();
               }
             } else if (btnText === WITHDRAW) await handleWithdraw();
             else if (btnText === PRIVATE_TRANSFER) await handleTransfer();
@@ -1007,11 +1025,10 @@ const MainComponent = () => {
                       />
                       <label
                         htmlFor={id}
-                        className={`block w-5 h-5 rounded-full border-2 transition-all duration-150 peer-focus-visible:ring-2 peer-focus-visible:ring-accent ${
-                          isSelected
-                            ? "bg-accent border-accent scale-110"
-                            : "bg-card border-accent-soft hover:bg-accent-soft/20"
-                        }`}
+                        className={`block w-5 h-5 rounded-full border-2 transition-all duration-150 peer-focus-visible:ring-2 peer-focus-visible:ring-accent ${isSelected
+                          ? "bg-accent border-accent scale-110"
+                          : "bg-card border-accent-soft hover:bg-accent-soft/20"
+                          }`}
                       />
                     </div>
                   );
@@ -1031,11 +1048,10 @@ const MainComponent = () => {
                   <label
                     key={`lbl-${id}`}
                     htmlFor={id}
-                    className={`text-sm tracking-wide cursor-pointer select-none ${
-                      isSelected
-                        ? "text-accent font-semibold"
-                        : "text-muted-foreground hover:text-card-foreground"
-                    }`}
+                    className={`text-sm tracking-wide cursor-pointer select-none ${isSelected
+                      ? "text-accent font-semibold"
+                      : "text-muted-foreground hover:text-card-foreground"
+                      }`}
                   >
                     {amount[0] == "0"
                       ? amount
@@ -1294,178 +1310,78 @@ const MainComponent = () => {
     setLoadingText(
       "Deposit Completed! (Do not close neither reload the screen.)"
     );
-    console.log("noteAcc", noteAcc);
-    if (
-      noteAcc == "" ||
-      noteAcc == null ||
-      noteAcc == undefined ||
-      noteAcc == "null" ||
-      noteAcc == "undefined"
-    ) {
-      let proofElements = JSON.stringify({
-        secret: "0x" + secret,
-        nullifier: "0x" + nullifier,
-        txHash: multiCall.transaction_hash.toString(),
-        pool: poolAddr,
-        day: rewardMode ? "0x" + day.toString() : "0x1",
-      });
-      createAndDownloadFile(proofElements);
-    } else {
-      setLoadingText(
-        "Saving in Note Account!(Do not close neither reload the screen.)"
-      );
+    let proofElements = JSON.stringify({
+      secret: "0x" + secret,
+      nullifier: "0x" + nullifier,
+      txHash: multiCall.transaction_hash.toString(),
+      pool: poolAddr,
+      day: rewardMode ? "0x" + day.toString() : "0x1",
+    });
+    createAndDownloadFile(proofElements);
+    // console.log("noteAcc", noteAcc);
+    // if (
+    //   noteAcc == "" ||
+    //   noteAcc == null ||
+    //   noteAcc == undefined ||
+    //   noteAcc == "null" ||
+    //   noteAcc == "undefined"
+    // ) {
+    //   let proofElements = JSON.stringify({
+    //     secret: "0x" + secret,
+    //     nullifier: "0x" + nullifier,
+    //     txHash: multiCall.transaction_hash.toString(),
+    //     pool: poolAddr,
+    //     day: rewardMode ? "0x" + day.toString() : "0x1",
+    //   });
+    //   createAndDownloadFile(proofElements);
+    // } else {
+    //   setLoadingText(
+    //     "Saving in Note Account!(Do not close neither reload the screen.)"
+    //   );
 
-      try {
-        await saveInNoteAccount(
-          [
-            "0x" + secret,
-            "0x" + nullifier,
-            multiCall.transaction_hash.toString(),
-            poolAddr,
-            rewardMode ? "0x" + day.toString() : "0x1",
-          ],
-          noteAcc
-        );
-        let proofElements = JSON.stringify({
-          secret: "0x" + secret,
-          nullifier: "0x" + nullifier,
-          txHash: multiCall.transaction_hash.toString(),
-          pool: poolAddr,
-          day: rewardMode ? "0x" + day.toString() : "0x1",
-        });
-        createAndDownloadFile(proofElements);
-      } catch (e) {
-        console.log(e);
-        let proofElements = JSON.stringify({
-          secret: "0x" + secret,
-          nullifier: "0x" + nullifier,
-          txHash: multiCall.transaction_hash.toString(),
-          pool: poolAddr,
-          day: rewardMode ? "0x" + day.toString() : "0x1",
-        });
-        createAndDownloadFile(proofElements);
-      }
-    }
+    //   try {
+    //     await saveInNoteAccount(
+    //       [
+    //         "0x" + secret,
+    //         "0x" + nullifier,
+    //         multiCall.transaction_hash.toString(),
+    //         poolAddr,
+    //         rewardMode ? "0x" + day.toString() : "0x1",
+    //       ],
+    //       noteAcc
+    //     );
+    //     let proofElements = JSON.stringify({
+    //       secret: "0x" + secret,
+    //       nullifier: "0x" + nullifier,
+    //       txHash: multiCall.transaction_hash.toString(),
+    //       pool: poolAddr,
+    //       day: rewardMode ? "0x" + day.toString() : "0x1",
+    //     });
+    //     createAndDownloadFile(proofElements);
+    //   } catch (e) {
+    //     console.log(e);
+    //     let proofElements = JSON.stringify({
+    //       secret: "0x" + secret,
+    //       nullifier: "0x" + nullifier,
+    //       txHash: multiCall.transaction_hash.toString(),
+    //       pool: poolAddr,
+    //       day: rewardMode ? "0x" + day.toString() : "0x1",
+    //     });
+    //     createAndDownloadFile(proofElements);
+    //   }
+    // }
 
     await new Promise((r) => setTimeout(r, 2000));
     setLoading(false);
   }
 
-  async function handleSpecificAmountDeposit() {
-    setLoading(true);
-    if (!resolvedTyphoonAddress) {
-      setLoading(false);
-      return;
-    }
-    const typhoon = await getContractAt(resolvedTyphoonAddress, provider);
-    if (!typhoon) {
-      setLoading(false);
-      return;
-    }
-
-    const token = await getContractAt(tokenToAddress[srcToken], provider);
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-
-    let proofsElements = [];
-
-    let secrets = [];
-    let nullifiers = [];
-    let pools = [];
-    let commitments = [];
-
-    let approvalsAndDeposit = [];
-
-    let [poolsAllowance, depositCount] = allowancePerPool(specificValue);
-    let noteCounter = 0;
-    for (let i = 0; i < poolsAllowance.length; i++) {
-      if (poolsAllowance[i] == 0) {
-        continue;
-      }
-      let pool = await typhoon.getPool(
-        tokenToAddress[srcToken],
-        getFullDenomination(denominationsList[i], tokenDecimals[srcToken])
-      );
-      approvalsAndDeposit.push({
-        contractAddress: tokenToAddress[srcToken],
-        entrypoint: "approve",
-        calldata: CallData.compile({
-          spender: "0x" + pool.toString(16),
-          amount: cairo.uint256(poolsAllowance[i]),
-        }),
-      });
-      for (
-        let j = 0;
-        j <
-        BigInt(poolsAllowance[i]) /
-          getFullDenomination(denominationsList[i], tokenDecimals[srcToken]);
-        j++
-      ) {
-        noteCounter++;
-        setLoadingText(
-          `Generating Deposit (${noteCounter}/${depositCount})...`
-        );
-        const [secret, nullifier] = generateSecretAndNullifier();
-        secrets.push(secret);
-        nullifiers.push(nullifier);
-        pools.push("0x" + pool.toString(16));
-        const [commitment, _] = await commitmentAndNullifierHash(
-          secret,
-          nullifier
-        );
-        commitments.push(commitment);
-      }
-    }
-
-    approvalsAndDeposit.push({
-      contractAddress: resolvedTyphoonAddress,
-      entrypoint: "deposit",
-      calldata: CallData.compile({
-        _commitment: cairo.tuple(commitments.map((x) => cairo.uint256(x))),
-        _pool: cairo.tuple(pools),
-        _reward: rewardMode,
-      }),
-    });
-    setLoadingText("Depositing...");
-    const multiCall = await account.execute(approvalsAndDeposit, {
-      version: 2,
-    });
-
-    await account.waitForTransaction(multiCall.transaction_hash);
-
-    const poolC = await getContractAt(pools[0], provider);
-    if (!poolC) {
-      setLoading(false);
-      return;
-    }
-
-    let day = await poolC.currentDay();
-
-    for (let i = 0; i < commitments.length; i++) {
-      proofsElements.push(
-        JSON.stringify({
-          secret: secrets[i],
-          nullifier: nullifiers[i],
-          txHash: multiCall.transaction_hash,
-          pool: pools[i],
-          day: rewardMode ? day.toString() : "1",
-        })
-      );
-    }
-    setSpecificValue("");
-    createAndDownloadFile(proofsElements.join("\n"));
-    setLoadingText("Deposit Completed!");
-    await new Promise((r) => setTimeout(r, 2000));
-    setLoading(false);
-  }
-
+ 
   async function handleWithdraw() {
     // let callData = await generateProofCalldata("", receiverValue)
     setLoading(true);
     setLoadingText("Initiating Withdraw...");
     await new Promise((r) => setTimeout(r, 1000));
+    let sdk = new TyphoonSDK();
 
     let proofsStringList = JSONInputStringToList(noteValue);
 
@@ -1482,56 +1398,60 @@ const MainComponent = () => {
         });
         continue;
       }
-      let callData = await generateProofCalldata(
-        parsed,
-        receiverValue,
-        paymaster
-      );
-      if (paymaster) {
-        let cd = callData.map((x) => x.toString());
-        try {
-          setLoadingText(
-            `Withdrawing using paymaster... (This can take a few seconds)`
-          );
-          const res = await axios.post(
-            "https://typhoon-paymaster.vercel.app/calldata",
-            {
-              calldata: cd,
-              note_account_calldata: [],
-            }
-          );
-          console.log("Response:", res.data);
-        } catch (err) {
-          console.error("Error:", err.response?.data || err.message);
-        }
-      } else {
-        setLoadingText(`Withdrawing... (This can take a few seconds)`);
-        const typhoonAbi = await loadAbi(resolvedTyphoonAddress, provider);
-        if (!typhoonAbi) {
-          setLoading(false);
-          return;
-        }
-        const typhoonContract = new Contract({
-          abi: typhoonAbi,
-          address: resolvedTyphoonAddress,
-          providerOrAccount: account,
-        });
-        const call = typhoonContract.populate("withdraw", {
-          full_proof_with_hints: callData,
-        });
-        // TODO: Calculate fees
-        const resourceBounds = account.estimateInvokeFee({
-          contractAddress: resolvedTyphoonAddress,
-          entrypoint: "withdraw",
-          calldata: call.calldata,
-        });
-        const multiCall = await account.execute(
-          call,
-          undefined,
-          resourceBounds
-        );
-        await account.waitForTransaction(multiCall.transaction_hash);
-      }
+      
+      sdk.init([parsed.secret.includes('0x') ? parsed.secret.slice(2) : parsed.secret], [parsed.nullifier.includes('0x') ? parsed.nullifier.slice(2) : parsed.nullifier], [parsed.pool]);
+      
+      await sdk.withdraw(parsed.txHash, [receiverValue]);
+      // let callData = await generateProofCalldata(
+      //   parsed,
+      //   receiverValue,
+      //   paymaster
+      // );
+      // if (paymaster) {
+      //   let cd = callData.map((x) => x.toString());
+      //   try {
+      //     setLoadingText(
+      //       `Withdrawing using paymaster... (This can take a few seconds)`
+      //     );
+      //     const res = await axios.post(
+      //       "https://typhoon-paymaster.vercel.app/calldata",
+      //       {
+      //         calldata: cd,
+      //         note_account_calldata: [],
+      //       }
+      //     );
+      //     console.log("Response:", res.data);
+      //   } catch (err) {
+      //     console.error("Error:", err.response?.data || err.message);
+      //   }
+      // } else {
+      //   setLoadingText(`Withdrawing... (This can take a few seconds)`);
+      //   const typhoonAbi = await loadAbi(resolvedTyphoonAddress, provider);
+      //   if (!typhoonAbi) {
+      //     setLoading(false);
+      //     return;
+      //   }
+      //   const typhoonContract = new Contract({
+      //     abi: typhoonAbi,
+      //     address: resolvedTyphoonAddress,
+      //     providerOrAccount: account,
+      //   });
+      //   const call = typhoonContract.populate("withdraw", {
+      //     full_proof_with_hints: callData,
+      //   });
+      //   // TODO: Calculate fees
+      //   const resourceBounds = account.estimateInvokeFee({
+      //     contractAddress: resolvedTyphoonAddress,
+      //     entrypoint: "withdraw",
+      //     calldata: call.calldata,
+      //   });
+      //   const multiCall = await account.execute(
+      //     call,
+      //     undefined,
+      //     resourceBounds
+      //   );
+      //   await account.waitForTransaction(multiCall.transaction_hash);
+      // }
     }
 
     setLoadingText("Withdraw Completed!");
@@ -1550,7 +1470,7 @@ const MainComponent = () => {
       tokenList[selectedTransferToken.name]
     );
     setLoadingText("Depositing...");
-    const multiCall = await account.execute(calls);
+    const multiCall = await account.execute([...calls]);
     await account.waitForTransaction(multiCall.transaction_hash);
     let secrets = sdk.get_secrets();
     let nullifiers = sdk.get_nullifiers();

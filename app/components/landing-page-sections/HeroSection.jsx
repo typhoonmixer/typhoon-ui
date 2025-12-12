@@ -36,7 +36,7 @@ function HeroSections() {
             Launch App <ArrowRight size={20} />
           </Link>
           <Link
-            href="https://typhoon-2.gitbook.io/typhoon-docs"
+            href="https://github.com/typhoonmixer/typhoon_sdk_docs"
             target="_blank"
             rel="noopener noreferrer"
             className="w-full sm:w-auto px-8 py-4 bg-card border border-border text-muted-foreground font-bold text-lg rounded-xl hover:text-foreground hover:border-foreground/20 transition-all flex items-center justify-center gap-2"
@@ -47,9 +47,10 @@ function HeroSections() {
 
         <div className="mt-24 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 max-w-4xl mx-auto">
           {[
-            { label: "Total Volume", value: "$4.2M+" },
-            { label: "Anonymity Set", value: "12,403" },
-            { label: "Relayer Fee", value: "0%" },
+            // { label: "Total Volume", value: "$4.2M+" },
+            { label: "Listed tokens", value: "11" },
+            { label: "Relayer Fee", value: "2.0%" },
+            { label: "Withdraw Fee", value: "0.5%" },
             { label: "Network", value: "Starknet" },
           ].map((stat, i) => (
             <div

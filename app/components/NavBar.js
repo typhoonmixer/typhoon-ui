@@ -117,7 +117,7 @@ export default function Navbar() {
               <a
                 target="_blank"
                 rel="noopener noreferrer"
-                href="https://typhoon-2.gitbook.io/typhoon-docs"
+                href="https://github.com/typhoonmixer/typhoon_sdk_docs"
                 className="text-foreground hover:text-accent text-sm md:text-base font-semibold transition-colors"
               >
                 Docs

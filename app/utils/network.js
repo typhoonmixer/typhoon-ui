@@ -15,7 +15,7 @@ export function getNodeUrl() {
   }
 
   const isMain = hint.includes('main');
-  const fallbackMain = 'https://starknet-mainnet.public.blastapi.io/rpc/v0_9';
-  const fallbackSep = 'https://starknet-sepolia.public.blastapi.io/rpc/v0_9';
+  const fallbackMain = 'https://g.w.lavanet.xyz:443/gateway/strk/rpc-http/5992507e9e5c513ecab8c5d93accb547';
+  const fallbackSep = 'https://g.w.lavanet.xyz:443/gateway/strks/rpc-http/5992507e9e5c513ecab8c5d93accb547';
   return isMain ? (envMainnet || fallbackMain) : (envSepolia || fallbackSep);
 }
