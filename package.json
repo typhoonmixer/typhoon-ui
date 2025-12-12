@@ -35,7 +35,7 @@
     "html2canvas": "^1.4.1",
     "html2pdf.js": "0.9.0",
     "lucide-react": "^0.542.0",
-    "next": "15.1.4",
+    "next": "15.1.9",
     "node-polyfill-webpack-plugin": "^4.1.0",
     "node-uri": "^1.1.2",
     "num": "^0.3.0",
