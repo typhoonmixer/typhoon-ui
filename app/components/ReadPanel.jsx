@@ -10,6 +10,7 @@ import { tokenDecimals } from '../utils/SupportedDenominations';
 import { getNodeUrl } from '../utils/network';
 // Note list panel removed per design
 
+const provider = new RpcProvider({ nodeUrl: "https://rpc.starknet.lava.build:443" });
 export default function ReadPanel({
   token,
   denomination,
@@ -18,7 +19,8 @@ export default function ReadPanel({
   overallDeposits,
 }) {
 
-  const { provider } = useProvider();
+  // const { provider } = useProvider();
+  
   const { chain } = useNetwork();
 
   const resolvedTyphoonAddress = useMemo(() => {
@@ -36,10 +38,15 @@ export default function ReadPanel({
   const tokenToAddress = {
     STRK: "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
     ETH: "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
-    USDC: "0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8",
-    UNO: "0x0719b5092403233201aa822ce928bd4b551d0cdb071a724edd7dc5e5f57b7f34",
+    USDC: "0x033068F6539f8e6e6b131e6B2B814e6c34A5224bC66947c47DaB9dFeE93b35fb",
     WBTC: "0x03fe2b97c1fd336e750087d68b9b867997fd64a2661ff3ca5a7c771641e8e7ac",
     tBTC: "0x04daa17763b286d1e59b97c283c0b8c949994c361e426a28f743c67bdfe9a32f",
+    SCHIZODIO: "0x00acc2fa3bb7f6a6726c14d9e142d51fe3984dbfa32b5907e1e76425177875e2",
+    SolvBTC: "0x0593e034dda23eea82d2ba9a30960ed42cf4a01502cc2351dc9b9881f9931a68",
+    USDT: "0x068F5c6a61780768455de69077E07e89787839bf8166dEcfBf92B645209c0fB8",
+    LORDS: "0x0124aeb495b947201f5faC96fD1138E326AD86195B98df6DEc9009158A533B49",
+    SURVIVOR: "0x042DD777885AD2C116be96d4D634abC90A26A790ffB5871E037Dd5Ae7d2Ec86B",
+    CASH: "0x0498EDFaF50CA5855666a700C25Dd629D577EB9aFcCDf3B5977aEC79AEE55ADA"
   };
 
   const [latest, setLatest] = useState([]); // [{index, timeAgo, blockNumber, txHash}]
@@ -87,7 +94,7 @@ export default function ReadPanel({
         let typhoon;
         try {
           typhoon = new Contract({ abi: typhoonAbi, address: resolvedTyphoonAddress, providerOrAccount: provider });
-          
+
         } catch (e) {
           console.error("Contract construction failed:", e);
           setError("Contract instantiation failed");
@@ -116,26 +123,33 @@ export default function ReadPanel({
         //   all = all.concat(page.events || []);
         //   token_aux = page.continuation_token;
         // } while (token_aux != undefined);
+        let continuationToken = undefined;
 
-        let continuationToken = '0';
-        while (continuationToken != undefined) {
-          const eventsList = await provider.getEvents({
+        do {
+          const page = await provider.getEvents({
             address: resolvedTyphoonAddress,
             from_block: { block_number: fromBlock },
             to_block: { block_number: Number(current) },
             chunk_size: 1000,
-            continuation_token: continuationToken === '0' ? undefined : continuationToken,
+            continuation_token: continuationToken,
           });
-          continuationToken = eventsList.continuation_token;
-          all = all.concat(eventsList.events)
-        }
+
+          all.push(...(page.events ?? []));
+
+          if (!page.continuation_token || page.continuation_token === continuationToken) {
+            break;
+          }
+
+          continuationToken = page.continuation_token;
+        } while (true);
+        console.log("all ",all)
 
         const abiEvents = snEvents.getAbiEvents(typhoonAbi);
         const abiStructs = SNCallData.getAbiStruct(typhoonAbi);
         const abiEnums = SNCallData.getAbiEnum(typhoonAbi);
         const parser = createAbiParser(typhoonAbi);
         const parsed = snEvents.parseEvents(all, abiEvents, abiStructs, abiEnums, parser);
-     
+
         // Filter for Deposit events for this pool and dedupe by tx hash
         const seen = new Set();
         const matched = [];
@@ -144,7 +158,7 @@ export default function ReadPanel({
           const raw = all[i];
           if (!p || !raw) continue;
           const isPool = ("0x" + p.pool.toString(16)).toLowerCase() === poolAddr.toLowerCase();
-        
+
           if (!isPool) continue;
           // if (seen.has(raw.transaction_hash)) continue;
           seen.add(raw.transaction_hash);
