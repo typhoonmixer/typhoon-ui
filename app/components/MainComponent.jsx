@@ -849,7 +849,7 @@ const MainComponent = () => {
           </div>
         </div>
         <div className="flex-1">{content}</div>
-        <button
+        {/* <button
           className={getBtnClassName()}
           disabled={loading}
           onClick={async () => {
@@ -870,7 +870,7 @@ const MainComponent = () => {
           }}
         >
           {btnText}
-        </button>
+        </button> */}
       </div>
       <ReadPanel
         token={srcToken}
