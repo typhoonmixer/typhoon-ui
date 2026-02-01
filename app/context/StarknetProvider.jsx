@@ -99,7 +99,7 @@ export function StarknetProvider({ children }) {
       chains={[mainnet, sepolia]}
       provider={provider}
       explorer={starkscan}
-      autoConnect={false}
+      autoConnect={true}
       defaultChainId={defaultChainId}
     >
       {children}
