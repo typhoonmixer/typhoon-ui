@@ -44,7 +44,6 @@ import {
   JSONInputStringToList,
   generateProofCalldata,
 } from "../utils/withdrawUtils";
-import NoteList from "./NoteList";
 import ReadPanel from "./ReadPanel";
 import typhoonAbi from "../utils/typhoon_abi.json" assert { type: "json" };
 import typhoonMain from "../../typhoon.json" assert { type: "json" };
