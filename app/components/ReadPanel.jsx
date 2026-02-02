@@ -165,7 +165,7 @@ export default function ReadPanel({
           matched.push(raw);
         }
         matched.sort((a, b) => (b.block_number || 0) - (a.block_number || 0));
-        const top = matched.slice(0, 10);
+        const top = matched.slice(0, 8);
         const rows = await Promise.all(top.map(async (e, idx) => {
           let ts;
           try { ts = (await provider.getBlockWithTxHashes(e.block_number))?.timestamp; } catch { }
