@@ -25,9 +25,6 @@ export function StarknetProvider({ children }) {
     includeRecommended: "always",
   });
 
-  console.log("argent id ", injected[0].id)
-  console.log("braavos id ", injected[1].id)
-  
   const connectors = [
     ...injected,
     new WebWalletConnector({ url: "https://web.argent.xyz" }),
@@ -91,7 +88,7 @@ export function StarknetProvider({ children }) {
     process.env.NEXT_PUBLIC_CHAIN ||
     ""
   ).toLowerCase();
-  const defaultChainId = chainHint.includes("main") ? mainnet.id : sepolia.id;
+  const defaultChainId = mainnet.id;
   // const provider = new RpcProvider({ nodeUrl: 'https://free-rpc.nethermind.io/sepolia-juno/v0_7' });
   return (
     <StarknetConfig
@@ -100,7 +97,7 @@ export function StarknetProvider({ children }) {
       provider={provider}
       explorer={starkscan}
       autoConnect={true}
-      defaultChainId={mainnet.id}
+      defaultChainId={defaultChainId}
     >
       {children}
     </StarknetConfig>
