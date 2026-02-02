@@ -219,8 +219,16 @@ const MainComponent = () => {
 
   const [selectedNavItem, setSelectedNavItem] = useState(DEPOSIT);
 
+  // Persist the latest deposit note so a reload can't lose it.
+  // We keep it as a single JSON blob to avoid key mismatch bugs.
+  const NOTE_STATE_KEY = "lastDepositNoteState";
+  const NOTE_STORAGE_KEY = "lastDepositNote"; // legacy
+  const NOTE_DOWNLOADED_KEY = "lastDepositNoteDownloaded"; // legacy
+
   const [noteAcc, setNoteAcc] = useState("");
   const [proofElement, setProofElement] = useState([]);
+  // Holds the exact note payload to present/download after deposit.
+  const [pendingNote, setPendingNote] = useState("");
   const [downloaded, setDownloaded] = useState(false);
 
   const nObj = {
@@ -369,7 +377,7 @@ const MainComponent = () => {
     { name: "SCHIZODIO", src: "schizodio_logo.jpg" },
     { name: "LORDS", src: "https://assets.coingecko.com/coins/images/22171/small/Frame_1.png" },
     { name: "SURVIVOR", src: "https://lootsurvivor.io/images/survivor_token.png" },
-    
+
   ]
   const [selectedTransferToken, setSelectedTransferToken] = useState(
     transferTokens[0]
@@ -392,7 +400,7 @@ const MainComponent = () => {
     { name: "SCHIZODIO" },
     { name: "LORDS" },
     { name: "SURVIVOR" }
-    
+
   ]
   const [openDepositTokenDD, setOpenDepositTokenDD] = useState(false);
 
@@ -429,45 +437,61 @@ const MainComponent = () => {
 
   const [accountExists, setAccountExists] = useState(false);
 
+  // One-time client-side restore of local state
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      if (
-        localStorage.getItem("noteAcc") != "null" &&
-        localStorage.getItem("noteAcc") != "undefined" &&
-        localStorage.getItem("noteAcc") != "" &&
-        localStorage.getItem("noteAcc") != null &&
-        localStorage.getItem("noteAcc") != undefined
-      ) {
-        setNoteAcc(localStorage.getItem("noteAcc"));
+    if (typeof window === "undefined") return;
+
+    // Restore note account
+    try {
+      const acc = localStorage.getItem("noteAcc");
+      if (acc && acc !== "null" && acc !== "undefined") {
+        setNoteAcc(acc);
         setAccountExists(true);
       }
-    }
-  });
+    } catch {}
 
-  let noteAccount = "";
+    // Restore last deposit note.
+    // Show the popup ONLY if the latest stored note was NOT downloaded.
+    try {
+      // New unified state
+      const raw = localStorage.getItem(NOTE_STATE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const savedNote = String(parsed?.note || "");
+        const wasDownloaded = Boolean(parsed?.downloaded);
+
+        if (savedNote) {
+          setPendingNote(savedNote);
+          setDownloaded(wasDownloaded);
+          setOpenDepositOp(!wasDownloaded);
+        }
+        return;
+      }
+
+      // Legacy fallback
+      const savedNote = localStorage.getItem(NOTE_STORAGE_KEY) || "";
+      const legacyFlag = (localStorage.getItem(NOTE_DOWNLOADED_KEY) || "false").toLowerCase();
+      const wasDownloaded = legacyFlag === "true" || legacyFlag === "1";
+
+      if (savedNote) {
+        setPendingNote(savedNote);
+        setDownloaded(wasDownloaded);
+        setOpenDepositOp(!wasDownloaded);
+      }
+    } catch (e) {
+      console.warn("Failed to restore last deposit note state", e);
+    }
+  }, []);
+
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window === "undefined") return;
+    // Used elsewhere in the app
+    try {
       localStorage.setItem(
         "curToken",
         "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d"
       );
-    }
-    let noteAccount = "";
-    if (typeof window !== "undefined") {
-      if (
-        localStorage.getItem("noteAcc") != "null" &&
-        localStorage.getItem("noteAcc") != "undefined" &&
-        localStorage.getItem("noteAcc") != "" &&
-        localStorage.getItem("noteAcc") != null &&
-        localStorage.getItem("noteAcc") != undefined
-      ) {
-        setNoteAcc(localStorage.getItem("noteAcc"));
-      }
-    }
-
-    // if (noteAccount != "") {
-    //   setNoteAcc(noteAccount)
-    // }
+    } catch {}
   }, [accountExists]);
 
   // useEffect(() => {
@@ -781,8 +805,10 @@ const MainComponent = () => {
   };
 
   return (
-    <div className="grid w-full gap-6 grid-cols-1 lg:grid-cols-2 items-stretch">
-      <div className="relative bg-card text-card-foreground w-full px-4 sm:px-6 pt-1 sm:pt-2 pb-4 sm:pb-6 rounded-xl min-h-[200px] mb-2 lg:mb-0 shadow-md border border-accent flex flex-col">
+    <>
+      {depositOptionPopup()}
+      <div className="grid w-full gap-6 grid-cols-1 lg:grid-cols-2 items-stretch">
+        <div className="relative bg-card text-card-foreground w-full px-4 sm:px-6 pt-1 sm:pt-2 pb-4 sm:pb-6 rounded-xl min-h-[200px] mb-2 lg:mb-0 shadow-md border border-accent flex flex-col">
         <div
           className="w-full flex justify-center overflow-x-auto mt-2 mb-2"
           role="tablist"
@@ -849,7 +875,7 @@ const MainComponent = () => {
           </div>
         </div>
         <div className="flex-1">{content}</div>
-        {/* <button
+        <button
           className={getBtnClassName()}
           disabled={loading}
           onClick={async () => {
@@ -870,16 +896,17 @@ const MainComponent = () => {
           }}
         >
           {btnText}
-        </button> */}
+        </button>
       </div>
-      <ReadPanel
-        token={srcToken}
-        denomination={dselectedItem}
-        poolCount={poolCount}
-        todayDeposits={todayDeposits}
-        overallDeposits={overallDeposits}
-      />
-    </div>
+        <ReadPanel
+          token={srcToken}
+          denomination={dselectedItem}
+          poolCount={poolCount}
+          todayDeposits={todayDeposits}
+          overallDeposits={overallDeposits}
+        />
+      </div>
+    </>
   );
 
   function withdrawContent() {
@@ -1310,14 +1337,35 @@ const MainComponent = () => {
     setLoadingText(
       "Deposit Completed! (Do not close neither reload the screen.)"
     );
-    let proofElements = JSON.stringify({
+    // NOTE: Triggering a download after async awaits (wallet popup, waitForTransaction, etc)
+    // is often blocked by browsers because it is no longer considered a "user gesture".
+    // Instead, we store the note in state and ask the user to click a button in the popup.
+    const proofElements = JSON.stringify({
       secret: "0x" + secret,
       nullifier: "0x" + nullifier,
       txHash: multiCall.transaction_hash.toString(),
       pool: poolAddr,
       day: rewardMode ? "0x" + day.toString() : "0x1",
     });
-    createAndDownloadFile(proofElements);
+    setPendingNote(proofElements);
+    // Persist note + downloaded flag so a reload cannot lose it.
+    try {
+      localStorage.setItem(NOTE_STATE_KEY, JSON.stringify({ note: proofElements, downloaded: false, ts: Date.now() }));
+      // legacy keys (keep for backwards compatibility)
+      localStorage.setItem(NOTE_STORAGE_KEY, proofElements);
+      localStorage.setItem(NOTE_DOWNLOADED_KEY, "false");
+    } catch {}
+
+    // Also keep legacy state for any other code paths.
+    setProofElement([
+      "0x" + secret,
+      "0x" + nullifier,
+      multiCall.transaction_hash.toString(),
+      poolAddr,
+      rewardMode ? "0x" + day.toString() : "0x1",
+    ]);
+    setDownloaded(false);
+    setOpenDepositOp(true);
     // console.log("noteAcc", noteAcc);
     // if (
     //   noteAcc == "" ||
@@ -1375,7 +1423,7 @@ const MainComponent = () => {
     setLoading(false);
   }
 
- 
+
   async function handleWithdraw() {
     // let callData = await generateProofCalldata("", receiverValue)
     setLoading(true);
@@ -1398,9 +1446,9 @@ const MainComponent = () => {
         });
         continue;
       }
-      
+
       sdk.init([parsed.secret.includes('0x') ? parsed.secret.slice(2) : parsed.secret], [parsed.nullifier.includes('0x') ? parsed.nullifier.slice(2) : parsed.nullifier], [parsed.pool]);
-      
+
       await sdk.withdraw(parsed.txHash, [receiverValue]);
       // let callData = await generateProofCalldata(
       //   parsed,
@@ -1496,134 +1544,144 @@ const MainComponent = () => {
   }
 
   function depositOptionPopup() {
+    if (!openDepositOp) return null;
+
+    const safeNote = pendingNote || JSON.stringify({
+      secret: proofElement?.[0],
+      nullifier: proofElement?.[1],
+      txHash: proofElement?.[2],
+      pool: proofElement?.[3],
+      day: proofElement?.[4],
+    });
+
     return (
       <div>
         <Popup
           open={openDepositOp}
+          // Prevent closing until the user downloads.
+          closeOnDocumentClick={downloaded}
+          closeOnEscape={downloaded}
           onClose={() => {
-            if (!downloaded) {
-              let proofElements = JSON.stringify({
-                secret: proofElement[0],
-                nullifier: proofElement[1],
-                txHash: proofElement[2],
-                pool: proofElement[3],
-                day: proofElement[4],
-              });
-              createAndDownloadFile(proofElements);
-            }
-            setDownloaded(true);
-            setOpenDepositOp(false);
+            if (downloaded) setOpenDepositOp(false);
           }}
           modal
           nested
+          overlayStyle={{
+            background: "rgba(0,0,0,0.65)",
+            backdropFilter: "blur(4px)",
+          }}
           contentStyle={{
-            width: "500px",
-            height: "200px",
-            borderRadius: "20px",
+            width: "min(680px, 92vw)",
+            height: "auto",
+            borderRadius: "16px",
+            padding: "0",
+            border: "1px solid rgba(255,255,255,0.08)",
+            background: "#0b0b0d",
+            boxShadow: "0 18px 60px rgba(0,0,0,0.65)",
           }}
         >
-          <div>
-            <div className="lg:border-outline-grey ml-5 basis-5/6 lg:col-span-2 lg:border-r-[1px] lg:border-solid lg:py-4 lg:pl-8">
-              <h2 className="my-4 text-center text-[1.125em] font-bold text-black lg:text-start">
-                Issue note options
-              </h2>
-            </div>
-            <div className="flex">
+          <div style={{ padding: "18px 18px 16px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "#fff" }}>Your note (save this!)</div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.72)" }}>If you lose this note, you lose the ability to withdraw.</div>
+              </div>
               <button
-                aria-haspopup="dialog"
                 onClick={() => {
-                  let proofElements = JSON.stringify({
-                    secret: proofElement[0],
-                    nullifier: proofElement[1],
-                    txHash: proofElement[2],
-                    pool: proofElement[3],
-                    day: proofElement[4],
-                  });
-                  createAndDownloadFile(proofElements);
-                  setDownloaded(true);
-                  setOpenDepositOp(false);
+                  if (downloaded) setOpenDepositOp(false);
                 }}
-                className="rounded-[12px] bg-accent text-accent-foreground ml-2 px-4 py-3 transition-all duration-300 hover:rounded-[30px] md:py-4"
+                disabled={!downloaded}
+                title={downloaded ? "Close" : "Download the note to close"}
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 10,
+                  border: "1px solid rgba(255,255,255,0.10)",
+                  background: downloaded ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.03)",
+                  color: downloaded ? "#fff" : "rgba(255,255,255,0.35)",
+                  cursor: downloaded ? "pointer" : "not-allowed",
+                }}
+                aria-label="Close"
               >
-                Download Note
+                ×
+              </button>
+            </div>
+
+            {!downloaded && (
+              <div style={{
+                marginBottom: 12,
+                padding: "10px 12px",
+                borderRadius: 12,
+                border: "1px solid rgba(255,255,255,0.10)",
+                background: "rgba(255,255,255,0.04)",
+                color: "rgba(255,255,255,0.85)",
+                fontSize: 12,
+              }}>
+                You must download this note before closing.
+              </div>
+            )}
+
+            <textarea
+              readOnly
+              value={safeNote}
+              style={{
+                width: "100%",
+                height: 140,
+                padding: 12,
+                borderRadius: 12,
+                border: "1px solid rgba(255,255,255,0.10)",
+                background: "rgba(255,255,255,0.04)",
+                color: "#fff",
+                fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+                fontSize: 12,
+                lineHeight: 1.4,
+              }}
+            />
+
+            <div style={{ display: "flex", gap: 10, marginTop: 12, justifyContent: "flex-end" }}>
+              <button
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(safeNote);
+                  } catch (e) {
+                    console.error("clipboard copy failed", e);
+                  }
+                }}
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 12,
+                  border: "1px solid rgba(255,255,255,0.10)",
+                  background: "rgba(255,255,255,0.06)",
+                  color: "#fff",
+                }}
+              >
+                Copy
               </button>
 
-              <Popup
-                trigger={
-                  <button
-                    className={
-                      "rounded-[12px] bg-accent text-accent-foreground ml-2 px-4 py-3 transition-all duration-300 hover:rounded-[30px] md:py-4"
-                    }
-                  >
-                    {" "}
-                    Connect/Create Note Account
-                  </button>
-                }
-                modal
-                contentStyle={{ borderRadius: "10px" }}
+              <button
+                onClick={() => {
+                  try {
+                    localStorage.setItem(NOTE_STATE_KEY, JSON.stringify({ note: safeNote, downloaded: true, ts: Date.now() }));
+                    // legacy keys
+                    localStorage.setItem(NOTE_STORAGE_KEY, safeNote);
+                    localStorage.setItem(NOTE_DOWNLOADED_KEY, "true");
+                  } catch {}
+                  createAndDownloadFile(safeNote);
+                  // Unlock close actions after a successful download click.
+                  // Popup should only close when user clicks "X".
+                  setDownloaded(true);
+                }}
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 12,
+                  border: "1px solid rgba(255,255,255,0.10)",
+                  background: "#c7a6ff",
+                  color: "#0b0b0d",
+                  fontWeight: 700,
+                }}
               >
-                <div>
-                  <div className="lg:border-outline-grey ml-5 basis-5/6 lg:col-span-2 lg:border-r-[1px] lg:border-solid lg:py-4 lg:pl-8">
-                    <h2 className="my-4 text-center text-[1.125em] font-bold text-black lg:text-start">
-                      Connect a Note Account
-                    </h2>
-                  </div>
-                  <div className="flex">
-                    <div className="relative bg-card p-12 py-6 rounded-xl mb-5 ml-5 border-transparent hover:border-border">
-                      <div className="flex items-center rounded-xl">
-                        <input
-                          className={getInputClassname()}
-                          type={"text"}
-                          value={noteValue}
-                          placeholder={"type or paste your private key here..."}
-                          disabled={false}
-                          onChange={(e) => {
-                            setNoteValue(e.target.value);
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    <button
-                      aria-haspopup="dialog"
-                      onClick={async () => {
-                        connectNoteAccount(noteValue);
-                        await saveInNoteAccount(proofElement, noteValue);
-                        setDownloaded(true);
-                        setOpenDepositOp(false);
-                      }}
-                      className="rounded-[12px]  ml-10 bg-accent text-accent-foreground px-4 py-3 transition-all duration-300 hover:rounded-[30px] md:py-4"
-                    >
-                      Connect
-                    </button>
-                  </div>
-                  <div className="items-center lg:border-outline-grey ml-5 basis-5/6 lg:col-span-2 lg:border-r-[1px] lg:border-solid lg:py-4 lg:pl-8">
-                    <h2 className="my-4 text-center text-[1.125em] font-bold text-black lg:text-start">
-                      Or
-                    </h2>
-                  </div>
-                  <button
-                    aria-haspopup="dialog"
-                    onClick={async () => {
-                      let acc = createNoteAccount();
-                      await saveInNoteAccount(proofElement, acc);
-                      setDownloaded(true);
-                      setOpenDepositOp(false);
-                    }}
-                    className="items-center rounded-[12px] ml-10 bg-accent text-accent-foreground px-6 py-3 transition-all duration-300 hover:rounded-[30px] md:py-4"
-                  >
-                    Create Note Account
-                  </button>
-                  <div className="col-span-8 flex flex-col gap-2">
-                    <p className="text-black">
-                      Once you click on "Create Note Account", a new private key
-                      will be generated and will be downloaded to your computer
-                      in ".txt" format. Please keep it safe, as it is the only
-                      way to access your Note Account.
-                    </p>
-                  </div>
-                </div>
-              </Popup>
+                Download
+              </button>
             </div>
           </div>
         </Popup>

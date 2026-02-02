@@ -43,8 +43,8 @@ export function StarknetProvider({ children }) {
   let provider;
   // If per‑chain env URLs are provided, honor them and keep provider dynamic by chain
   if (envSepolia || envMainnet) {
-    const fallbackMain = "https://starknet-mainnet.public.blastapi.io/rpc/v0_9";
-    const fallbackSep = "https://starknet-sepolia.public.blastapi.io/rpc/v0_9";
+    const fallbackMain = "https://rpc.starknet.lava.build:443";
+    const fallbackSep = "https://rpc.starknet-testnet.lava.build:443";
     provider = jsonRpcProvider({
       rpc: (chain) => {
         const isMain = chain.id === mainnet.id;
@@ -73,8 +73,8 @@ export function StarknetProvider({ children }) {
       rpc: (chain) => {
         const isMainnet = chain.id === mainnet.id;
         const nodeUrl = isMainnet
-          ? "https://starknet-mainnet.public.blastapi.io/rpc/v0_9"
-          : "https://starknet-sepolia.public.blastapi.io/rpc/v0_9";
+          ? "https://rpc.starknet.lava.build:443"
+          : "https://rpc.starknet-testnet.lava.build:443";
         return { nodeUrl };
       },
     });
@@ -100,7 +100,7 @@ export function StarknetProvider({ children }) {
       provider={provider}
       explorer={starkscan}
       autoConnect={true}
-      defaultChainId={defaultChainId}
+      defaultChainId={mainnet.id}
     >
       {children}
     </StarknetConfig>
